@@ -14,7 +14,7 @@ contains the values of the input (default: "values")}
 
 \item{dim_types}{a character value or a named list which specifies
 the type of the variable in the data.frame corresponding to the dimension of
-the input array. If a character value is given, all variables are
+the input array. If one character value is given, all variables are
 transformed to that type (default: "character"). Possible types are
 "logical", "character", "numeric", "double", "integer", "factor".}
 

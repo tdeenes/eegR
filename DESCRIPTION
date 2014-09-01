@@ -9,3 +9,4 @@ Description: The eegR package has been developed to process electroencephalograp
 License: GPL-3
 Imports: ggplot2, abind, mgcv, matrixStats, parallel, permute, Rcpp, gplots, proj4, sgeostat, caTools, zoo, corpcor, orthopolynom, plotrix, RColorBrewer
 LinkingTo: Rcpp
+VignetteBuilder: knitr

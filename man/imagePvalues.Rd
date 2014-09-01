@@ -7,7 +7,8 @@ imagePvalues(pvalues, pcrit = c(0.001, 0.01, 0.05), grid = NULL,
   wrap = NULL)
 }
 \arguments{
-\item{numeric}{matrix or array of p-values with named dimensions}
+\item{pvalues}{numeric matrix or array of p-values with named dimensions (at
+least chan and time)}
 
 \item{pcrit}{numeric vector of significancy limits
 (default: 0.001, 0.01, 0.05)}

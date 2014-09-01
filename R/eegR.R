@@ -1,10 +1,15 @@
 
-#' @useDynLib eegR
+#' @useDynLib eegR 
+#' @import matrixStats permute
 #' @importFrom Rcpp evalCpp
-#' @import matrixStats
-#' @import permute
 NULL
 
+.onAttach <- function(lib, pkg) {
+    packageStartupMessage(paste0("*** eegR ",
+                                 packageVersion("eegR"),
+                                 " loaded ***"), 
+                          appendLF=TRUE)
+}
 
 #
 # <<< simple utility functions >>> --------
@@ -388,7 +393,7 @@ mat2array <- function(dat, dims=NULL, row_dim=NULL) {
 #' contains the values of the input (default: "values")
 #' @param dim_types a character value or a named list which specifies 
 #' the type of the variable in the data.frame corresponding to the dimension of 
-#' the input array. If a character value is given, all variables are 
+#' the input array. If one character value is given, all variables are 
 #' transformed to that type (default: "character"). Possible types are 
 #' "logical", "character", "numeric", "double", "integer", "factor".
 #' @param na_omit if TRUE, omit all rows from the data.frame which have missing 
@@ -539,7 +544,12 @@ splitArray <- function(dat, whichdim) {
 #' 
 #' \code{rearrangeList} reshapes a special type of one- or two-level lists.
 #' @param dat the list to be rearranged
-#' @param newname character string, the name of the highest-level factor
+#' @param name_listdim character string; the name of the dimension which the 
+#' list represents
+#' @param name_datadim character vector or a list of character vectors (for 
+#' two-level list input), providing the name of the dimensions for each list 
+#' element. The default is NULL, meaning that the original dimension 
+#' names will be used.
 #' @details One or two level lists which contain identically shaped elements at 
 #' the base level, and elements at the base level are vectors, matrices or
 #' arrays, can be rearranged to a matrix/array (from a one-level list) or to a 
@@ -550,21 +560,35 @@ splitArray <- function(dat, whichdim) {
 #' @export
 #' @return A matrix or array, if the input is a one-level list, and a one-level 
 #' list, if the input is a two-level list
-rearrangeList <- function(dat, newname) {
-    stopifnot(!missing(newname))
+rearrangeList <- function(dat, name_listdim, name_datadim=NULL) {
+    stopifnot(!missing(name_listdim))
     if (identical(unlist(dat, recursive=FALSE), 
                   unlist(dat, recursive=TRUE))) {
-        dims <- c(dim(dat[[1]]), length(dat))
-        dimn <- c(dimnames(dat[[1]]), listS(.newname=names(dat)))
+        dat <- lapply(dat, as.array)
+        newdims <- c(dim(dat[[1]]), length(dat))
+        newdimns <- c(dimnames(dat[[1]]), listS(.name_listdim=names(dat)))
+        if (!is.null(name_datadim)) {
+            names(newdimns) <- c(name_datadim, name_listdim)
+        }
         dat <- unlist(dat, recursive=TRUE, use.names=FALSE)
-        dim(dat) <- dims
-        dimnames(dat) <- dimn
+        dim(dat) <- newdims
+        dimnames(dat) <- newdimns
     } else {
         names_at_level2 <- names(dat[[1]])
-        dat <- lapply(names(dat[[1]]), function(i) {
+        dat <- lapply(dat, function(x) lapply(x, as.array))
+        dat <- lapply(seq_along(names_at_level2), function(i) {
             out <- abind(lapply(dat, function(x) x[[i]]), 
                          along=length(dim(dat[[1]][[i]]))+1)
-            names(dimnames(out)) <- c(names(dimnames(dat[[1]][[i]])), newname)
+            dimn <- 
+                if (!is.null(name_datadim[[i]])) {
+                    name_datadim[[i]]    
+                } else {
+                    names(dimnames(dat[[1]][[i]]))
+                }
+            if (is.null(dimn)) {
+                dimn <- character(length(dim(dat[[1]][[i]])))
+            }
+            names(dimnames(out)) <- c(dimn, name_listdim)
             return( out )
         })
         names(dat) <- names_at_level2
@@ -960,7 +984,7 @@ preAnova <- function(arraydat, factordef, bwdat,
             data.frame(bwdat[,factordef$between]), factor)
     }
     if (useparallel) {
-        params$ncpus <- ifelse(is.null(ncpus), detectCores()/2, ncpus)
+        params$ncpus <- ncpus
         if (par_method=="snow") {
             fns <- ls(envir=parent.env(environment()))
             fns <- fns[sapply(fns, function(x) is.function(get(x)))]
@@ -1236,10 +1260,24 @@ arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE,
                        nperm=999L, useparallel=FALSE, ncpus=NULL, 
                        par_method="snow", cl=NULL,
                        usetfce=TRUE, tfce_options=NULL, seed=NULL) {
+    # some checks
+    stopifnot(is.array(arraydat))
+    stopifnot(is.list(factordef))
+    if (!is.null(factordef$between) && is.null(bwdat)) {
+        stop("No between-participant data provided")
+    } 
     if (usetfce) {
+        if (is.null(tfce_options)) stop("Provide at least tfce_options$ChN")
         ChN <- tfce_options$ChN
         EH <- if (is.null(tfce_options$EH)) c(0.66, 2) else tfce_options$EH
     }
+    if (useparallel) {
+        stopifnot(require(parallel))
+        if (is.null(ncpus)) ncpus <- detectCores()
+    }
+    #
+    out <- list(call=match.call())
+    #
     #
     temp <- preAnova(arraydat, factordef, bwdat, 
                      useparallel, ncpus, par_method, usetfce)
@@ -1287,7 +1325,6 @@ arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE,
         if (!useparallel) {
             maxperm <- lapply(1:nperm, permfn)
         } else if (par_method=="snow") {
-            require(parallel)
             if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncpus, 
                                                     outfile="")
             clusterExport(cl, 
@@ -1298,7 +1335,6 @@ arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE,
             stopCluster(cl)
             rm(cl)
         } else if (par_method=="mc") {
-            require(parallel)
             maxperm <- mclapply(1:nperm, permfn, mc.cores=par_params$ncpus)
         } 
         maxperm <- matrix(unlist(maxperm), ncol=nperm)
@@ -1309,19 +1345,11 @@ arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE,
                 (nperm + 1)
         }
         sig <- revMergeDims(sig)
-        if (usetfce) {
-            return(list(effect_F_obs=Fvals_obs, effect_tfce_obs=tfce_obs, 
-                        perm_pvalues=sig))
-        } else {
-            return(list(effect_F_obs=Fvals_obs, perm_pvalues=sig))
-        }
-    } else {
-        if (usetfce) {
-            return(list(effect_F_obs=Fvals_obs, effect_tfce_obs=tfce_obs))
-        } else {
-            return(list(effect_F_obs=Fvals_obs))
-        }
-    }
+    } 
+    out$effect_F_obs <- Fvals_obs
+    if (usetfce) out$effect_tfce_obs <- tfce_obs
+    if (nperm > 1L) out$perm_pvalues <- sig
+    return( out )
 }
 
 #' Extract interaction
@@ -1706,10 +1734,10 @@ chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3,
                        m=4, N=7, lambda=1e-10, 
                        type=c("voltage", "laplacian", "scd"),
                        alarm_tolerance=1e-2) {
-    message("\n****\nStart interpolation...\n")
     if (!require(orthopolynom)) stop("Package orthopolynom not found.")
     if (!require(corpcor)) stop("Package corpcor not found.")
     if (!require(Kmisc)) stop("Package Kmisc not found.")
+    message("\n****\nStart interpolation...\n")
     # Function to compute G matrices:
     # G = g(cos(ch_pos)) / interpG = g(cos(ch_pos, interp_pos))
     compGmat <- function(cos_angles, m, N) {
@@ -2279,7 +2307,7 @@ baselineCorr <- function(dat, basedim="chan", baseind=NULL) {
     }
     attributes(out) <- origattr
     attr(out, "processing_steps")$baseline_correction <- list(
-        call=sys.call(), base_dimensions=basedim, base_indices=baseind)
+        call=match.call(), base_dimensions=basedim, base_indices=baseind)
     message("Done")
     return(out)
 }
@@ -2674,7 +2702,10 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
                       useparallel=TRUE, ncpus=NULL, par_method=c("snow", "mc"),
                       cl=NULL, groups=NULL, use_subset=NULL, seed=NULL,
                       save.random2matlab=FALSE) {
-    if (useparallel && is.null(ncpus)) ncpus <- detectCores()
+    if (useparallel) {
+        stopifnot(require(parallel))
+        if (is.null(ncpus)) ncpus <- detectCores()
+    }
     type <- match.arg(type)
     par_method <- match.arg(par_method)
     tfce_dat <- aperm(dat, 
@@ -2743,7 +2774,6 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
     if (!useparallel) {
         maxtfce.perm <- lapply(1:nperm, tempfn)
     } else if (par_method=="snow") {
-        require(parallel)
         if (is.null(cl)) cl <- makePSOCKcluster(ncpus)
         clusterExport(cl, 
                       varlist=c("tfce.fnc", "arrayTtest", "asub", "randval",
@@ -2755,7 +2785,6 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
         stopCluster(cl)
         rm(cl)
     } else if (par_method=="multicore") {
-        require(parallel)
         maxtfce.perm <- mclapply(1:nperm, tempfn, mc.cores=ncpus)
     } 
     chantime.n <- prod(sapply(t_obs.dimn[1:2], length))
@@ -2767,7 +2796,7 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
     sig <- array(
         (rowSums(maxtfce.perm>=0)+1)/(nperm+1),
         dim(tfce_obs), dimnames=t_obs.dimn)
-    return(list(effect_t_obs=t_obs, effect_tfce_obs=tfce_obs, 
+    return(list(call=match.call(), effect_t_obs=t_obs, effect_tfce_obs=tfce_obs, 
                 perm_pvalues=sig))
 }
 
@@ -2808,6 +2837,8 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
 #' @param iaterms_last logival variable whether all interaction terms should 
 #' follow all main effect terms (default: TRUE)
 #' @param seed an integer value which specifies a seed (default: NULL)
+#' @param pcrit the significance level for duration and global count p-value 
+#' correction (default: 0.05)
 #' @details The function assumes that the input array contains at least two 
 #' named dimensions: chan (corresponding to the channels [electrodes]) and time 
 #' (corresponding to time points). All dimensions which are not listed as 
@@ -2824,15 +2855,25 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
                    type=c("tanova", "dissimilarity", "gfp"), 
                    verbose=TRUE, nperm=999L, useparallel=FALSE, ncpus=NULL,
                    par_method=c("snow", "mc"), cl=NULL,
-                   iaterms_last=TRUE, seed=NULL) {
+                   iaterms_last=TRUE, seed=NULL, pcrit=0.05) {
+    # some checks
+    stopifnot(is.array(arraydat))
+    stopifnot(is.list(factordef))
+    if (!is.null(factordef$between) && is.null(bwdat)) {
+        stop("No between-participant data provided")
+    }
+    if (useparallel) {
+        stopifnot(require(parallel))
+        if (is.null(ncpus)) ncpus <- detectCores()
+    }
+    #
+    out <- list(call = match.call())
+    #
     effSize <- function(means) {
-        tempfn <- 
-            if (type=="gfp") {
-                function(x) drop( avgDims(abs(x), "modelterm") )
-            } else {
-                function(x) drop( avgDims(compGfp(x), "modelterm") )
-            }
-        out <- rearrangeList(lapply(means, tempfn), "modelterm")
+        datfn <- if (type=="gfp") abs else compGfp
+        out <- lapply(means, function(x) avgDims(datfn(x), "modelterm"))
+        out <- rearrangeList(out, "modelterm")
+        out <- drop(out)
         return( out )
     }
     # 
@@ -2870,7 +2911,7 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
                                 origdimnames[keepdims], 
                                 keep_term_order=!iaterms_last, residualmean=TRUE)
     es_obs <- effSize(term_means)
-    out <- list(effect=es_obs, residual_means=term_means)
+    out <- c(out, list(effect=es_obs, residual_means=term_means))
     names(out)[1] <- paste(names(out)[1], type, sep="_")
     if (verbose) {
         if (type=="gfp") {
@@ -2904,7 +2945,6 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
         if (!useparallel) {
             es_perm <- lapply(1:nperm, permfn)
         } else if (par_method=="snow") {
-            require(parallel)
             if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncpus, outfile="")
             clusterExport(cl, 
                           varlist=par_params$varlist2snow,
@@ -2913,7 +2953,6 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
             stopCluster(cl)
             rm(cl)
         } else if (par_method=="mc") {
-            require(parallel)
             es_perm <- mclapply(1:nperm, permfn, mc.cores=par_params$ncpus)
         } 
         # permuted F values
@@ -2928,7 +2967,7 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
         pvalues_perm <- (nperm + 2 - pvalues_perm) / (nperm + 1)
         pvalues <- avgDims(subsetArray(pvalues_perm, list(perm = 1), drop=FALSE),
                            "perm")
-        pvalues_perm <- (pvalues_perm < 0.05)
+        pvalues_perm <- (pvalues_perm < pcrit)
         # consecutive sign. criterion
         pvalues_consec <- fnDims(pvalues, "time", I)
         pvalues_maxconsec <- mergeDims(pvalues_perm, 
@@ -2936,10 +2975,10 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
                                                c("time", "perm")))
         pvalues_maxconsec <- apply(pvalues_maxconsec, 1, function(x) {
             res <- fnDims(x, "time", matrixRle, vectorized=TRUE)
-            res <- quantile(res$lengths[res$values>0], 0.95)
+            res <- quantile(res$lengths[res$values>0], 1 - pcrit)
             return( res )
         })
-        temp <- matrixRle(array2mat(pvalues, "time") < 0.05)
+        temp <- matrixRle(array2mat(pvalues, "time") < pcrit)
         ind <- ( (temp$lengths < pvalues_maxconsec[temp$matrixcolumn]) &
                      (temp$values == 1) )
         temp$values[ind] <- 0
@@ -3016,6 +3055,20 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
                       nperm=1, useparallel=FALSE, ncpus=NULL,
                       par_method=c("snow", "mc"), cl=NULL,
                       iaterms_last=TRUE, seed=NULL) {
+    # some checks
+    stopifnot(is.array(arraydat) | missing(arraydat))
+    stopifnot(is.list(factordef) | missing(factordef))
+    stopifnot(length(peakdef)!=2 | missing(peakdef))
+    if (!is.null(factordef$between) && is.null(bwdat)) {
+        stop("No between-participant data provided")
+    }
+    if (useparallel) {
+        stopifnot(require(parallel))
+        if (is.null(ncpus)) ncpus <- detectCores()
+    }
+    #
+    out <- list(call = match.call())
+    #
     sumSq <- function(arraydat, f_dat, aov_form, labels=FALSE) {
         out <- summary(aov(as.formula(aov_form), data=f_dat))
         if (!labels) {
@@ -3104,7 +3157,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
     # Compute ANOVA on peak amplitudes
     Fvals_obs <- arrayAnovaSub(arraydat_peaks, 
                                factordef, origdimnames_peaks, dat, verbose)
-    out <- list(F_obs=Fvals_obs)
+    out <- c(out, list(F_obs=Fvals_obs))
     # if verbose, save factor means
     if (verbose) {
         factor_means <- data.frame(
@@ -3149,14 +3202,13 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
         if (!useparallel) {
             lateff_perm <- lapply(1:nperm, permfn)
         } else if (par_method=="snow") {
-            require(parallel)
             if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncpus, outfile="")
             clusterExport(cl, 
                           varlist=par_params$varlist2snow,
                           envir=environment())
             lateff_perm <- parLapply(cl, 1:nperm, permfn)
-            stopCluster(cl)
-            rm(cl)
+#             stopCluster(cl)
+#             rm(cl)
         } else if (par_method=="mc") {
             lateff_perm <- mclapply(1:nperm, permfn, mc.cores=par_params$ncpus)
         } 
@@ -3256,8 +3308,8 @@ plotERParray <- function(dat, xdim, sepdim, title="", subtitle.col = "black",
 #' \link{http://www.remotesensing.org/geotiff/proj_list/} for common projections
 #' @param projref projection reference (pole [=default] or equator)
 #' @param gfp a numeric vector of the GFP values in the whole time window
-#' @import sgeostat
-#' @import gplots
+#' @importFrom sgeostat in.polygon
+#' @importFrom gplots colorpanel redgreen greenred bluered redblue
 #' @export
 plot2dview <- function(dat, ch_pos, r=1, timepoint=NULL, ampl_range=c(-5, 5), 
                        resol=100L, resolcol=1000L,
@@ -3626,7 +3678,8 @@ reprPlot <- function(p, e, title="Reproducibility",
 #' Image plot of p-values
 #' 
 #' \code{imagePvalues} creates an image plot from a matrix or array of p-values
-#' @param numeric matrix or array of p-values with named dimensions
+#' @param pvalues numeric matrix or array of p-values with named dimensions (at
+#' least chan and time)
 #' @param pcrit numeric vector of significancy limits 
 #' (default: 0.001, 0.01, 0.05)
 #' @param grid character vector or formula defining the layout of panels
@@ -3640,8 +3693,8 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
     timebreaks <- as.numeric( as.character( dimnames(pvalues)$time ) )
     timebreaks <- range( timebreaks %/% 100)
     timebreaks <- seq(timebreaks[1], timebreaks[2]) * 100
-    pvalues_df <- as.data.frame.table(pvalues, responseName="p")
-    pvalues_df$time <- as.numeric(as.character(pvalues_df$time))
+    pvalues_df <- array2df(pvalues, response_name="p", 
+                           dim_types=list(time="numeric"))
     pvalues_df$pcrit <- findInterval(pvalues_df$p, pcrit)
     pp <- ggplot(pvalues_df, aes(x = time, y = chan)) + 
         geom_tile(aes(fill = pcrit), size = 0) + 
@@ -3652,6 +3705,38 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
                             breaks = 0:2,
                             labels = paste("< ", pcrit, sep=""),
                             limits = c(0, length(pcrit))) + 
+        scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
+                         name = "channels") + 
+        scale_x_continuous(breaks = timebreaks, expand=c(0.05, 0.1))
+    if (!is.null(grid)) {
+        pp <- pp + facet_grid( as.formula(grid) )
+    } else if (!is.null(wrap)) {
+        pp <- pp + facet_wrap( as.formula(wrap) )
+    }
+    return(pp)
+}
+
+
+#' Image plot of channel values
+#' 
+#' \code{imageValues} creates an image plot from a matrix or array of channel x 
+#' time values
+#' @param dat numeric matrix or array of values with named dimensions (at least
+#' chan and time)
+#' @param grid character vector or formula defining the layout of panels
+#' @param wrap character vector or formula defining the dimension which 
+#' separates panels (only considered if grid is NULL)
+#' @export
+#' @return A ggplot object
+imageValues <- function(dat, grid = NULL, wrap = NULL) {
+    chans <- dimnames(pvalues)$chan
+    timebreaks <- as.numeric( as.character( dimnames(dat)$time ) )
+    timebreaks <- range( timebreaks %/% 100)
+    timebreaks <- seq(timebreaks[1], timebreaks[2]) * 100
+    dat_df <- array2df(pvalues, response_name="effect", 
+                           dim_types=list(time="numeric"))
+    pp <- ggplot(dat_df, aes(x = time, y = chan)) + 
+        geom_tile(aes(fill = effect), size = 0) + 
         scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
                          name = "channels") + 
         scale_x_continuous(breaks = timebreaks, expand=c(0.05, 0.1))
@@ -3723,7 +3808,50 @@ tfce.plot <- function(arraydat, breaks=c(0, 0.001, 0.01, 0.05),
     }
 }
 
-# plot tanova results
+###
+
+plot.tanova <- function(results, plot_title="", only_p=FALSE) {
+    reshapefn <- function(slot, headername) {
+        x <- results[[slot]]
+        x <- array2df(x, response_name=headername, 
+                      dim_types=list(time="numeric"))
+        return(x)
+    }
+    #
+    pcrit <- as.list(results$call)$pcrit
+    if (is.null(pcrit)) pcrit <- formals(tanova)$pcrit
+    #
+    dat <- array2df(results$effect, "effect", dim_types=list(time="numeric"))
+    dat$pvalue <- -log(c(results$perm_pvalues))
+    dat$pvalue_consec <- -log(c(results$perm_pvalues_consec))
+    dat$pcrit <- factor(dat$pvalue_consec > -log(pcrit))
+    legendtitle <- paste("pvalue <", substitute(pcrit), sep=" ")
+    #
+    if (only_p) {
+        qp <- ggplot(dat[order(dat$time),], 
+                     aes(x=time, y=pvalue, col=pcrit, group=NA)) + 
+            geom_hline(yintercept=-log(pcrit), lty=3) + 
+            ylab("-log(P-value)")
+    } else {
+        qp <- ggplot(dat[order(dat$time),], 
+                     aes(x=time, y=effect, col=pcrit, group=NA)) + 
+            ylab("Effect")
+    }
+    qp <- qp + geom_line() + facet_wrap(~modelterm) +
+        ggtitle(plot_title) + 
+        scale_colour_manual(name=legendtitle,
+                            values=c("FALSE"="grey60","TRUE"="red")) + 
+        theme(panel.background = element_rect(fill = "white"),
+              panel.grid.major = element_line(color="grey95"),
+              panel.grid.minor = element_line(color="grey97"),
+              panel.border = element_rect(color="grey70", fill=NA))
+    print(qp)
+}
+
+
+
+
+# plot neurodys tanova results
 fastplot_tanova <- function(results, plot_title="", pcrit=0.05, only_p=FALSE) {
     reshapefn <- function(slot, headername) {
         x <- lapply(results, "[[", slot)

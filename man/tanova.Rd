@@ -6,7 +6,7 @@
 tanova(arraydat, factordef, bwdat = NULL, type = c("tanova",
   "dissimilarity", "gfp"), verbose = TRUE, nperm = 999L,
   useparallel = FALSE, ncpus = NULL, par_method = c("snow", "mc"),
-  cl = NULL, iaterms_last = TRUE, seed = NULL)
+  cl = NULL, iaterms_last = TRUE, seed = NULL, pcrit = 0.05)
 }
 \arguments{
 \item{arraydat}{a numeric array with named dimnames containing the EEG (or
@@ -49,6 +49,9 @@ if NULL (default), it is set to the maximum number of cores available}
 follow all main effect terms (default: TRUE)}
 
 \item{seed}{an integer value which specifies a seed (default: NULL)}
+
+\item{pcrit}{the significance level for duration and global count p-value
+correction (default: 0.05)}
 }
 \value{
 A list object with effect statistics, uncorrected p-values, and
