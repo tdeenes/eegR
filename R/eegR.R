@@ -1481,7 +1481,8 @@ extractInteraction <- function(dat, sep=".", sep_fixed=TRUE) {
 #' @return A data.frame with converted coordinates
 NULL
 
-#' @rdname coordinates 
+#' @rdname coordinates
+#' @export
 # Transform cartesian to spherical coordinates
 sph2cart <- function(ch_pos, r=1, deg=TRUE) {
     ch_pos <- as.data.frame(ch_pos)
@@ -1502,6 +1503,7 @@ sph2cart <- function(ch_pos, r=1, deg=TRUE) {
 }
 
 #' @rdname coordinates 
+#' @export
 # Transform cartesian to spherical coordinates
 cart2sph <- function(ch_pos, deg=TRUE) {
     ch_pos <- as.data.frame(ch_pos)
@@ -1522,6 +1524,7 @@ cart2sph <- function(ch_pos, deg=TRUE) {
 }
 
 #' @rdname coordinates
+#' @export
 # Transform spherical to geographical coordinates
 sph2geo <- function(ch_pos, r=1, deg=TRUE, long360=TRUE, 
                     orient=c("northpole", "equatorial")) {
@@ -1550,6 +1553,7 @@ sph2geo <- function(ch_pos, r=1, deg=TRUE, long360=TRUE,
 }
 
 #' @rdname coordinates
+#' @export
 # Transform geographical to spherical coordinates
 geo2sph <- function(ch_pos, r=1, deg=TRUE) {
     ch_pos <- as.data.frame(ch_pos)
@@ -1575,12 +1579,14 @@ geo2sph <- function(ch_pos, r=1, deg=TRUE) {
 }
 
 #' @rdname coordinates
+#' @export
 # Transform geographical to cartesian coordinates
 geo2cart <- function(ch_pos, r=1, deg=TRUE) {
     sph2cart( geo2sph(ch_pos, r, deg) )
 }
 
 #' @rdname coordinates
+#' @export
 # Transform cartesian to geographical coordinates
 cart2geo <- function(ch_pos, deg=TRUE) {
     sph2geo( cart2sph(ch_pos, deg) )
@@ -1591,16 +1597,18 @@ cart2geo <- function(ch_pos, deg=TRUE) {
 #' 
 #' \code{chanNb} finds neighbouring channels
 #' @param ch_pos electrode positions
+#' @param check_alpha a two-element numeric vector defining the range which is 
+#' supposed to contain the optimal value of alpha
 #' @param alpha a numeric value which influences the allowed distance between
-#' neighbouring electrodes
+#' neighbouring electrodes; if other than NULL (the default), check_alpha is 
+#' ignored
 #' @param ... parameters to \code{\link{sph2cart}}
 #' @export
 #' @import rgl
 #' @import alphashape3d
-#' @import shiny
 #' @import shinyRGL
 #' @return An electrode neighbourhood matrix
-chanNb <- function(ch_pos, alpha=NULL, ...) {
+chanNb <- function(ch_pos, check_alpha=c(0.1, 10), alpha=NULL, ...) {
     options(rgl.useNULL=TRUE)
     require(rgl)
     require(alphashape3d)
@@ -1610,7 +1618,8 @@ chanNb <- function(ch_pos, alpha=NULL, ...) {
         } else {
             stop("Channel coordinates should be spherical (polar) or cartesian coordinates!")
         }
-    }
+    } 
+    ch_pos <- ch_pos[, c("x", "y", "z")]
     channames <- paste(1:nrow(ch_pos), rownames(ch_pos), sep=". ")
     if (is.null(alpha)) {
         require(shiny)
@@ -1623,12 +1632,14 @@ chanNb <- function(ch_pos, alpha=NULL, ...) {
                 sidebarPanel(
                     sliderInput("alpha",
                                 "Alpha value: ",
-                                min = 0.1, max = 2, value = 1, step = 0.1),
+                                min = min(check_alpha), 
+                                max = max(check_alpha), 
+                                value = 1, step = 0.1),
                     actionButton("submit", "Use selected alpha")
                 ),
                 # Show the generated 3d scatterplot
                 mainPanel(
-                    webGLOutput("chanPlot")
+                    webGLOutput("chanPlot", height="700px")
                 )
             ),
             server = function(input, output) {
@@ -1649,7 +1660,8 @@ chanNb <- function(ch_pos, alpha=NULL, ...) {
             }
         ))
     }
-    a <- suppressWarnings(ashape3d(as.matrix(ch_pos), alpha, pert=TRUE))$edge
+    a <- suppressWarnings(ashape3d(as.matrix(ch_pos), 
+                                   alpha, pert=TRUE))$edge
     a <- a[,c(1, 2, ncol(a))]
     out <- matrix(0, nrow(ch_pos), nrow(ch_pos))
     rownames(out) <- rownames(ch_pos)
@@ -3236,8 +3248,8 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
                           varlist=par_params$varlist2snow,
                           envir=environment())
             lateff_perm <- parLapply(cl, 1:nperm, permfn)
-#             stopCluster(cl)
-#             rm(cl)
+            #             stopCluster(cl)
+            #             rm(cl)
         } else if (par_method=="mc") {
             lateff_perm <- mclapply(1:nperm, permfn, mc.cores=par_params$ncpus)
         } 
@@ -3724,6 +3736,7 @@ reprPlot <- function(p, e, title="Reproducibility",
 #' @return A ggplot object
 imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
                          grid = NULL, wrap = NULL) {
+    require(ggplot2)
     chans <- dimnames(pvalues)$chan
     timebreaks <- as.numeric( as.character( dimnames(pvalues)$time ) )
     timebreaks <- range( timebreaks %/% 100)
@@ -3731,6 +3744,12 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
     pvalues_df <- array2df(pvalues, response_name="p", 
                            dim_types=list(time="numeric"))
     pvalues_df$pcrit <- findInterval(pvalues_df$p, pcrit)
+    for (i in colnames(pvalues_df)) {
+        if (is.character(pvalues_df[[i]])) {
+            pvalues_df[[i]] <- factor(pvalues_df[[i]], 
+                                      levels=dimnames(pvalues)[[i]])
+        }
+    }
     pp <- ggplot(pvalues_df, aes(x = time, y = chan)) + 
         geom_tile(aes(fill = pcrit), size = 0) + 
         scale_fill_gradient(guide="legend", 
@@ -3764,12 +3783,19 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
 #' @export
 #' @return A ggplot object
 imageValues <- function(dat, grid = NULL, wrap = NULL) {
-    chans <- dimnames(pvalues)$chan
+    require(ggplot2)
+    chans <- dimnames(dat)$chan
     timebreaks <- as.numeric( as.character( dimnames(dat)$time ) )
     timebreaks <- range( timebreaks %/% 100)
     timebreaks <- seq(timebreaks[1], timebreaks[2]) * 100
-    dat_df <- array2df(pvalues, response_name="effect", 
-                           dim_types=list(time="numeric"))
+    dat_df <- array2df(dat, response_name="effect", 
+                       dim_types=list(time="numeric"))
+    for (i in colnames(dat_df)) {
+        if (is.character(dat_df[[i]])) {
+            dat_df[[i]] <- factor(dat_df[[i]], 
+                                  levels=dimnames(dat)[[i]])
+        }
+    }
     pp <- ggplot(dat_df, aes(x = time, y = chan)) + 
         geom_tile(aes(fill = effect), size = 0) + 
         scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
@@ -4150,7 +4176,7 @@ prepare2plot <- function(dat, datid,
     } else {
         names.mat <- sapply(1:ncol(facs), 
                             function(cc) sapply(1:nrow(facs), function(rr) 
-            paste(colnames(facs)[cc], facs[rr, cc], sep="-")))
+                                paste(colnames(facs)[cc], facs[rr, cc], sep="-")))
         if (nrow(facs)>1) {
             names(out) <- apply(names.mat, 1, paste, collapse="_")
         } else if (ncol(facs)>1) {
