@@ -5,7 +5,8 @@
 \usage{
 plotERParray(dat, xdim = "time", sepdim = "chan", title = "",
   subtitle.col = "black", gfp_plot = TRUE, gfp_col = "black",
-  gfp_lwd = 1.3, grid_labels = c("time", "ampl"), grid_dim = NULL, ...)
+  gfp_lwd = 1.3, minus_up = NULL, grid_labels = c("time", "ampl"),
+  grid_dim = NULL, ...)
 }
 \arguments{
 \item{dat}{a numeric array with named dimensions}
