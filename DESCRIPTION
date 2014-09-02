@@ -8,5 +8,6 @@ Maintainer: Denes Toth <toth.denes@ttk.mta.hu>
 Description: The eegR package has been developed to process electroencephalography (EEG) signals. Beyond common EEG signal processing functionalities, eegR provides advanced tools to analyze single-trial and averaged event related potentials (ERPs).
 License: GPL-3
 Imports: alphashape3d, abind, caTools, corpcor, ggplot2, gplots, matrixStats, orthopolynom, parallel, proj4, permute, plotrix, RColorBrewer, Rcpp, sgeostat, shinyRGL, zoo
+Suggests: knitr
 LinkingTo: Rcpp
 VignetteBuilder: knitr
