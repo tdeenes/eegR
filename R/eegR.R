@@ -3282,6 +3282,10 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
 #' plotted
 #' @param gfp_col the colour of the GFP curves (if plotted)
 #' @param gfp_lwd the thickness of the GFP curves (if plotted)
+#' @param minus_up logical value; if set to TRUE, minus values are plotted 
+#' upwards. If set to FALSE, minus values are plotted downwards. If NULL 
+#' (default), it is set to TRUE or FALSE depending on the gfp_plot parameter. 
+#' NULL
 #' @param grid_labels character vector; the name of the x and y axes
 #' @param grid_dim integer vector giving the number of rows and columns
 #' in which the plots are arranged; if set to NULL (default), the arrangement 
@@ -3305,7 +3309,10 @@ plotERParray <- function(dat, xdim="time", sepdim="chan", title="", subtitle.col
     if (is.null(list(...)$ylim)) {
         yr <- range(dat)
         yrange <- mean(yr) + c(-1, 1)*(yr[2]-mean(yr))*1.02
-        if (!gfp_plot && (is.null(minus_up) || minus_up)) yrange <- -yrange
+        if (is.null(minus_up)) {
+            minus_up <- if (!gfp_plot) TRUE else FALSE
+        }
+        if (minus_up) yrange <- -yrange
     } else {
         yrange <- list(...)$ylim
     } 
