@@ -3,18 +3,18 @@
 \alias{plotERParray}
 \title{Plot ERP curves}
 \usage{
-plotERParray(dat, xdim, sepdim, title = "", subtitle.col = "black",
-  gfp_plot = TRUE, gfp_col = "black", gfp_lwd = 1.3,
-  grid_labels = c("time", "ampl"), grid_dim = NULL, ...)
+plotERParray(dat, xdim = "time", sepdim = "chan", title = "",
+  subtitle.col = "black", gfp_plot = TRUE, gfp_col = "black",
+  gfp_lwd = 1.3, grid_labels = c("time", "ampl"), grid_dim = NULL, ...)
 }
 \arguments{
 \item{dat}{a numeric array with named dimensions}
 
 \item{xdim}{character value; the name of the dimension of dat which defines
-the x axis}
+the x axis (default: "time")}
 
 \item{sepdim}{character value; the name of the dimension of dat which
-separates the lines}
+separates the lines (default: "chan")}
 
 \item{title}{character value; the title of the plot}
 
