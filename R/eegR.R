@@ -3277,7 +3277,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
 #' @param ... additional parameters to be passed to \code{matlines}
 #' @export
 plotERParray <- function(dat, xdim="time", sepdim="chan", title="", subtitle.col = "black",
-                         gfp_plot=TRUE, gfp_col="black", gfp_lwd=1.3,
+                         gfp_plot=TRUE, gfp_col="black", gfp_lwd=1.3, minus_up = NULL,
                          grid_labels=c("time", "ampl"), grid_dim=NULL, ...) {
     emptyplot <- function() 
         plot(0, 0, xlim=c(-1,1), type="n", axes=FALSE, frame.plot=FALSE, xlab="", ylab="")
@@ -3289,8 +3289,14 @@ plotERParray <- function(dat, xdim="time", sepdim="chan", title="", subtitle.col
     subtitle.col <- rep(subtitle.col, length_out=dim(dat)[3])
     if (gfp_plot) gfpdat <- compGfp(dat)
     x <- as.numeric(as.character(dimnames(dat)[[1]]))
-    xrange <- range(x)
-    yrange <- range(dat)*1.01
+    xrange <- if (is.null(list(...)$xlim)) range(x) else list(...)$xlim 
+    if (is.null(list(...)$ylim)) {
+        yr <- range(dat)
+        yrange <- mean(yr) + c(-1, 1)*(yr[2]-mean(yr))*1.02
+        if (is.null(minus_up) || minus_up) yrange <- -yrange
+    } else {
+        yrange <- list(...)$ylim
+    } 
     if (is.null(grid_dim)) grid_dim = rep(ceiling(sqrt(dim(dat)[3])), 2)
     layoutmat <- cbind(
         c(0, rep(2, grid_dim[1]), 0, 0),
