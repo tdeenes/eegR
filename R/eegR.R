@@ -1,4 +1,8 @@
 
+#
+# <<< initialize >>> --------
+#
+
 #' @useDynLib eegR 
 #' @import matrixStats permute
 #' @importFrom Rcpp evalCpp
@@ -10,6 +14,31 @@ NULL
                                  " loaded ***"), 
                           appendLF=TRUE)
 }
+
+#
+# <<< document example data >>> --------
+#
+
+#' Averaged ERPs in a visual word recognition experiment
+#' 
+#' A dataset containing averaged event-related potentials (ERPs) from 20 
+#' participants. The data were collected in a same-different matching task, and
+#' simplified for present purposes. Only brain responses to the target stimuli 
+#' from 10 dyslexic and 10 control participants are included. There were 3 types
+#' of stimulus classes (A, B, and C) and 3 types of stimulus pairs (identical,
+#' substituted, and transposed). The data were downsampled to 500 Hz, and cover 
+#' the following time window: -50 ms to 500 ms. 
+#' @docType data
+#' @keywords datasets
+#' @name erps
+#' @usage data(erps)
+#' @format An array with 5 dimensions: stimulus class (stimclass, 3 level) x 
+#' pair type (pairtype, 3 level) x channels (chan, 33 levels) x time (time, 276 
+#' levels) x participant (id, 20 levels). Additionally, the array has an 
+#' attribute "id" which is a data.frame of the group memberships (dyslexic or 
+#' control), and an attribute "chan" which is a data.frame of the electrode 
+#' positions in spherical coordinates.
+NULL
 
 #
 # <<< simple utility functions >>> --------
@@ -3232,9 +3261,9 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
 #' \code{plotERParray} is a generalization of \code{matplot} onto array inputs.
 #' @param dat a numeric array with named dimensions
 #' @param xdim character value; the name of the dimension of dat which defines 
-#' the x axis
+#' the x axis (default: "time")
 #' @param sepdim character value; the name of the dimension of dat which 
-#' separates the lines
+#' separates the lines (default: "chan")
 #' @param title character value; the title of the plot
 #' @param subtitle.col the colour of the subtitles
 #' @param gfp_plot logical value; if TRUE (default), the GFP curves are also 
@@ -3247,7 +3276,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
 #' of the plot is set up automatically
 #' @param ... additional parameters to be passed to \code{matlines}
 #' @export
-plotERParray <- function(dat, xdim, sepdim, title="", subtitle.col = "black",
+plotERParray <- function(dat, xdim="time", sepdim="chan", title="", subtitle.col = "black",
                          gfp_plot=TRUE, gfp_col="black", gfp_lwd=1.3,
                          grid_labels=c("time", "ampl"), grid_dim=NULL, ...) {
     emptyplot <- function() 
