@@ -3,13 +3,17 @@
 \alias{chanNb}
 \title{Find channel neighbours}
 \usage{
-chanNb(ch_pos, alpha = NULL, ...)
+chanNb(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...)
 }
 \arguments{
 \item{ch_pos}{electrode positions}
 
+\item{check_alpha}{a two-element numeric vector defining the range which is
+supposed to contain the optimal value of alpha}
+
 \item{alpha}{a numeric value which influences the allowed distance between
-neighbouring electrodes}
+neighbouring electrodes; if other than NULL (the default), check_alpha is
+ignored}
 
 \item{...}{parameters to \code{\link{sph2cart}}}
 }
