@@ -28,6 +28,11 @@ plotted}
 
 \item{gfp_lwd}{the thickness of the GFP curves (if plotted)}
 
+\item{minus_up}{logical value; if set to TRUE, minus values are plotted
+upwards. If set to FALSE, minus values are plotted downwards. If NULL
+(default), it is set to TRUE or FALSE depending on the gfp_plot parameter.
+NULL}
+
 \item{grid_labels}{character vector; the name of the x and y axes}
 
 \item{grid_dim}{integer vector giving the number of rows and columns
