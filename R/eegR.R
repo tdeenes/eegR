@@ -3305,7 +3305,7 @@ plotERParray <- function(dat, xdim="time", sepdim="chan", title="", subtitle.col
     if (is.null(list(...)$ylim)) {
         yr <- range(dat)
         yrange <- mean(yr) + c(-1, 1)*(yr[2]-mean(yr))*1.02
-        if (is.null(minus_up) || minus_up) yrange <- -yrange
+        if (!gfp_plot && (is.null(minus_up) || minus_up)) yrange <- -yrange
     } else {
         yrange <- list(...)$ylim
     } 
