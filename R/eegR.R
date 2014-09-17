@@ -258,7 +258,7 @@ listS <- function(..., indices=NULL) {
             )
         }
     }
-    names(list_def)[indices] <- unlist(newnam)
+    names(list_def)[indices] <- unlist(newnam, use.names = FALSE)
     return( list_def )
 }
 
@@ -445,7 +445,7 @@ array2df <- function(dat, response_name="values", dim_types="character",
             dim_types <- setNames(as.list(rep(dim_types, ncol(out)-1)),
                                   setdiff(colnames(out), response_name))
         }
-        stopifnot(all(unlist(dim_types) %in% 
+        stopifnot(all(unlist(dim_types, use.names = FALSE) %in% 
                           c("logical", "character", "integer", 
                             "numeric", "double", "factor")))
         for (i in names(dim_types)) {
@@ -509,7 +509,7 @@ revMergeDims <- function(dat) {
     attribs <- attr(dat, "orig_dimattributes")
     orig_dim <- attribs$dim
     orig_dimnames <- attribs$dimnames
-    merged_dims <- unlist(attribs$merged_dims)
+    merged_dims <- unlist(attribs$merged_dims, use.names = FALSE)
     if (is.character(merged_dims)) {
         merged_dims <- match(merged_dims, names(orig_dimnames))
     }
@@ -591,8 +591,8 @@ splitArray <- function(dat, whichdim) {
 #' list, if the input is a two-level list
 rearrangeList <- function(dat, name_listdim, name_datadim=NULL) {
     stopifnot(!missing(name_listdim))
-    if (identical(unlist(dat, recursive=FALSE), 
-                  unlist(dat, recursive=TRUE))) {
+    if (identical(unlist(dat, recursive=FALSE, use.names = FALSE), 
+                  unlist(dat, recursive=TRUE, use.names = FALSE))) {
         dat <- lapply(dat, as.array)
         newdims <- c(dim(dat[[1]]), length(dat))
         newdimns <- c(dimnames(dat[[1]]), listS(.name_listdim=names(dat)))
@@ -722,7 +722,7 @@ fnDims <- function(dat, target_dim, target_fn, arg_list=NULL,
             } else {
                 tempdim <- c(dim(out[[1]]), length(out))
             }
-            out <- drop(array(unlist(out), tempdim))
+            out <- drop(array(unlist(out, use.names = FALSE), tempdim))
         }
     }
     if (length(out)==1 | is.list(out)) {
@@ -1031,7 +1031,8 @@ preAnova <- function(arraydat, factordef, bwdat,
     modeldims <- c(factordef$w_id, factordef$within)
     keepdims <- setdiff(names(origdimnames), modeldims)
     arraydat <- mergeDims(arraydat, list(modeldims, keepdims))
-    dat <- data.frame(matrix(unlist(strsplit(rownames(arraydat), "[.]")), 
+    dat <- data.frame(matrix(unlist(strsplit(rownames(arraydat), "[.]"), 
+                                    use.names = FALSE), 
                              nrow=nrow(arraydat), byrow=TRUE))
     colnames(dat) <- modeldims
     dat[,factordef$between] <- bwdat[
@@ -1058,7 +1059,7 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
             as.character(quote(a_dat)), "~", 
             paste(as.character(f_def$between), collapse = "*")))
         results <- summary(aov(aov_formula, data=f_dat))
-        results <- array(unlist(results), 
+        results <- array(unlist(results, use.names = FALSE), 
                          c(dim(results[[1]]), length(results)),
                          dimnames=list(
                              modelterm=gsub(" ", "", rownames(results[[1]])),
@@ -1366,7 +1367,7 @@ arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE,
         } else if (par_method=="mc") {
             maxperm <- mclapply(1:nperm, permfn, mc.cores=par_params$ncpus)
         } 
-        maxperm <- matrix(unlist(maxperm), ncol=nperm)
+        maxperm <- matrix(unlist(maxperm, use.names = FALSE), ncol=nperm)
         sig <- if (usetfce) tfce_obs else Fvals_obs
         sig <- mergeDims(sig, mergedimnames)
         for (i in 1:nrow(sig)) {
@@ -1772,12 +1773,12 @@ cosAngle <- function(x, y = NULL, coords=TRUE, units_in_rows=TRUE,
 #' @import corpcor
 #' @import Kmisc
 chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3, 
-                       m=4, N=7, lambda=1e-10, 
+                       m=4L, N=7L, lambda=1e-10, 
                        type=c("voltage", "laplacian", "scd"),
                        alarm_tolerance=1e-2) {
-    if (!require(orthopolynom)) stop("Package orthopolynom not found.")
-    if (!require(corpcor)) stop("Package corpcor not found.")
-    if (!require(Kmisc)) stop("Package Kmisc not found.")
+    require(orthopolynom)
+    require(corpcor)
+    require(Kmisc)
     message("\n****\nStart interpolation...\n")
     # Function to compute G matrices:
     # G = g(cos(ch_pos)) / interpG = g(cos(ch_pos, interp_pos))
@@ -1913,7 +1914,7 @@ chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3,
     argnames <- argnames[argnames != ""]
     procsteps <- attr(dat, "processing_steps")
     procsteps$interpolation <- list(
-        options=mget(argnames), call=sys.call(),
+        options=mget(argnames), call=match.call(),
         nr_of_missings=sum(is.na(dat)))
     #
     # check input data and run interpolation
@@ -2160,7 +2161,7 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
         attr(eeg, "processing_steps")$import <- import_options
         attr(eeg, "processing_steps")$import$file_name <- file_name
         attr(eeg, "processing_steps")$import$file_name <- file_path
-        attr(eeg, "processing_steps")$import$call <- sys.call()
+        attr(eeg, "processing_steps")$import$call <- match.call()
     } else {
         eeg <- NULL
     }
@@ -2228,7 +2229,8 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
                 eeg[i, unlist(mapply(seq, 
                                      badchans[[i]][, "start"], 
                                      badchans[[i]][, "stop"], 
-                                     SIMPLIFY=FALSE))] <- NA
+                                     SIMPLIFY=FALSE), 
+                              use.names = FALSE)] <- NA
             }
         }
         attr(eeg, "processing_steps")$bad_channels <- badchans
@@ -2296,7 +2298,8 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
 #' @seealso \code{\link{strsplit}}
 splitMarker <- function(marker, header, type=NULL, splitchar="_") {
     out <- data.frame(
-        matrix(unlist(strsplit(as.character(marker), splitchar)), 
+        matrix(unlist(strsplit(as.character(marker), splitchar), 
+                      use.names = FALSE), 
                nrow=length(marker), ncol=length(header), byrow=TRUE))
     colnames(out) <- header
     if (!is.null(type)) {
@@ -2522,7 +2525,7 @@ artifactRejection <- function(dat, markers=NULL, artrej_options=artrejOptions(),
             attr(dat, "processing_steps") <- list()
         }
         attr(dat, "processing_steps")$artifact_rejection <- 
-            list(results=badtrials, options=artrej_options, call=sys.call())
+            list(results=badtrials, options=artrej_options, call=match.call())
         markers <- droplevels( markers[!badtrials, ] )
         return(list(bad_trials=badtrials, eeg=dat, markers=markers))
     } else {
@@ -2663,9 +2666,9 @@ avgTrials <- function(dat, markers, which_factors=NULL) {
     }
     attr(out, "processing_steps") <- procsteps
     attr(out, "processing_steps")$averaging <-
-        list(call=sys.call(),
+        list(call=match.call(),
              factors=as.data.frame(
-                 matrix(unlist(tempfac), 
+                 matrix(unlist(tempfac, use.names = FALSE), 
                         nrow=length(tempfac), ncol=length(tempfac[[1]]), byrow=TRUE,
                         dimnames=list(1:length(tempfac), colnames(markers)))))
     message("Done")
@@ -2766,7 +2769,9 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
         t_obs.temp <- array(t_obs, c(dim(t_obs)[1:2],
                                      length(t_obs)/prod(dim(t_obs)[1:2])))
         tfce_obs <- array(unlist(lapply(1:dim(t_obs.temp)[3], 
-                                        function(ii) tfce.fnc(t_obs.temp[,,ii], ChN, EH))),
+                                        function(ii) tfce.fnc(t_obs.temp[,,ii], 
+                                                              ChN, EH)), 
+                                 use.names = FALSE),
                           dim(t_obs), dimnames=t_obs.dimn)
         if (!is.null(seed)) set.seed(seed)  
         randval <- rep(c(T, F), sapply(groups, length))
@@ -2794,7 +2799,9 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
         t_obs.temp <- array(t_obs, c(dim(t_obs)[1:2],
                                      length(t_obs)/prod(dim(t_obs)[1:2])))
         tfce_obs <- array(unlist(lapply(1:dim(t_obs.temp)[3], 
-                                        function(ii) tfce.fnc(t_obs.temp[,,ii], ChN, EH))),
+                                        function(ii) tfce.fnc(t_obs.temp[,,ii], 
+                                                              ChN, EH)), 
+                                 use.names = FALSE),
                           dim(t_obs), dimnames=t_obs.dimn)
         if (!is.null(seed)) set.seed(seed) 
         randval <- ifelse(runif(nrow(tfce_dat)*nperm)<0.5,-1,1)
@@ -2830,7 +2837,7 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
     } 
     chantime.n <- prod(sapply(t_obs.dimn[1:2], length))
     maxtfce_obs <- colMaxs(matrix(abs(tfce_obs), nrow=chantime.n))
-    maxtfce.perm <- matrix(unlist(maxtfce.perm),ncol=nperm)
+    maxtfce.perm <- matrix(unlist(maxtfce.perm, use.names = FALSE), ncol=nperm)
     maxtfce.perm <- sweep(
         maxtfce.perm[rep(1:nrow(maxtfce.perm), each=chantime.n),],
         1, abs(c(tfce_obs)), "-")
@@ -3113,10 +3120,12 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
     sumSq <- function(arraydat, f_dat, aov_form, labels=FALSE) {
         out <- summary(aov(as.formula(aov_form), data=f_dat))
         if (!labels) {
-            out <- matrix(unlist(lapply(out, "[", "Mean Sq")),
+            out <- matrix(unlist(lapply(out, "[", "Mean Sq"), 
+                                 use.names = FALSE),
                           nrow(out[[1]]), ncol(arraydat))
         } else {
-            out <- matrix(unlist(lapply(out, "[", "Mean Sq")),
+            out <- matrix(unlist(lapply(out, "[", "Mean Sq"), 
+                                 use.names = FALSE),
                           nrow(out[[1]]), ncol(arraydat),
                           dimnames=list(term=gsub(" ","",rownames(out[[1]])), 
                                         peak=seq_along(out)))
@@ -3238,7 +3247,8 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
                         plots=Plots(strata=dat[,factordef$w_id], 
                                     type="free"))),
             mc.cores=par_params$ncpus)
-        randind <- matrix(unlist(randind), nperm, nrow(dat), T)
+        randind <- matrix(unlist(randind, use.names = FALSE), 
+                          nperm, nrow(dat), T)
         #
         if (!useparallel) {
             lateff_perm <- lapply(1:nperm, permfn)
@@ -3254,7 +3264,8 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
             lateff_perm <- mclapply(1:nperm, permfn, mc.cores=par_params$ncpus)
         } 
         lateff_perm <- cbind(c(lateff_obs), 
-                             matrix(unlist(lateff_perm),ncol=nperm))
+                             matrix(unlist(lateff_perm, use.names = FALSE),
+                                    ncol=nperm))
         lateff_perm <- sweep(lateff_perm[,-1, drop=F], 1, lateff_perm[,1], "-")
         pvalues <- array(
             (rowSums(lateff_perm>=0)+1)/(nperm+1),
@@ -3440,7 +3451,7 @@ plot2dview <- function(dat, ch_pos, r=1, timepoint=NULL, ampl_range=c(-5, 5),
     gridgeo <- project3dMap(gridpos[ind,], projection="laea", 
                             projref=projref, origo=origo, inverse=TRUE)
     gridcart <- geo2cart(gridgeo)
-    z <- matrix(NA, resol, resol)
+    z <- matrix(NA_real_, resol, resol)
     z[ind] <- chanInterp(dat, ch_pos, gridcart)
     par(mar=rep(0, 4))
     image(gridx, gridy, z, useRaster=TRUE, col=bluered(resolcol),
@@ -3453,9 +3464,8 @@ plot2dview <- function(dat, ch_pos, r=1, timepoint=NULL, ampl_range=c(-5, 5),
     gridpos <- expand.grid(x=gridx, y=gridy)
     ind <- !in.polygon(gridpos$x, gridpos$y, 
                        boundarypos$x*1, boundarypos$y*1)
-    z <- NA
-    z[ind] <- 1
-    dim(z) <- c(1000, 1000)
+    z <- matrix(NA_integer_, 1000, 1000)
+    z[ind] <- 1L
     image(gridx, gridy, z, useRaster=TRUE, col="white", add=TRUE)
     lines(boundarypos, col="white", lwd=1)
     #
@@ -3581,12 +3591,15 @@ complexplot2dview <- function(dat, ch_pos, timepoint,
         text(-1, 0, title_row[i], cex=1.3, pos=4)
     }    
     if (is.null(ampl_range)) {
-        ampl_range <- c(min(unlist(dat)), max(unlist(dat)))
+        ampl_range <- c(min(unlist(dat, use.names = FALSE)), 
+                        max(unlist(dat, use.names = FALSE)))
         ampl_range <- round(c((1 - 0.2*sign(ampl_range)[1]) * ampl_range[1],
                               (1 + 0.2*sign(ampl_range)[2]) * ampl_range[2]), 1)
     }
-    if (length(unlist(gfp))==1 && gfp==TRUE) gfp <- lapply(dat, compGfp)
-    gfp_max <- if (is.null(gfp)) NULL else max(unlist(gfp))
+    if (length(unlist(gfp, use.names = FALSE))==1 && gfp==TRUE) {
+        gfp <- lapply(dat, compGfp)    
+    }
+    gfp_max <- if (is.null(gfp)) NULL else max(unlist(gfp, use.names = FALSE))
     for (i in 1:length(dat)) {
         plot2dview(dat[[i]], ch_pos=ch_pos, timepoint=timepoint, 
                    gfp=gfp[[i]], gfp_max=gfp_max,
@@ -3641,8 +3654,8 @@ reprPlot <- function(p, e, title="Reproducibility",
                 }
             }
             if (!is.na(plim_outline)) {
-                sig <- rep(NA, length(x))
-                sig[y<=plim_outline] <- 1
+                sig <- rep(NA_integer_, length(x))
+                sig[y<=plim_outline] <- 1L
                 lines(x, sig, col="green", lwd=3)
             }
         } else {
@@ -3661,8 +3674,8 @@ reprPlot <- function(p, e, title="Reproducibility",
                 }
             }
             if (!is.na(plim_outline)) {
-                sig <- rep(NA, length(x))
-                sig[y<=plim_outline] <- 1
+                sig <- rep(NA_integer_, length(x))
+                sig[y<=plim_outline] <- 1L
                 lines(sig, x, col="green", lwd=3)
             }
         }
