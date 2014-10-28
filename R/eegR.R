@@ -537,19 +537,26 @@ revMergeDims <- function(dat) {
 #' @return An array
 #' @seealso \code{\link{expand.grid}}
 dim2multidim <- function(dat, whichdim, datfr) {
-    if (!is.data.frame(datfr)) datfr <- as.data.frame(datfr)
-    datfr <- droplevels(datfr)
+    if (!is.data.frame(datfr)) 
+        datfr <- as.data.frame(datfr, stringsAsFactors = FALSE)
+    datfr <- lapply(datfr, as.character)
     orig_dimnames <- dimnames(dat)
     orig_dims <- dim(dat)
-    add_dimnames <- dimnames(drop(xtabs(rep.int(1, nrow(datfr))~., 
-                                        datfr)))
+    add_dimnames <- lapply(datfr, unique)
+    if (!identical(datfr, 
+                   as.list(expand.grid(add_dimnames, 
+                                       KEEP.OUT.ATTRS = FALSE,
+                                       stringsAsFactors = FALSE)))) {
+        stop("datfr is not commensurate with the result of expand.grid()")
+    }
     add_dims <- sapply(add_dimnames, length)
     if (is.character(whichdim)) 
-        whichdim <- which(names(orig_dimnames)==whichdim)
-    if (is.logical(whichdim))
+        whichdim <- which(names(orig_dimnames) == whichdim)
+    if (is.logical(whichdim)) 
         whichdim <- which(whichdim)
-    dim(dat) <- append(orig_dims[-whichdim], add_dims, whichdim-1)
-    dimnames(dat) <- append(orig_dimnames[-whichdim], add_dimnames, whichdim-1)
+    dim(dat) <- append(orig_dims[-whichdim], add_dims, whichdim - 1)
+    dimnames(dat) <- append(orig_dimnames[-whichdim], add_dimnames, 
+                            whichdim - 1)
     return(dat)
 }
 
