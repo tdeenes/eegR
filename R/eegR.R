@@ -2106,6 +2106,8 @@ importOptions <- function(eeg_ext = "dat", marker_ext = "vmrk", info_ext = "vhdr
 #' participant
 #' @param import_options a list, which should be given by calling 
 #' \code{\link{importOptions}}
+#' @note This is a custom function tailored for the special datasets collected 
+#' in our lab. Use it with extra care for general purposes!
 #' @export
 #' @return A list with three named elements: eeg (array), markers (data.frame), 
 #' channels (data.frame)
@@ -2191,6 +2193,10 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
     # remove data in bad channel intervals
     if (!is.null(marker_badchan)) {
         chan_names <- rownames(chan)
+        ind <- markers.orig[, 5]>0
+        markers.orig[ind, 2] <- paste(markers.orig[ind, 2], 
+                                      chan_names[markers.orig[ind, 5]],
+                                      sep="_")
         badchanFn <- function(i) {
             indstart <- grep(paste(marker_badchan[1], ".*", 
                                    chan_names[i], sep=""), 
@@ -2298,7 +2304,7 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
 #' factors.
 #' @param splitchar a character vector of length one indicating the splitting
 #' character (default: _). Splitting characters which are special characters in
-#' R (e.g. "|", ".", etc.) should be given as in strsplit (e.g. "\\|")
+#' R (e.g. "|", ".", etc.) should be given as in strsplit (e.g. "\\\|")
 #' @export
 #' @return A data.frame with header and appropriate classes, containing the 
 #' spltted substrings of the original vector elements
