@@ -2182,6 +2182,7 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
         header=marker_header, fill=marker_fill, 
         as.is=marker_asis, sep=marker_sep, skip=marker_skip)
     markers.orig[,3] <- suppressWarnings(as.numeric(markers.orig[, 3]))
+    markers.orig[,5] <- suppressWarnings(as.integer(markers.orig[, 5]))
     markers.orig <- markers.orig[!is.na(markers.orig[, 3]), 1:5]
     markers.orig$segmind <- findInterval(
         markers.orig[,3],
@@ -2193,19 +2194,21 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
     # remove data in bad channel intervals
     if (!is.null(marker_badchan)) {
         chan_names <- rownames(chan)
+        bch <- markers.orig[, 2]
         ind <- markers.orig[, 5]>0
-        markers.orig[ind, 2] <- paste(markers.orig[ind, 2], 
-                                      chan_names[markers.orig[ind, 5]],
-                                      sep="_")
+        bch[ind] <- paste(bch[ind],
+                          chan_names[markers.orig[ind, 5]],
+                          sep="_")
+        bch <- paste0(bch, "_")
         badchanFn <- function(i) {
-            indstart <- grep(paste(marker_badchan[1], ".*", 
-                                   chan_names[i], sep=""), 
-                             markers.orig[, 2])
-            indstart <- indstart[!duplicated(markers.orig[indstart,3])]
-            indstop <- grep(paste(marker_badchan[2], ".*", 
-                                  chan_names[i], sep=""), 
-                            markers.orig[, 2])
-            indstop <- indstop[!duplicated(markers.orig[indstop,3])]
+            indstart <- grep(paste(marker_badchan[1], ".*_", 
+                                   chan_names[i], "_", sep=""), 
+                             bch)
+            indstart <- unique(markers.orig[indstart, 3])
+            indstop <- grep(paste(marker_badchan[2], ".*_", 
+                                  chan_names[i], "_", sep=""), 
+                            bch)
+            indstop <- unique(markers.orig[indstop, 3])
             len1 <- length(indstart)
             len2 <- length(indstop)
             if (len1==0 & len2==0) {
@@ -2214,24 +2217,27 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
                 lendiff <- len1 - len2
                 if (lendiff == 1) {
                     message(
-                        paste("One badchan_stop marker was missing at channel ", chan_names[i], 
-                              " and was automatically set to the last sampling point.",
-                              sep="")
+                        paste0("One badchan_stop marker was missing at channel ", chan_names[i], 
+                              " and was automatically set to the last sampling point.")
                     )
                     indstop <- c(indstop, ncol(eeg))
                 } else if (lendiff == -1) {
                     message(
-                        paste("One badchan_start marker was missing at channel ", chan_names[i],
-                              " and was automatically set to the first sampling point.",
-                              sep="")
+                        paste0("One badchan_start marker was missing at channel ", chan_names[i],
+                              " and was automatically set to the first sampling point.")
                     )
                     indstart <- c(1, indstart)    
                 } else if (abs(lendiff) > 1) {
                     stop(
-                        paste("Badchan_start and badchan_stop markers do not match at channel ", chan_names[i], ".", sep="")
+                        paste0("Badchan_start and badchan_stop markers do not match at channel ", chan_names[i], ".")
                     )
                 }
                 return(cbind(start=indstart, stop=indstop))
+            }
+            if (any((indstop-indstart)<0)) {
+                stop(
+                    paste0("Badchan_start and badchan_stop markers do not match at channel ", chan_names[i], ".")
+                )
             }
         }
         badchans <- lapply(seq_along(chan_names), badchanFn)
