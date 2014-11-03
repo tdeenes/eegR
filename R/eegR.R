@@ -12,7 +12,7 @@ NULL
     packageStartupMessage(paste0("*** eegR ",
                                  packageVersion("eegR"),
                                  " loaded ***"), 
-                          appendLF=TRUE)
+                          appendLF = TRUE)
 }
 
 #
@@ -57,20 +57,20 @@ NULL
 #' @export
 #' @return The function is invoked for its side effect, which is assigning list
 #' elements to the enclosing environment
-assignList <- function(listdat, verbose=TRUE, overwriteGlobal=FALSE) {
+assignList <- function(listdat, verbose = TRUE, overwriteGlobal = FALSE) {
     min_calling_frame <- ifelse(overwriteGlobal, 1, 2)
-    if (sys.nframe()>=min_calling_frame) {
+    if (sys.nframe() >= min_calling_frame) {
         if (is.null(names(listdat)) | 
-                any(sapply(names(listdat), function(x) x==""))) {
+                any(sapply(names(listdat), function(x) x == ""))) {
             stop("All elements of the assigned list should have a name!")
         }
         for (i in names(listdat)) {
-            assign(i, listdat[[i]], pos=parent.frame())
+            assign(i, listdat[[i]], pos = parent.frame())
         }
         if (verbose) {
             warning(
                 paste("The following variables were assigned to the environment:", 
-                      paste(names(listdat), collapse=" ")))
+                      paste(names(listdat), collapse = " ")))
         }
     }
 }
@@ -88,25 +88,25 @@ findExtremes <- function(x) {
     out <- rep(0, length(x))
     names(out) <- names(x)
     ind <- diff(x)
-    ind <- ind[ind!=0]
+    ind <- ind[ind != 0]
     startval <- sign(ind[1])*Inf
     endval <- sign(-ind[length(ind)])*Inf
     ind <- diff(c(startval, x, endval))
-    if (ind[2]==0) {
+    if (ind[2] == 0) {
         ind[2] <- -sign(ind[1])
     }
-    ind <- ind[ind!=0]
+    ind <- ind[ind != 0]
     ind[1] <- 0
     ind[-1] <- diff(sign(ind))
-    out[names( ind[which(ind>0)-1] )] <- -1
-    out[names( ind[which(ind<0)-1] )] <- 1
+    out[names( ind[which(ind > 0)-1] )] <- -1
+    out[names( ind[which(ind < 0)-1] )] <- 1
     for (i in 2:length(out)) {
-        if (x[i-1]==x[i]) {
+        if (x[i-1] == x[i]) {
             out[i] <- out[i-1]
         }
     }
-    if (out[1]!=out[2]) out[1] <- 0
-    if (out[length(out)]!=out[length(out)-1]) out[length(out)] <- 0
+    if (out[1] != out[2]) out[1] <- 0
+    if (out[length(out)] != out[length(out)-1]) out[length(out)] <- 0
     names(out) <- names(x)
     return(out)
 }
@@ -120,7 +120,7 @@ findExtremes <- function(x) {
 #' @param FUN the function to be applied to compute moving window statistics. 
 #' See details.
 #' @param force_rollapply logical variable; if yes, zoo:::rollapply is called 
-#' (default=FALSE).
+#' (default = FALSE).
 #' @param ... optional arguments to the corresponding function in caTools or
 #' zoo:::rollapply
 #' @details If FUN is one of min, max, mean, sd, mad, quantile (OR "min", "max",
@@ -131,14 +131,14 @@ findExtremes <- function(x) {
 #' @return An object having the same attributes as dat.
 #' @import zoo 
 #' @import caTools
-rollFun <- function(dat, width, FUN, force_rollapply=FALSE, ...) {
+rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
     dims <- dim(dat)
     attribs <- attributes(dat)
     if (is.data.frame(dat)) dat <- as.matrix(dat)
     if (is.list(dat)) 
         stop("Provide a vector, a matrix or a data.frame as input!")
     if (is.vector(dat)) {
-        dat <- matrix(dat, ncol=1)
+        dat <- matrix(dat, ncol = 1)
         dims <- dim(dat)
     }
     if ((min(width) < 1) || (max(width) > nrow(dat)))
@@ -147,35 +147,35 @@ rollFun <- function(dat, width, FUN, force_rollapply=FALSE, ...) {
     width <- as.integer(width)
     FUN <- match.fun(FUN)
     if (!force_rollapply) {
-        funlist <- list(min=min, max=max, mean=mean, 
-                        sd=sd, mad=mad, quantile=quantile)
+        funlist <- list(min = min, max = max, mean = mean, 
+                        sd = sd, mad = mad, quantile = quantile)
         funind <- sapply(funlist, identical, FUN)
         if (any(funind)) {
             if (require(caTools)) {
                 FUN <- names(funlist)[funind]
-                FUN <- match.fun(paste("run", FUN, sep=""))
+                FUN <- match.fun(paste("run", FUN, sep = ""))
                 if (identical(FUN, runquantile)) {
                     probs <- list(...)$probs
                     dims <- c(dim(dat), length(probs))
                     attribs$dim <- dims
                     if (!is.null(attribs$dimnames)) {
                         attribs$dimnames <- c(attribs$dimnames, 
-                                              list(quantiles=probs))
+                                              list(quantiles = probs))
                     }
                 }
-                if (length(width)==1) {
+                if (length(width) == 1) {
                     out <- FUN(dat, width, ...)
                 } else {
                     out <- array(0, dims)
                     if (identical(FUN, runquantile)) {
                         for (i in unique(width)) {
-                            ind <- width==i
-                            out[ind, , ] <- FUN(dat, i, ...)[ind, , , drop=F]
+                            ind <- width == i
+                            out[ind, , ] <- FUN(dat, i, ...)[ind, , , drop = F]
                         }
                     } else {
                         for (i in unique(width)) {
-                            ind <- width==i
-                            out[ind, ] <- FUN(dat, i, ...)[ind, , drop=F]
+                            ind <- width == i
+                            out[ind, ] <- FUN(dat, i, ...)[ind, , drop = F]
                         }
                     }
                 }
@@ -188,12 +188,12 @@ rollFun <- function(dat, width, FUN, force_rollapply=FALSE, ...) {
     } 
     if (force_rollapply) {
         if (require(zoo)) {
-            out <- rollapply(dat, width, FUN, partial=TRUE, by.column=TRUE, ...)
+            out <- rollapply(dat, width, FUN, partial = TRUE, by.column = TRUE, ...)
         } else {
             stop("Package zoo is not installed but called by rollFun().")
         }
     }
-    if (!is.null(attribs$class) && attribs$class=="data.frame") {
+    if (!is.null(attribs$class) && attribs$class == "data.frame") {
         out <- as.data.frame(out)
     }
     attributes(out) <- attribs
@@ -208,12 +208,12 @@ rollFun <- function(dat, width, FUN, force_rollapply=FALSE, ...) {
 #' @export
 #' @return matrix without duplicated units
 #' @import Kmisc
-fastUnique <- function(x, units_in_rows=TRUE) {
+fastUnique <- function(x, units_in_rows = TRUE) {
     if (!require(Kmisc)) stop("Kmisc package is not installed.")
     if (!is.matrix(x)) stop("Provide a matrix as input!")
     if (units_in_rows) x <- t(x)
     dupl <- duplicated(str_collapse(lapply(1:ncol(x), function(i) x[,i])))
-    x <- x[, !dupl, drop=F]
+    x <- x[, !dupl, drop = F]
     if (units_in_rows) x <- t(x)
     return(x)
 }
@@ -230,7 +230,7 @@ fastUnique <- function(x, units_in_rows=TRUE) {
 #' in ... should not be dotted.
 #' @export
 #' @return A list with substituted names.
-listS <- function(..., indices=NULL) {
+listS <- function(..., indices = NULL) {
     list_def <- list(...)
     if (is.null(names(list_def))) {
         return( list_def )
@@ -242,17 +242,17 @@ listS <- function(..., indices=NULL) {
     } else {
         newnam <- nam[INDICES]
     }
-    if (length(newnam)==0) return( list_def )
+    if (length(newnam) == 0) return( list_def )
     newnam <- structure(
         lapply(newnam, function(x) {
             for (n in 1:sys.nframe()) {
-                tempx <- try(get(x, envir=parent.frame(n)), silent=TRUE)
+                tempx <- try(get(x, envir = parent.frame(n)), silent = TRUE)
                 if (!inherits(tempx, "try-error")) return( tempx )
             }
         }),
-        names=newnam)
+        names = newnam)
     for (i in 1:length(newnam)) {
-        if (!is.atomic(newnam[[i]]) || length(newnam[[i]])>1) {
+        if (!is.atomic(newnam[[i]]) || length(newnam[[i]]) > 1) {
             stop(
                 "The object denoted by '", names(newnam)[i], "' is not a character string!"
             )
@@ -273,7 +273,7 @@ listS <- function(..., indices=NULL) {
 #' consecutive significant time points
 #' @export
 #' @return An object of the same dimension as the input data
-pvalueConsec <- function(dat, sig_level=0.05, min_length=10) {
+pvalueConsec <- function(dat, sig_level = 0.05, min_length = 10) {
     pCorr <- function(x) {
         temp <- rle(x)
         ind <- (temp$values == 1) & (temp$lengths < min_length)
@@ -298,26 +298,33 @@ pvalueConsec <- function(dat, sig_level=0.05, min_length=10) {
 # <<< array reformatting functions >>> --------
 #
 
-#' Return subset of an array
+#' Extract or replace a part of an array
 #' 
-#' \code{subsetArray} is a wrapper for asub() in the abind package. It returns 
-#' a subset of an array and assumes that the array has named dimnames.
+#' \code{subsetArray} is a convenience function for extracting or replacing a 
+#' part of an array which has dimension names
+#' @name subsetArray
+#' @usage subsetArray(dat, subsets, keep_attr = TRUE, ...)
+#' @usage subsetArray(dat, subsets) <- value
 #' @param dat array to be subsetted
-#' @param subsets a named list of character vectors indicating which rows of 
-#' which dimensions to keep (see Details)
+#' @param subsets a named list of character, numeric, or logical vectors 
+#' indicating which levels of which dimensions to subset (see Details)
 #' @param keep_attr a logical variable which determines if the result inherits 
 #' the custom attributes of the input (TRUE, default) or not  
 #' @param ... further arguments to be passed to asub
-#' @details Dimensions which are not listed in subsets are not affected. Names
-#' of subsets indicate which dimensions are to be subsetted in the input array, 
-#' and each list element indicates which levels of the given dimension will be 
-#' kept. If a list element is a named empty vector, the correspondig dimension 
-#' will not be affected by the function.
+#' @details Names of subsets indicate which dimensions are to be subsetted in 
+#' the input array, and each list element indicates which levels of the given 
+#' dimension will be selected. If a list element is a named empty vector, or 
+#' the name of a dimension does not appear in subsets, all levels of the 
+#' correspondig dimension will be selected.
 #' @export
-#' @return An array which contains only the selected level of the given 
-#' dimensions.
+#' @return A subset of an array or the array with replaced values
 #' @import abind
-subsetArray <- function(dat, subsets, keep_attr=TRUE, ...) {
+
+
+#' @rdname subsetArray
+#' @export
+# Extract a part of an array
+subsetArray <- function(dat, subsets, keep_attr = TRUE, ...) {
     dimpos <- match(names(subsets), names(dimnames(dat)))
     out <- asub(dat, subsets, dimpos, ...)
     if (keep_attr) {
@@ -331,11 +338,26 @@ subsetArray <- function(dat, subsets, keep_attr=TRUE, ...) {
                 ("factor_level" %in% names(subsets)) ) {
             attr(out, "factors") <- splitMarker(dimnames(out)$factor_level,
                                                 colnames(attr(out, "factors")),
-                                                splitchar="\\|")
+                                                splitchar = "\\|")
         }
     }
     return(out)
 }
+
+#' @rdname subsetArray
+#' @export
+# Replace a part of an array
+`subsetArray<-` <- function(dat, subsets, value) {
+    dimn <- dimnames(dat)
+    dimn[names(subsets)] <- subsets
+    eval(parse(
+        text = paste("dat[", 
+                     paste(paste0("dimn$", names(dimn)), collapse = ","), 
+                     "] <- value", sep = ""))
+        )
+    return( dat )
+}
+
 
 #' Reshape array to matrix with specified row dimension
 #' 
@@ -352,25 +374,25 @@ subsetArray <- function(dat, subsets, keep_attr=TRUE, ...) {
 #' @export
 #' @return A matrix
 #' @seealso \code{\link{mat2array}} which is the inverse of array2mat
-array2mat <- function(dat, row_dim, return_attributes=TRUE) {
+array2mat <- function(dat, row_dim, return_attributes = TRUE) {
     if (is.character(row_dim)) {
-        row_dim <- which(names(dimnames(dat))==row_dim)
+        row_dim <- which(names(dimnames(dat)) == row_dim)
     }
     col_dims <- seq_along(dim(dat))[-row_dim]
     out <- aperm(dat, c(row_dim, col_dims))
-    out <- matrix(out, nrow=nrow(out))
+    out <- matrix(out, nrow = nrow(out))
     rownames(out) <- dimnames(dat)[[row_dim]]
     if (!is.null(dimnames(dat)[col_dims])) {
         colnames(out) <- interaction(
-            expand.grid(dimnames(dat)[col_dims]), sep="|")
+            expand.grid(dimnames(dat)[col_dims]), sep = "|")
     }
     if (!is.null(dimnames(dat))) {
         names(dimnames(out)) <- c(names(dimnames(dat))[row_dim], 
-                                  paste(names(dimnames(dat))[col_dims], collapse="|"))
+                                  paste(names(dimnames(dat))[col_dims], collapse = "|"))
     }
     if (return_attributes) {
         attr(out, "array_attributes") <- c(attributes(dat), 
-                                           list(row_dim=row_dim))
+                                           list(row_dim = row_dim))
     }
     return(out)
 }
@@ -389,7 +411,7 @@ array2mat <- function(dat, row_dim, return_attributes=TRUE) {
 #' array2mat().
 #' @export
 #' @seealso \code{\link{array2mat}}
-mat2array <- function(dat, dims=NULL, row_dim=NULL) {
+mat2array <- function(dat, dims = NULL, row_dim = NULL) {
     dimn <- NULL
     if (is.null(dims)) {
         array_attribs <- attr(dat, "array_attributes")
@@ -401,7 +423,7 @@ mat2array <- function(dat, dims=NULL, row_dim=NULL) {
             stop("Provide dims and row_dim parameters!")
         }
     } else {
-        if (is.character(row_dim)) row_dim <- which(names(dims)==row_dim)
+        if (is.character(row_dim)) row_dim <- which(names(dims) == row_dim)
         if (is.list(dims)) {
             dimn <- dims
             dims <- sapply(dims, length)
@@ -430,19 +452,19 @@ mat2array <- function(dat, dims=NULL, row_dim=NULL) {
 #' @param ... additional parameters to be passed to \code{\link{as.data.frame.table}}
 #' @export
 #' @return A data.frame
-array2df <- function(dat, response_name="values", dim_types="character", 
-                     na_omit=FALSE, ...) {
+array2df <- function(dat, response_name = "values", dim_types = "character", 
+                     na_omit = FALSE, ...) {
     if ("stringsAsFactors" %in% names(list(...))) {
         warning("The parameter stringsAsFactors was ignored. It was set to FALSE by default.")
     }
-    out <- as.data.frame.table(dat, responseName=response_name, 
-                               stringsAsFactors=FALSE, ...)
+    out <- as.data.frame.table(dat, responseName = response_name, 
+                               stringsAsFactors = FALSE, ...)
     if (!is.null(dim_types)) {
         if (!is.list(dim_types)) {
             if (length(dim_types) > 1) {
                 stop("dim_types must be a single character value or a named list")
             }
-            dim_types <- setNames(as.list(rep(dim_types, ncol(out)-1)),
+            dim_types <- setNames(as.list(rep(dim_types, ncol(out) - 1)),
                                   setdiff(colnames(out), response_name))
         }
         stopifnot(all(unlist(dim_types, use.names = FALSE) %in% 
@@ -468,12 +490,12 @@ array2df <- function(dat, response_name="values", dim_types="character",
 #' attributes should be appended to the resulting array
 #' @export
 #' @return Array with merged dimensions
-mergeDims <- function(dat, dims, sep=".", return_dimattributes=TRUE) {
+mergeDims <- function(dat, dims, sep = ".", return_dimattributes = TRUE) {
     if (return_dimattributes) {
         adim <- attr(dat, "dim")
         adimn <- attr(dat, "dimnames")
-        attribs <- list(dim=setNames(adim, names(adimn)), 
-                        dimnames=adimn)
+        attribs <- list(dim = setNames(adim, names(adimn)), 
+                        dimnames = adimn)
     }
     if (!is.list(dims)) dims <- list(dims)
     for (i in length(dims):1) {
@@ -484,15 +506,15 @@ mergeDims <- function(dat, dims, sep=".", return_dimattributes=TRUE) {
         dat <- array(out, 
                      c(prod(dim(out)[1:length(mdims)]), 
                        dim(out)[-(1:length(mdims))]),
-                     dimnames=append(
+                     dimnames = append(
                          list(interaction(expand.grid(dimnames(out)[1:length(mdims)]), 
-                                          sep=sep)),
+                                          sep = sep)),
                          dimnames(out)[-(1:length(mdims))]))
-        names(dimnames(dat))[1] <- paste(dims[[i]], collapse=sep)
+        names(dimnames(dat))[1] <- paste(dims[[i]], collapse = sep)
     } 
     if (return_dimattributes) {
         attr(dat, "orig_dimattributes") <- c(attribs, 
-                                             list(sep=sep, merged_dims=dims))
+                                             list(sep = sep, merged_dims = dims))
     }
     return(dat)
 }
@@ -571,7 +593,7 @@ dim2multidim <- function(dat, whichdim, datfr) {
 #' @return A list of subsets of the original data matrix/array
 splitArray <- function(dat, whichdim) {
     dimn <- dimnames(dat)[[whichdim]]
-    out <- lapply(dimn, function(i) subsetArray(dat, listS(.whichdim=i)))
+    out <- lapply(dimn, function(i) subsetArray(dat, listS(.whichdim = i)))
     names(out) <- dimn
     return( out )
 }
@@ -596,17 +618,17 @@ splitArray <- function(dat, whichdim) {
 #' @export
 #' @return A matrix or array, if the input is a one-level list, and a one-level 
 #' list, if the input is a two-level list
-rearrangeList <- function(dat, name_listdim, name_datadim=NULL) {
+rearrangeList <- function(dat, name_listdim, name_datadim = NULL) {
     stopifnot(!missing(name_listdim))
-    if (identical(unlist(dat, recursive=FALSE, use.names = FALSE), 
-                  unlist(dat, recursive=TRUE, use.names = FALSE))) {
+    if (identical(unlist(dat, recursive = FALSE, use.names = FALSE), 
+                  unlist(dat, recursive = TRUE, use.names = FALSE))) {
         dat <- lapply(dat, as.array)
         newdims <- c(dim(dat[[1]]), length(dat))
-        newdimns <- c(dimnames(dat[[1]]), listS(.name_listdim=names(dat)))
+        newdimns <- c(dimnames(dat[[1]]), listS(.name_listdim = names(dat)))
         if (!is.null(name_datadim)) {
             names(newdimns) <- c(name_datadim, name_listdim)
         }
-        dat <- unlist(dat, recursive=TRUE, use.names=FALSE)
+        dat <- unlist(dat, recursive = TRUE, use.names = FALSE)
         dim(dat) <- newdims
         dimnames(dat) <- newdimns
     } else {
@@ -614,7 +636,7 @@ rearrangeList <- function(dat, name_listdim, name_datadim=NULL) {
         dat <- lapply(dat, function(x) lapply(x, as.array))
         dat <- lapply(seq_along(names_at_level2), function(i) {
             out <- abind(lapply(dat, function(x) x[[i]]), 
-                         along=length(dim(dat[[1]][[i]]))+1)
+                         along = length(dim(dat[[1]][[i]])) + 1)
             dimn <- 
                 if (!is.null(name_datadim[[i]])) {
                     name_datadim[[i]]    
@@ -637,21 +659,228 @@ rearrangeList <- function(dat, name_listdim, name_datadim=NULL) {
 # <<< general functions on arrays >>> --------
 #
 
+# iterator for array chunks
+# iarray <- function(a, chunks, chunkgrid) {
+#     i <- 0
+#     nextElem <- function() {
+#         if (i >= nrow(chunkgrid)) stop('StopIteration')
+#         i <<- i + 1
+#         subsetArray(
+#             a,
+#             subsets = mapply("==", chunks, chunkgrid[i, ]), 
+#             drop = FALSE)
+#     }
+#     structure(list(nextElem=nextElem), class=c('iarray', 'iter'))
+# }
+# nextElem.iarray <- function(obj) obj$nextElem()
+
+# chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL,
+#                      useparallel = FALSE, ncores = NULL, 
+#                      par_method = c("snow", "multicore"), cl = NULL) {
+#     require(doParallel)
+#     if (useparallel) {
+#         par_method = match.arg(par_method)
+#         if (is.null(ncores)) ncores <- detectCores()
+#         if (par_method == "snow" || .Platform$OS.type=="windows") {
+#             if (is.null(cl)) cl <- makePSOCKcluster(ncores)
+#             registerDoParallel(cl)
+#             on.exit(stopCluster(cl))
+#         } else {
+#             registerDoParallel(ncores = ncores)
+#         }
+#     } else {
+#         registerDoSEQ()
+#     }
+#     chunkCheckFn <- function(x, name) {
+#         dimlen <- dimlens[name]
+#         if (is.character(x)) {
+#             x <- match(x, unique(x))
+#         } else if (is.logical(x)) {
+#             x <- as.integer(x) + 1L            
+#         } else if (!is.integer(x)) {
+#             x <- as.integer(x)
+#         } 
+#         out <- 
+#             if (length(x) == 1) {
+#                 rep(seq_len(x), 
+#                     sapply(parallel::splitIndices(dimlen, x), length))
+#             } else if (length(x) == dimlen) {
+#                 as.integer(x)
+#             } else {
+#                 rep(as.integer(x), length.out = dimlen)
+#             }
+#         out
+#     }
+#     # 
+#     if (is.null(chunks)) {
+#         return( do.call(fun, append(list(dat), arg_list)) )
+#     }
+#     if (!is.list(chunks) && is.null(names(chunks))) {
+#         stop("chunks must be a named list")
+#     }
+#     dimlens <- dim(dat)
+#     names(dimlens) <- names(dimnames(dat))
+#     #
+#     chunks <- setNames(
+#         mapply(chunkCheckFn, chunks, names(chunks),
+#                SIMPLIFY = FALSE, USE.NAMES = FALSE),
+#         names(chunks))
+#     chunkgrid <- expand.grid(lapply(chunks, unique), 
+#                              KEEP.OUT.ATTRS = FALSE,
+#                              stringsAsFactors = FALSE)
+#     outpart <- foreach(x = iarray(dat, chunks, chunkgrid)) %dopar% 
+#         do.call(fun, append(list(x), arg_list))
+#     out.dims <- dim(outpart[[1]])
+#     out.dims[match(names(chunks), names(dimnames(outpart[[1]])))] <- 
+#         dimlens[names(chunks)]
+#     out.dimnames <- setNames(
+#         lapply(names(dimnames(outpart[[1]])), function(n) {
+#             if (n %in% names(chunks)) {
+#                 dimnames(dat)[[n]]
+#             } else {
+#                 dimnames(outpart[[1]])[[n]]
+#             }}),
+#         names(dimnames(outpart[[1]]))
+#     )
+#     na <- NA
+#     storage.mode(na) <- storage.mode(outpart[[1]])
+#     out <- array(na, out.dims, out.dimnames)
+#     for (i in 1:nrow(chunkgrid)) {
+#         subsetArray(
+#             out,
+#             subsets = mapply("==", chunks, chunkgrid[i, ])) <- outpart[[i]]
+#     }
+#     return( out )
+# }
+
+
+#' Call a function on array chunks
+#' 
+#' \code{chunkify} creates subsets of an array according to various chunking
+#' schemes and performs the given function on these data chunks. The resulting
+#' array is identical to the result of a function call on the whole array.
+#' @param dat matrix or array with named dimnames
+#' @param fun name of the function (can be a character string). See details.
+#' @param arg_list a list of parameters passed to \code{fun}
+#' @param chunks a named list which defines the chunking scheme. See details.
+#' @details The main purpose of \code{chunkify} is twofold: 1) it can decrease
+#' memory load if a memory-intensive function is called on a large array; 2) it
+#' enables within-dimension computations (e.g. perform baseline correction 
+#' separately for various levels of the trial dimension). The parameter 
+#' \code{chunks} is a named list; each element must correspond to a named 
+#' dimension of \code{dat}. If the list element contains one integer, it gives
+#' the number of chunks for the given dimension. If it contains as many elements
+#' as the length of the given dimension, it defines chunk code; i.e., 
+#' which chunk the given level of the dimension belongs to. Otherwise, the
+#' list elements are expanded (recycled to the dimensions' length) and 
+#' interpreted as chunk codes. \code{fun} must be a function which operates on
+#' arrays (or matrices), and returns a matrix or array with named dimensions.
+#' Chunking can be based only on those dimensions which are not affected by
+#' \code{fun}. 
+#' @export
+#' @return An array (or vector/matrix); its shape and dimension names are 
+#' identical to the return value of \code{fun} called on \code{dat} without 
+#' chunking
+chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
+    chunkCheckFn <- function(x, name) {
+        dimlen <- dimlens[name]
+        if (is.character(x)) {
+            x <- match(x, unique(x))
+        } else if (is.logical(x)) {
+            x <- as.integer(x) + 1L            
+        } else if (!is.integer(x)) {
+            x <- as.integer(x)
+        } 
+        out <- 
+            if (length(x) == 1) {
+                rep(seq_len(x), 
+                    sapply(parallel::splitIndices(dimlen, x), length))
+            } else if (length(x) == dimlen) {
+                as.integer(x)
+            } else {
+                rep(as.integer(x), length.out = dimlen)
+            }
+        out
+    }
+    # 
+    if (is.null(chunks)) {
+        return( do.call(fun, append(list(dat), arg_list)) )
+    }
+    if (!is.list(chunks) && is.null(names(chunks))) {
+        stop("chunks must be a named list")
+    }
+    dimlens <- dim(dat)
+    names(dimlens) <- names(dimnames(dat))
+    #
+    chunks <- setNames(
+        mapply(chunkCheckFn, chunks, names(chunks),
+               SIMPLIFY = FALSE, USE.NAMES = FALSE),
+        names(chunks))
+    chunkgrid <- expand.grid(lapply(chunks, unique), 
+                             KEEP.OUT.ATTRS = FALSE,
+                             stringsAsFactors = FALSE)
+    message(sprintf("\n==== Analyze Chunk 1/%i ====", nrow(chunkgrid)))
+    subs <- mapply("==", chunks, chunkgrid[1, ], SIMPLIFY = FALSE)
+    x <- subsetArray(dat,
+                     subsets = subs,
+                     drop = FALSE)
+    message()
+    outpart <- do.call(fun, append(list(x), arg_list))
+    #
+    if (nrow(chunkgrid) == 1) return( outpart )
+    #
+    out.dims <- dim(outpart)
+    out.dims[match(names(chunks), names(dimnames(outpart)))] <- 
+        dimlens[names(chunks)]
+    out.dimnames <- setNames(
+        lapply(names(dimnames(outpart)), function(n) {
+            if (n %in% names(chunks)) {
+                dimnames(dat)[[n]]
+            } else {
+                dimnames(outpart)[[n]]
+            }}),
+        names(dimnames(outpart))
+    )
+    na <- NA
+    storage.mode(na) <- storage.mode(outpart)
+    out <- array(na, out.dims, out.dimnames)
+    for (i in 1:nrow(chunkgrid)) {
+        if (i > 1) {
+            message(sprintf("\n==== Analyze Chunk %i/%i ====", 
+                            i, nrow(chunkgrid)))
+            subs <- mapply("==", chunks, chunkgrid[i, ], SIMPLIFY = FALSE)
+            x <- subsetArray(dat,
+                             subsets = subs,
+                             drop = FALSE)
+            outpart <- do.call(fun, append(list(x), arg_list))
+        }
+        subsetArray(
+            out,
+            subsets = subs) <- outpart
+        gc()
+    }
+    message("\n==== Analysis completed ====")
+    return( out )
+}
+
 
 #' Collapse data in array format across specific dimensions
 #' 
-#' \code{avgDims} collapses data in array format across specific dimensions by simple averaging
+#' \code{avgDims} collapses data in array format across specific dimensions by 
+#' simple averaging
 #' @param dat matrix or array to average
-#' @param dims character vector of dimension names or numeric vector of dimension indices 
-#' across which averaging should ocuur. If character vector, dat must have named dimnames. 
-#' @param na_rm logical variable; if TRUE (default), missing values are removed before averaging
+#' @param dims character vector of dimension names or numeric vector of 
+#' dimension indices across which averaging should ocuur. If character vector, 
+#' dat must have named dimnames. 
+#' @param na_rm logical variable; if TRUE (default), missing values are removed 
+#' before averaging
 #' @export
-#' @return An array (or matrix) with averaged data (the number of dimensions of dat is 
-#' decreased by the length of dims)
-avgDims <- function(dat, dims, na_rm=TRUE) {
+#' @return An array (or matrix) with averaged data (the number of dimensions of 
+#' dat is decreased by the length of dims)
+avgDims <- function(dat, dims, na_rm = TRUE) {
     if (is.character(dims)) dims <- match(dims, names(dimnames(dat)))
     out <- aperm(dat, c(dims, seq_along(dim(dat))[-dims]))
-    out <- colMeans(out, na.rm=na_rm, dims = length(dims))
+    out <- colMeans(out, na.rm = na_rm, dims = length(dims))
     if (is.vector(out)) {
         dim(out) <- c(length(out), 1)
         dimnames(out) <- c(dimnames(dat)[-dims], list(NULL))
@@ -678,11 +907,11 @@ avgDims <- function(dat, dims, na_rm=TRUE) {
 #' operates column-wise (TRUE, default) or row-wise (FALSE)
 #' @param keep_dimorder logical value; if TRUE, and the returned matrix or array 
 #' is of the same size as dat, the order of dimensions in the returned matrix 
-#' or array will be the same as in dat (default=FALSE)
+#' or array will be the same as in dat (default = FALSE)
 #' @param useparallel logical value; if TRUE, a snow-type parallel backend is 
 #' used (default: FALSE)
 #' @param cl cluster definition if useparallel is TRUE
-#' @param ncpus number of cpus if useparallel is TRUE and clust is NULL
+#' @param ncores number of cpus if useparallel is TRUE and clust is NULL
 #' @details This function works by transforming dat to a matrix with a row 
 #' dimension corresponding to target_dim and calling target_fn on each column 
 #' of the matrix repeatedly, or if target_fn is TRUE, by feeding the transformed
@@ -696,10 +925,10 @@ avgDims <- function(dat, dims, na_rm=TRUE) {
 #' @return see Details
 #' @seealso \code{\link{avgDims}} if target_fn is colMeans, avgDims might be a 
 #' better choice
-fnDims <- function(dat, target_dim, target_fn, arg_list=NULL, 
-                   newdims=list(), vectorized=FALSE, columnwise=TRUE, 
-                   keep_dimorder=FALSE, 
-                   useparallel=FALSE, cl=NULL, ncpus=NULL) {
+fnDims <- function(dat, target_dim, target_fn, arg_list = NULL, 
+                   newdims = list(), vectorized = FALSE, columnwise = TRUE, 
+                   keep_dimorder = FALSE, 
+                   useparallel = FALSE, cl = NULL, ncores = NULL) {
     if (is.data.frame(dat)) dat <- as.matrix(dat)
     out <- aperm(dat, c(target_dim, setdiff(names(dimnames(dat)), target_dim)))
     dims <- dim(out)
@@ -714,13 +943,13 @@ fnDims <- function(dat, target_dim, target_fn, arg_list=NULL,
                 do.call(target_fn, append(list(out[, i]), arg_list)))
         } else {
             stopifnot(require(parallel))
-            if (is.null(ncpus)) ncpus <- detectCores()
-            if (is.null(cl)) cl <- makePSOCKcluster(ncpus)
+            if (is.null(ncores)) ncores <- detectCores()
+            if (is.null(cl)) cl <- makePSOCKcluster(ncores)
             tempfn <- function(i) 
                 do.call(target_fn, append(list(out[, i]), arg_list))
             clusterExport(cl, 
-                          varlist=c("tempfn","out","arg_list","target_fn"),
-                          envir=environment())
+                          varlist = c("tempfn","out","arg_list","target_fn"),
+                          envir = environment())
             out <- parLapply(cl, 1:ncol(out), tempfn)
             stopCluster(cl)
             rm(cl)
@@ -732,9 +961,9 @@ fnDims <- function(dat, target_dim, target_fn, arg_list=NULL,
             out <- drop(array(unlist(out, use.names = FALSE), tempdim))
         }
     }
-    if (length(out)==1 | is.list(out)) {
+    if (length(out) == 1 | is.list(out)) {
         return(out)
-    } else if (length(dim(out))<=1) {
+    } else if (length(dim(out)) <= 1) {
         if (columnwise) {
             dims <- dims[-1]
             dims.n[[1]] <- NULL
@@ -742,9 +971,9 @@ fnDims <- function(dat, target_dim, target_fn, arg_list=NULL,
             dims <- dims[1]
             dims.n <- dims.n[1]
         }
-    } else if (length(out)!=length(dat) || length(newdims)>0) {
-        if (length(newdims)==0)
-            newdims <- list(function.values=1:nrow(out))
+    } else if (length(out) != length(dat) || length(newdims) > 0) {
+        if (length(newdims) == 0)
+            newdims <- list(function.values = 1:nrow(out))
         if (columnwise) {
             dims <- c(sapply(newdims, length), dims[-1])
             dims.n <- append(newdims, dims.n[-1])
@@ -753,8 +982,8 @@ fnDims <- function(dat, target_dim, target_fn, arg_list=NULL,
             dims.n <- append(newdims, dims.n[1])
         }
     } 
-    out <- array(out, dims, dimnames=dims.n)
-    if (length(out)==length(dat) && keep_dimorder) {
+    out <- array(out, dims, dimnames = dims.n)
+    if (length(out) == length(dat) && keep_dimorder) {
         out <- aperm(out, names(dimnames(dat)))
     }
     return(out)
@@ -779,15 +1008,15 @@ fnDims <- function(dat, target_dim, target_fn, arg_list=NULL,
 #' TRUE (which reuses the original labels). 
 #' @export
 #' @return A matrix or array, depending on the input
-avgBin <- function(dat, target_dim, bin_length=NULL, bin_ind=NULL, 
-                   rolling=FALSE, newnames="avg") {
+avgBin <- function(dat, target_dim, bin_length = NULL, bin_ind = NULL, 
+                   rolling = FALSE, newnames = "avg") {
     if (rolling) {
         if (is.null(bin_length)) {
             stop("Provide bin_length if rolling_avg is set to TRUE")
         }
         out <- fnDims(dat, target_dim, rollFun, 
-                      arg_list=list(width=bin_length, FUN=mean), 
-                      vectorized=TRUE)
+                      arg_list = list(width = bin_length, FUN = mean), 
+                      vectorized = TRUE)
     } else {
         avgfn <- function(x, y) y %*% x
         if (is.null(bin_length) & is.null(bin_ind)) {
@@ -796,17 +1025,17 @@ avgBin <- function(dat, target_dim, bin_length=NULL, bin_ind=NULL,
             bin_ind <- as.numeric(factor(bin_ind))
             multmat <- diag(max(bin_ind))[, bin_ind]
             multmat <- multmat/colSums(multdat)
-            out <- fnDims(dat, target_dim, avgfn, arg_list=list(y=multmat), 
-                          vectorized=TRUE)
+            out <- fnDims(dat, target_dim, avgfn, arg_list = list(y = multmat), 
+                          vectorized = TRUE)
         } else if (length(dimnames(dat)[[target_dim]]) %% bin_length > 0) {
             stop("Target dimension length is not multiple of bin_length")
         } else {
             bins <- length(dimnames(dat)[[target_dim]])/bin_length
-            multmat <- diag(bins)[, rep(1:bins, each=bin_length)]/bin_length
-            out <- fnDims(dat, target_dim, avgfn, arg_list=list(y=multmat), 
-                          vectorized=TRUE)
+            multmat <- diag(bins)[, rep(1:bins, each = bin_length)]/bin_length
+            out <- fnDims(dat, target_dim, avgfn, arg_list = list(y = multmat), 
+                          vectorized = TRUE)
         }
-        if (newnames=="avg") {
+        if (newnames == "avg") {
             newdim <- list(as.character(
                 multmat %*% as.numeric(dimnames(dat)[[target_dim]])))
         } else if (is.null(newnames)) {
@@ -843,32 +1072,32 @@ avgBin <- function(dat, target_dim, bin_length=NULL, bin_ind=NULL,
 #' p-values, and the corresponding degrees of freedom. The dimension of the 
 #' t- and p-values corresponds to the dimension of the input data, apart from 
 #' the id_dim dimension, which is dropped.
-arrayTtest <- function(dat1, dat2=NULL, id_dim="id", 
-                       paired=FALSE, mu=0, var_equal=TRUE, verbose=TRUE) {
+arrayTtest <- function(dat1, dat2 = NULL, id_dim = "id", 
+                       paired = FALSE, mu = 0, var_equal = TRUE, verbose = TRUE) {
     if (paired && !is.null(dat2)) {
         if (!identical(dimnames(dat1)[[id_dim]],dimnames(dat2)[[id_dim]]))
             stop("\nCHECK your paired(?) datasets: IDs are not identical!\n")
-        dat1 <- dat1-dat2
+        dat1 <- dat1 - dat2
         dat2 <- NULL
     }
     if (is.null(dat2)) {
         m1 <- fnDims(dat1, id_dim, colMeans, 
-                     arg_list=list(na.rm=TRUE), vectorized=TRUE, columnwise=TRUE)
+                     arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
         sd1 <- fnDims(dat1, id_dim, colSds, 
-                      arg_list=list(na.rm=TRUE), vectorized=TRUE, columnwise=TRUE)
+                      arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
         n1 <- length(dimnames(dat1)[[id_dim]])
-        t <- (m1-mu)/(sd1/sqrt(n1))
-        df <- n1-1
+        t <- (m1 - mu)/(sd1/sqrt(n1))
+        df <- n1 - 1
     } else {
         m1 <- fnDims(dat1, id_dim, colMeans, 
-                     arg_list=list(na.rm=TRUE), vectorized=TRUE, columnwise=TRUE)
+                     arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
         sd1 <- fnDims(dat1, id_dim, colSds, 
-                      arg_list=list(na.rm=TRUE), vectorized=TRUE, columnwise=TRUE)
+                      arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
         n1 <- length(dimnames(dat1)$id)
         m2 <- fnDims(dat2, id_dim, colMeans, 
-                     arg_list=list(na.rm=TRUE), vectorized=TRUE, columnwise=TRUE)
+                     arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
         sd2 <- fnDims(dat2, id_dim, colSds, 
-                      arg_list=list(na.rm=TRUE), vectorized=TRUE, columnwise=TRUE)
+                      arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
         n2 <- length(dimnames(dat2)[[id_dim]])
         if (var_equal) {
             sd12 <- sqrt(
@@ -884,7 +1113,7 @@ arrayTtest <- function(dat1, dat2=NULL, id_dim="id",
             df <- sd12^4/( (sd1/n1)^2/(n1-1) + (sd2/n2)^2/(n2-1) )
         }
     }
-    out <- list(t=TRUE, df=df)
+    out <- list(t = TRUE, df = df)
     if (verbose) {
         out$p <- 2 * pt(-abs(t), df)
     }    
@@ -916,9 +1145,9 @@ arrayTtest <- function(dat1, dat2=NULL, id_dim="id",
 #' computing the marginal means (default: FALSE)
 #' @export
 #' @return A named list containing the marginal means for each model terms
-marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order=FALSE, 
-                          residualmean=FALSE, whichterm=NULL, no_icpt=FALSE) {
-    labels <- attr(terms(as.formula(form), keep.order=keep_term_order), 
+marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE, 
+                          residualmean = FALSE, whichterm = NULL, no_icpt = FALSE) {
+    labels <- attr(terms(as.formula(form), keep.order = keep_term_order), 
                    "term.labels")
     termL <- if (is.null(whichterm) || is.na(whichterm)) {
         strsplit(labels, ":")
@@ -930,14 +1159,14 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order=FALSE,
     marg_means <- vector("list", length(termL))
     if (residualmean && !no_icpt) a_dat <- sweep(a_dat, 2, colMeans(a_dat), "-")
     for (i in 1:length(termL)) {
-        groups <- factor(interaction(f_dat[,termL[[i]]], drop=TRUE))
+        groups <- factor(interaction(f_dat[,termL[[i]]], drop = TRUE))
         groupfreq <- tabulate(groups)
         names(groupfreq) <- levels(groups)
         tmeans <- rowsum(a_dat, groups)/groupfreq
         if (residualmean) a_dat <- a_dat - tmeans[as.numeric(groups),]
         marg_means[[i]] <- array(tmeans, 
                                  c(length(groupfreq), sapply(dimn, length)),
-                                 c(list(modelterm=names(groupfreq)), dimn))
+                                 c(list(modelterm = names(groupfreq)), dimn))
         attr(marg_means[[i]], "freq") <- groupfreq
     }
     names(marg_means) <- labels
@@ -946,10 +1175,10 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order=FALSE,
 
 #' Compute Sum of Squares
 #' @keywords internal
-sumsq <- function(form, f_dat, a_dat, dimn, keep_term_order=FALSE, 
-                  whichterm=NULL, no_icpt=FALSE, return_means=FALSE,
-                  return_array=TRUE) {
-    labels <- attr(terms(as.formula(form), keep.order=keep_term_order), 
+sumsq <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE, 
+                  whichterm = NULL, no_icpt = FALSE, return_means = FALSE,
+                  return_array = TRUE) {
+    labels <- attr(terms(as.formula(form), keep.order = keep_term_order), 
                    "term.labels")
     termL <- if (is.null(whichterm) || is.na(whichterm)) {
         strsplit(labels, ":")
@@ -969,13 +1198,13 @@ sumsq <- function(form, f_dat, a_dat, dimn, keep_term_order=FALSE,
     if (!no_icpt) a_dat <- sweep(a_dat, 2, colMeans(a_dat), "-")
     #
     for (i in 1:length(termL)) {
-        groups <- factor(interaction(f_dat[,termL[[i]]], drop=TRUE))
+        groups <- factor(interaction(f_dat[,termL[[i]]], drop = TRUE))
         groupfreq <- tabulate(groups)
         names(groupfreq) <- levels(groups)
         tmeans <- rowsum(a_dat, groups)/groupfreq
         a_dat <- a_dat - tmeans[as.numeric(groups),]
         ssq[i, ] <- colSums(groupfreq*tmeans^2)
-        if (length(termL[[i]])==1) {
+        if (length(termL[[i]]) == 1) {
             df[i] <- length(groupfreq)-1
         } else {
             ind <- which(sapply(termL[1:(i-1)], 
@@ -985,13 +1214,13 @@ sumsq <- function(form, f_dat, a_dat, dimn, keep_term_order=FALSE,
         if (return_means) {
             marg_means[[i]] <- array(tmeans, 
                                      c(length(groupfreq), sapply(dimn, length)),
-                                     c(list(modelterm=names(groupfreq)), dimn))
+                                     c(list(modelterm = names(groupfreq)), dimn))
         }
     }
     #
     if (return_array) {
         ssq <- array(ssq, c(nrow(ssq), sapply(dimn, length)),
-                     c(list(modelterm=labels), dimn))
+                     c(list(modelterm = labels), dimn))
     } else {
         rownames(ssq) <- labels
         names(dimnames(ssq))[1] <- "modelterm"
@@ -1004,7 +1233,7 @@ sumsq <- function(form, f_dat, a_dat, dimn, keep_term_order=FALSE,
 #' Parameter checks and data preparation before arrayAnovaSub
 #' @keywords internal
 preAnova <- function(arraydat, factordef, bwdat, 
-                     useparallel, ncpus, par_method, usetfce=FALSE) {
+                     useparallel, ncores, par_method, usetfce = FALSE) {
     params <- list()
     # fast check of arguments
     if (is.null(factordef$w_id)) factordef$w_id <- "id"
@@ -1020,9 +1249,9 @@ preAnova <- function(arraydat, factordef, bwdat,
             data.frame(bwdat[,factordef$between]), factor)
     }
     if (useparallel) {
-        params$ncpus <- ncpus
-        if (par_method=="snow") {
-            fns <- ls(envir=parent.env(environment()))
+        params$ncores <- ncores
+        if (par_method == "snow") {
+            fns <- ls(envir = parent.env(environment()))
             fns <- fns[sapply(fns, function(x) is.function(get(x)))]
             params$varlist2snow <-  
                 if (usetfce) {
@@ -1040,12 +1269,12 @@ preAnova <- function(arraydat, factordef, bwdat,
     arraydat <- mergeDims(arraydat, list(modeldims, keepdims))
     dat <- data.frame(matrix(unlist(strsplit(rownames(arraydat), "[.]"), 
                                     use.names = FALSE), 
-                             nrow=nrow(arraydat), byrow=TRUE))
+                             nrow = nrow(arraydat), byrow = TRUE))
     colnames(dat) <- modeldims
     dat[,factordef$between] <- bwdat[
         match(dat[,factordef$w_id],bwdat[,factordef$w_id]),factordef$between]
-    return(list(dat=dat, arraydat=arraydat, factordef=factordef, 
-                origdimnames=origdimnames, par_params=params))
+    return(list(dat = dat, arraydat = arraydat, factordef = factordef, 
+                origdimnames = origdimnames, par_params = params))
 }
 
 #' Workhorse function of arrayAnova
@@ -1053,7 +1282,7 @@ preAnova <- function(arraydat, factordef, bwdat,
 #' \code{arrayAnovaSub} computes F-values in ANOVA designs, and provides 
 #' additional p-values, degrees of freedom, generalized effect sizes if 
 #' requested.
-arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
+arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
     origdims <- sapply(d_names, length)
     modeldims <- c(f_def$w_id, f_def$within)
     keepdims <- setdiff(names(d_names), modeldims)
@@ -1065,33 +1294,33 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
         aov_formula <- as.formula(paste(
             as.character(quote(a_dat)), "~", 
             paste(as.character(f_def$between), collapse = "*")))
-        results <- summary(aov(aov_formula, data=f_dat))
+        results <- summary(aov(aov_formula, data = f_dat))
         results <- array(unlist(results, use.names = FALSE), 
                          c(dim(results[[1]]), length(results)),
-                         dimnames=list(
-                             modelterm=gsub(" ", "", rownames(results[[1]])),
-                             measures=colnames(results[[1]]),
-                             columns=gsub("[*Response ]", "", names(results))))
-        termrows <- tolower(rownames(results))!="residuals"
+                         dimnames = list(
+                             modelterm = gsub(" ", "", rownames(results[[1]])),
+                             measures = colnames(results[[1]]),
+                             columns = gsub("[*Response ]", "", names(results))))
+        termrows <- tolower(rownames(results)) != "residuals"
         Fvals <- array(results[termrows,"F value",], 
                        c(sum(termrows), origdims[keepdims]),
-                       dimnames=c(list(modelterm=rownames(results)[termrows]), 
+                       dimnames = c(list(modelterm = rownames(results)[termrows]), 
                                   d_names[keepdims]))
         if (verbose) {
             Df <- as.numeric(results[termrows, "Df", 1])
             rDf <- results[!termrows, "Df", 1]
             pvalues <- results[termrows,"Pr(>F)",]
             # effect size (Olejnik and Algina, 2003; Bakeman, 2005)
-            results <- subsetArray(results, list(measures="Sum Sq"), drop=FALSE)
+            results <- subsetArray(results, list(measures = "Sum Sq"), drop = FALSE)
             results <- matrix(results, nrow(results), dim(results)[3], 
-                              dimnames=dimnames(results)[-2])
+                              dimnames = dimnames(results)[-2])
             SSr <- results["Residuals", ]
             if (!is.null(f_def$observed)) {
                 ind <- apply(sapply(f_def$observed, 
                                     function(x) 
                                         grepl(x, rownames(results))),
                              1, any)
-                SS1 <- colSums(results[ind, , drop=F])
+                SS1 <- colSums(results[ind, , drop = F])
                 SS2 <- sweep(results, 1, ind, "*")
                 ges <- results / sweep(sweep(results - SS2, 2, SSr, "+"), 2,
                                        SS1, "+")
@@ -1100,7 +1329,7 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
             }
             ges <- ges[-nrow(ges), ]
             factor_means <- marginalMeans(aov_formula, f_dat, a_dat, 
-                                          d_names[keepdims], residualmean=FALSE)
+                                          d_names[keepdims], residualmean = FALSE)
         }
     } else if (is.null(f_def$between)) {
         # compute marginal means
@@ -1111,7 +1340,7 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
             )
             )
             factor_means <- marginalMeans(aov_formula, f_dat, a_dat, 
-                                          d_names[keepdims], residualmean=FALSE)
+                                          d_names[keepdims], residualmean = FALSE)
         }
         # model formula
         aov_formula <- as.formula(paste(
@@ -1119,7 +1348,7 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
             paste(
                 f_def$w_id, 
                 paste(as.character(f_def$within), collapse = "*"),
-                sep="*")
+                sep = "*")
         )
         )
         #
@@ -1127,29 +1356,29 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
         #
         a_datsc <- sweep(a_dat, 2, colMeans(a_dat), "-")
         model <- sumsq(aov_formula, f_dat, a_datsc, d_names[keepdims], 
-                       no_icpt=TRUE, return_array=FALSE)
+                       no_icpt = TRUE, return_array = FALSE)
         model_df <- attr(model, "Df")
         # compute indices to handle error terms
         modnames <- dimnames(model)$modelterm
         m_ind <- !grepl(f_def$w_id, modnames)
         err_ind <- match(
-            paste(f_def$w_id, ":", modnames[m_ind], sep=""),
+            paste(f_def$w_id, ":", modnames[m_ind], sep = ""),
             modnames)
         Df <- model_df[m_ind]
         rDf <- model_df[err_ind]
-        Fvals <- (model[m_ind, , drop=F] / Df) / 
-            (model[err_ind, , drop=F] / rDf)
+        Fvals <- (model[m_ind, , drop = F] / Df) / 
+            (model[err_ind, , drop = F] / rDf)
         if (verbose) {
-            pvalues <- mapply(pf, Fvals, Df, rDf, MoreArgs=list(lower.tail=FALSE))
+            pvalues <- mapply(pf, Fvals, Df, rDf, MoreArgs = list(lower.tail = FALSE))
             dim(pvalues) <- dim(Fvals)
             # effect size (Olejnik and Algina, 2003; Bakeman, 2005)
             SSr <- colSums(model[grep(f_def$w_id, 
                                       rownames(model)), ])
-            ges <- model[m_ind, , drop=F] / 
-                sweep(model[m_ind, , drop=F], 2, SSr, "+")
+            ges <- model[m_ind, , drop = F] / 
+                sweep(model[m_ind, , drop = F], 2, SSr, "+")
         }
         Fvals <- array(Fvals, c(nrow(Fvals), origdims[keepdims]),
-                       dimnames=c(list(modelterm=rownames(Fvals)), 
+                       dimnames = c(list(modelterm = rownames(Fvals)), 
                                   d_names[keepdims]))
     } else {   
         aov_formula1 <- as.formula(paste(
@@ -1157,7 +1386,7 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
             paste(
                 paste(as.character(f_def$between), collapse = "*"), 
                 paste(as.character(f_def$within), collapse = "*"),
-                sep="*")
+                sep = "*")
         )
         )
         aov_formula2 <- as.formula(paste(
@@ -1165,22 +1394,22 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
             paste(
                 f_def$w_id, 
                 paste(as.character(f_def$within), collapse = "*"),
-                sep="*")
+                sep = "*")
         )
         )
         # compute marginal means
         if (verbose) 
             factor_means <- marginalMeans(aov_formula1, f_dat, a_dat, 
-                                          d_names[keepdims], residualmean=FALSE)
+                                          d_names[keepdims], residualmean = FALSE)
         #
         # run model
         #
         a_datsc <- sweep(a_dat, 2, colMeans(a_dat), "-")
         model1 <- sumsq(aov_formula1, f_dat, a_datsc, d_names[keepdims], 
-                        no_icpt=TRUE, return_array=FALSE)
+                        no_icpt = TRUE, return_array = FALSE)
         model1_df <- attr(model1, "Df")
         model2 <- sumsq(aov_formula2, f_dat, a_datsc, d_names[keepdims], 
-                        no_icpt=TRUE, return_array=FALSE)
+                        no_icpt = TRUE, return_array = FALSE)
         model2_df <- attr(model2, "Df")
         # compute indices to handle error terms
         modnames <- dimnames(model2)$modelterm
@@ -1188,10 +1417,10 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
         modnames <- modnames[m2indices]
         bwnames <- unlist(lapply(seq_along(f_def$between), 
                                  function(i) apply(combn(f_def$between, i), 2, 
-                                                   paste, collapse=":")))
+                                                   paste, collapse = ":")))
         sumindices <- sapply(bwnames, function(i) 
             match(sub(f_def$w_id, i, modnames), dimnames(model1)$modelterm))
-        modnames <- sub(paste(f_def$w_id,"\\:?", sep=""), "", modnames)
+        modnames <- sub(paste(f_def$w_id,"\\:?", sep = ""), "", modnames)
         fillindices <- lapply(1:nrow(sumindices), function(i)
             c(sumindices[i,], 
               na.omit(match(modnames[i], 
@@ -1200,9 +1429,9 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
         model1_err <- array(0, dim(model1))
         model1_err_df <- rep(0, length(model1_df))
         for (i in 1:nrow(sumindices)) {
-            errs <- model2[m2indices[i],] - colSums(model1[sumindices[i,], , drop=F])
+            errs <- model2[m2indices[i],] - colSums(model1[sumindices[i,], , drop = F])
             model1_err[fillindices[[i]], ] <- 
-                rep(c(errs), each=length(fillindices[[i]])) 
+                rep(c(errs), each = length(fillindices[[i]])) 
             model1_err_df[fillindices[[i]]] <- model2_df[m2indices[i]] - 
                 sum(model1_df[sumindices[i, ]])
         }
@@ -1210,7 +1439,7 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
         if (verbose) {
             Df <- as.numeric(model1_df)
             rDf <- model1_err_df
-            pvalues <- mapply(pf, Fvals, Df, rDf, MoreArgs=list(lower.tail=FALSE))
+            pvalues <- mapply(pf, Fvals, Df, rDf, MoreArgs = list(lower.tail = FALSE))
             # effect size (Olejnik and Algina, 2003; Bakeman, 2005)
             SSr <- colSums(model1_err[grep(f_def$w_id, 
                                            rownames(model2)), ])
@@ -1227,13 +1456,13 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
             }
         }
         Fvals <- array(Fvals, c(nrow(Fvals), origdims[keepdims]),
-                       dimnames=c(list(modelterm=rownames(Fvals)), 
+                       dimnames = c(list(modelterm = rownames(Fvals)), 
                                   d_names[keepdims]))
     }
     # rearrange dimensions to be compatible with arrayTtest output
     if (verbose) {
         tempfn <- function(x) aperm(array(x, dim(Fvals), 
-                                          dimnames=dimnames(Fvals)), 
+                                          dimnames = dimnames(Fvals)), 
                                     c(keepdims, "modelterm"))
         pvalues <- tempfn(pvalues)
         ges <- tempfn(ges)
@@ -1271,7 +1500,7 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
 #' @param nperm integer value giving the number of permutations (default: 999L)
 #' @param useparallel logical value; if TRUE (default), computations are done
 #' in parallel
-#' @param ncpus integer value corresponding to the number of cores; 
+#' @param ncores integer value corresponding to the number of cores; 
 #' if NULL (default), it is set to the maximum number of cores available
 #' @param par_method parallelization method; can be "snow" (default) or "mc"
 #' (multicore)
@@ -1293,10 +1522,10 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose=TRUE) {
 #' @export
 #' @return A list object with F values, TFCE-corrected F-values and
 #' permutation-based p-values (if requested)
-arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE, 
-                       nperm=999L, useparallel=FALSE, ncpus=NULL, 
-                       par_method="snow", cl=NULL,
-                       usetfce=TRUE, tfce_options=NULL, seed=NULL) {
+arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE, 
+                       nperm = 999L, useparallel = FALSE, ncores = NULL, 
+                       par_method = "snow", cl = NULL,
+                       usetfce = TRUE, tfce_options = NULL, seed = NULL) {
     # some checks
     stopifnot(is.array(arraydat))
     stopifnot(is.list(factordef))
@@ -1310,16 +1539,16 @@ arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE,
     }
     if (useparallel) {
         stopifnot(require(parallel))
-        if (is.null(ncpus)) ncpus <- detectCores()
+        if (is.null(ncores)) ncores <- detectCores()
     }
     #
-    out <- list(call=match.call())
+    out <- list(call = match.call())
     #
     #
     temp <- preAnova(arraydat, factordef, bwdat, 
-                     useparallel, ncpus, par_method, usetfce)
+                     useparallel, ncores, par_method, usetfce)
     # assign variables to this environment, and potentially overwrite existing ones
-    assignList(temp, verbose=FALSE)
+    assignList(temp, verbose = FALSE)
     rm(temp)
     #
     Fvals_obs <- arrayAnovaSub(arraydat, factordef, origdimnames, 
@@ -1331,7 +1560,7 @@ arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE,
             tfce_obs[i,,] <- tfce.fnc(tfce_obs[i,,], ChN, EH)
         tfce_obs <- revMergeDims(tfce_obs)
     }
-    if (nperm>1) {
+    if (nperm > 1) {
         #
         permfn_f <- function(i) {
             x <- arrayAnovaSub(arraydat[randind[i,], ], 
@@ -1342,7 +1571,7 @@ arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE,
             return(maxf)
         }
         permfn_tfce <- function(i) {
-            verb <- ifelse(i==1, verbose, F)
+            verb <- ifelse(i == 1, verbose, F)
             x <- arrayAnovaSub(arraydat[randind[i,], ], 
                                factordef, origdimnames, dat, F)
             x <- mergeDims(x, mergedimnames)
@@ -1355,26 +1584,26 @@ arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE,
         # generate random orders (dim(randind) = nperm X nrow(dat))
         if (!is.null(seed)) set.seed(seed)
         randind <- shuffleSet(nrow(dat), nperm, 
-                              how(within=Within(type="free"), 
-                                  plots=Plots(strata=dat[,factordef$w_id], 
-                                              type="free")))
+                              how(within = Within(type = "free"), 
+                                  plots = Plots(strata = dat[,factordef$w_id], 
+                                              type = "free")))
         #
         if (!useparallel) {
             maxperm <- lapply(1:nperm, permfn)
-        } else if (par_method=="snow") {
-            if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncpus, 
-                                                    outfile="")
+        } else if (par_method == "snow") {
+            if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncores, 
+                                                    outfile = "")
             clusterExport(cl, 
-                          varlist=par_params$varlist2snow,
-                          envir=environment())
+                          varlist = par_params$varlist2snow,
+                          envir = environment())
             #clusterEvalQ(cl, dyn.load("ept_TFCE3_R.so"))
             maxperm <- parLapply(cl, 1:nperm, permfn)
             stopCluster(cl)
             rm(cl)
-        } else if (par_method=="mc") {
-            maxperm <- mclapply(1:nperm, permfn, mc.cores=par_params$ncpus)
+        } else if (par_method == "mc") {
+            maxperm <- mclapply(1:nperm, permfn, mc.cores = par_params$ncores)
         } 
-        maxperm <- matrix(unlist(maxperm, use.names = FALSE), ncol=nperm)
+        maxperm <- matrix(unlist(maxperm, use.names = FALSE), ncol = nperm)
         sig <- if (usetfce) tfce_obs else Fvals_obs
         sig <- mergeDims(sig, mergedimnames)
         for (i in 1:nrow(sig)) {
@@ -1415,23 +1644,23 @@ arrayAnova <- function(arraydat, factordef, bwdat=NULL, verbose=TRUE,
 #' @export
 #' @return A named list is returned with the same names as the input, but the 
 #' list elements are ia_level x chan x time arrays.  
-extractInteraction <- function(dat, sep=".", sep_fixed=TRUE) {
+extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
     # function to compute the weights (+1 or -1) of the factor levels (f)
     iasign <- function(f) {
         combin <- lapply(f, function(x) combn(levels(x), 2))
         combin_ind <- expand.grid(lapply(combin, 
                                          function(x) seq.int(ncol(x))))
         combin_names <- expand.grid(lapply(f, function(x) 
-            combn(levels(x), 2, FUN=paste, collapse="-")))
-        combin_names <- apply(combin_names, 1, paste, collapse=".")
+            combn(levels(x), 2, FUN = paste, collapse = "-")))
+        combin_names <- apply(combin_names, 1, paste, collapse = ".")
         out <- sapply(1:nrow(combin_ind), function(ii) {
             out <- rep(0, nrow(f))
             ind <- sapply(names(combin), function(x) 
                 f[, x] %in% combin[[x]][, combin_ind[ii, x]])
             ind <- apply(ind, 1, all)
-            if (sum(ind)>2) {
-                tempf <- sapply(droplevels(f[ind, , drop=F]), as.numeric)
-                tempf <- sign(1.5-tempf)
+            if (sum(ind) > 2) {
+                tempf <- sapply(droplevels(f[ind, , drop = F]), as.numeric)
+                tempf <- sign(1.5 - tempf)
                 out[which(ind)] <- apply(tempf, 1, prod)
             } else {
                 out[which(ind)] <- c(1, -1)
@@ -1444,17 +1673,17 @@ extractInteraction <- function(dat, sep=".", sep_fixed=TRUE) {
     # function to compute the interaction effects
     compia <- function(x, modterm_name) {
         modterm <- dimnames(x)$modelterm
-        facs <- strsplit(modterm, sep, fixed=sep_fixed)
-        facs <- data.frame(matrix(unlist(facs), ncol=length(facs[[1]]), 
-                                  byrow=TRUE))
+        facs <- strsplit(modterm, sep, fixed = sep_fixed)
+        facs <- data.frame(matrix(unlist(facs), ncol = length(facs[[1]]), 
+                                  byrow = TRUE))
         colnames(facs) <- unlist( strsplit(modterm_name, ":") )
         signs <- iasign(facs)
         rownames(signs) <- modterm
         avg_ia <- fnDims(x, "modelterm", 
                          function(xx, y) t( crossprod(xx, y) ), 
-                         list(y=signs),
-                         newdim=list(ia_level=colnames(signs)),
-                         vectorized=TRUE)
+                         list(y = signs),
+                         newdim = list(ia_level = colnames(signs)),
+                         vectorized = TRUE)
         return( avg_ia )
     }
     # ------
@@ -1479,7 +1708,7 @@ extractInteraction <- function(dat, sep=".", sep_fixed=TRUE) {
 #' or geographical coordinates of the electrode positions. It should contain 
 #' at least the following (named) columns, respectively: theta and phi; 
 #' x, y, and z; or lat and long.
-#' @param r radius (default=1)
+#' @param r radius (default = 1)
 #' @param deg logical variable indicating whether spherical or geographical 
 #' coordinates are or should be given in degrees (TRUE, default)
 #' @param long360 logical variable; if TRUE (default), longitudes range from
@@ -1492,7 +1721,7 @@ NULL
 #' @rdname coordinates
 #' @export
 # Transform cartesian to spherical coordinates
-sph2cart <- function(ch_pos, r=1, deg=TRUE) {
+sph2cart <- function(ch_pos, r = 1, deg = TRUE) {
     ch_pos <- as.data.frame(ch_pos)
     if (!all(c("theta", "phi") %in% colnames(ch_pos)))
         stop("Either theta or phi angles are missing!")
@@ -1502,9 +1731,9 @@ sph2cart <- function(ch_pos, r=1, deg=TRUE) {
     theta <- ch_pos$theta
     phi <- ch_pos$phi
     out <- data.frame(
-        x = r*sin(theta)*cos(phi),
-        y = r*sin(theta)*sin(phi),
-        z = r*cos(theta)
+        x = r * sin(theta) * cos(phi),
+        y = r * sin(theta) * sin(phi),
+        z = r * cos(theta)
     )
     rownames(out) <- rownames(ch_pos)
     return(out)
@@ -1513,7 +1742,7 @@ sph2cart <- function(ch_pos, r=1, deg=TRUE) {
 #' @rdname coordinates 
 #' @export
 # Transform cartesian to spherical coordinates
-cart2sph <- function(ch_pos, deg=TRUE) {
+cart2sph <- function(ch_pos, deg = TRUE) {
     ch_pos <- as.data.frame(ch_pos)
     if (!all(c("x", "y", "z") %in% colnames(ch_pos)))
         stop("Either x, y, or z coordinates are missing!")
@@ -1521,28 +1750,28 @@ cart2sph <- function(ch_pos, deg=TRUE) {
     y <- ch_pos$y
     z <- ch_pos$z
     r <- sqrt(x^2 + y^2 + z^2)
-    theta <- sign(x)*abs(acos(z/r))
+    theta <- sign(x) * abs(acos(z/r))
     phi <- abs(atan(y/x))
-    phi[y==x & x==0] <- 0
-    phi <- phi*sign(x)*sign(y) 
+    phi[y == x & x == 0] <- 0
+    phi <- phi * sign(x) * sign(y) 
     out <- data.frame(theta, phi, r)
-    if (nrow(out)>1) rownames(out) <- rownames(ch_pos)
-    if (deg) out[, 1:2] <- out[, 1:2]*180/pi
+    if (nrow(out) > 1) rownames(out) <- rownames(ch_pos)
+    if (deg) out[, 1:2] <- out[, 1:2] * 180/pi
     return(out)
 }
 
 #' @rdname coordinates
 #' @export
 # Transform spherical to geographical coordinates
-sph2geo <- function(ch_pos, r=1, deg=TRUE, long360=TRUE, 
-                    orient=c("northpole", "equatorial")) {
+sph2geo <- function(ch_pos, r = 1, deg = TRUE, long360 = TRUE, 
+                    orient = c("northpole", "equatorial")) {
     ch_pos <- as.data.frame(ch_pos)
     if (!all(c("theta", "phi") %in% colnames(ch_pos)))
         stop("Either theta or phi angles are missing!")
     if (!is.null(ch_pos$r)) r <- ch_pos$r
-    if (!deg) ch_pos <- ch_pos/pi*180
+    if (!deg) ch_pos <- ch_pos * 180/pi
     orient <- match.arg(orient)
-    if (orient=="equatorial") {
+    if (orient == "equatorial") {
         temp <- sph2cart(ch_pos)[, c("z", "x", "y")]
         colnames(temp) <- c("x", "y", "z")
         temp <- cart2sph(temp)
@@ -1551,11 +1780,11 @@ sph2geo <- function(ch_pos, r=1, deg=TRUE, long360=TRUE,
     }
     theta <- ch_pos$theta
     phi <- ch_pos$phi
-    long <- ifelse(theta<0, 180, 0) + phi
-    long[long<0] <- 360 + long[long<0]
-    if (!long360) long[long>180] <- long[long>180]-360
-    lat <- 90-abs(theta)
-    out <- data.frame(long=long, lat=lat, r=r)
+    long <- ifelse(theta < 0, 180, 0) + phi
+    long[long < 0] <- 360 + long[long < 0]
+    if (!long360) long[long > 180] <- long[long > 180] - 360
+    lat <- 90 - abs(theta)
+    out <- data.frame(long = long, lat = lat, r = r)
     rownames(out) <- rownames(ch_pos)
     return(out)
 }
@@ -1563,7 +1792,7 @@ sph2geo <- function(ch_pos, r=1, deg=TRUE, long360=TRUE,
 #' @rdname coordinates
 #' @export
 # Transform geographical to spherical coordinates
-geo2sph <- function(ch_pos, r=1, deg=TRUE) {
+geo2sph <- function(ch_pos, r = 1, deg = TRUE) {
     ch_pos <- as.data.frame(ch_pos)
     if (!all(c("lat", "long") %in% colnames(ch_pos)))
         stop("Either latitude [lat] or longitude [long] coordinates are missing!")
@@ -1571,12 +1800,12 @@ geo2sph <- function(ch_pos, r=1, deg=TRUE) {
     neglong <- ch_pos$long < 0
     long360 <- if (any(neglong)) F else T
     theta <- (90 - ch_pos$lat) * sign(90 - ch_pos$long) * sign(270 - ch_pos$long)
-    theta <- ifelse(ch_pos$lat == 45 & theta==0, 45, theta)
+    theta <- ifelse(ch_pos$lat == 45 & theta == 0, 45, theta)
     phi <- -(ifelse(theta < 0, 180, 0) - ch_pos$long)
     phi <- ifelse(phi > 180, phi - 360, phi)
-    out <- data.frame(r=r, theta=theta, phi=phi)
+    out <- data.frame(r = r, theta = theta, phi = phi)
     backcheck <- sum(abs(as.matrix(
-        sph2geo(out, long360=long360)[, c("long", "lat")] - 
+        sph2geo(out, long360 = long360)[, c("long", "lat")] - 
             ch_pos[, c("long", "lat")]))) < 1e-8
     if (backcheck) {
         if (!deg) out <- out/180 * pi
@@ -1589,14 +1818,14 @@ geo2sph <- function(ch_pos, r=1, deg=TRUE) {
 #' @rdname coordinates
 #' @export
 # Transform geographical to cartesian coordinates
-geo2cart <- function(ch_pos, r=1, deg=TRUE) {
+geo2cart <- function(ch_pos, r = 1, deg = TRUE) {
     sph2cart( geo2sph(ch_pos, r, deg) )
 }
 
 #' @rdname coordinates
 #' @export
 # Transform cartesian to geographical coordinates
-cart2geo <- function(ch_pos, deg=TRUE) {
+cart2geo <- function(ch_pos, deg = TRUE) {
     sph2geo( cart2sph(ch_pos, deg) )
 }
 
@@ -1616,8 +1845,8 @@ cart2geo <- function(ch_pos, deg=TRUE) {
 #' @import alphashape3d
 #' @import shinyRGL
 #' @return An electrode neighbourhood matrix
-chanNb <- function(ch_pos, check_alpha=c(0.1, 10), alpha=NULL, ...) {
-    options(rgl.useNULL=TRUE)
+chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
+    options(rgl.useNULL = TRUE)
     require(rgl)
     require(alphashape3d)
     if (!all(c("x", "y", "z") %in% colnames(ch_pos))) {
@@ -1628,7 +1857,7 @@ chanNb <- function(ch_pos, check_alpha=c(0.1, 10), alpha=NULL, ...) {
         }
     } 
     ch_pos <- ch_pos[, c("x", "y", "z")]
-    channames <- paste(1:nrow(ch_pos), rownames(ch_pos), sep=". ")
+    channames <- paste(1:nrow(ch_pos), rownames(ch_pos), sep = ". ")
     if (is.null(alpha)) {
         require(shiny)
         require(shinyRGL)
@@ -1647,18 +1876,18 @@ chanNb <- function(ch_pos, check_alpha=c(0.1, 10), alpha=NULL, ...) {
                 ),
                 # Show the generated 3d scatterplot
                 mainPanel(
-                    webGLOutput("chanPlot", height="700px")
+                    webGLOutput("chanPlot", height = "700px")
                 )
             ),
             server = function(input, output) {
                 output$chanPlot <- renderWebGL({
                     #bg3d("grey40")
                     a <- suppressWarnings(ashape3d(as.matrix(ch_pos), 
-                                                   input$alpha, pert=TRUE))
-                    plot(a, walpha=TRUE, transparency=0.95, 
-                         col=c("red", "red2", "red"), shininess=100)
-                    text3d(ch_pos$x, ch_pos$y, ch_pos$z, cex=0.6, 
-                           channames, col="black")
+                                                   input$alpha, pert = TRUE))
+                    plot(a, walpha = TRUE, transparency = 0.95, 
+                         col = c("red", "red2", "red"), shininess = 100)
+                    text3d(ch_pos$x, ch_pos$y, ch_pos$z, cex = 0.6, 
+                           channames, col = "black")
                 })
                 observe({
                     if (input$submit == 0)
@@ -1669,11 +1898,11 @@ chanNb <- function(ch_pos, check_alpha=c(0.1, 10), alpha=NULL, ...) {
         ))
     }
     a <- suppressWarnings(ashape3d(as.matrix(ch_pos), 
-                                   alpha, pert=TRUE))$edge
+                                   alpha, pert = TRUE))$edge
     a <- a[,c(1, 2, ncol(a))]
     out <- matrix(0, nrow(ch_pos), nrow(ch_pos))
     rownames(out) <- rownames(ch_pos)
-    mirror <- out>0
+    mirror <- out > 0
     for (i in 1:nrow(ch_pos)) {
         nb <- sort(unique(c(
             which(mirror[i,]), 
@@ -1682,7 +1911,7 @@ chanNb <- function(ch_pos, check_alpha=c(0.1, 10), alpha=NULL, ...) {
         out[i, 1:length(nb)] <- nb
         mirror[nb, i] <- T
     }
-    out <- out[, apply(out>0, 2, any)]
+    out <- out[, apply(out > 0, 2, any)]
     return(out)
 }
 
@@ -1705,11 +1934,11 @@ chanNb <- function(ch_pos, check_alpha=c(0.1, 10), alpha=NULL, ...) {
 #' FALSE if you really know what you are doing. 
 #' @export
 #' @return A symmetric matrix  
-cosAngle <- function(x, y = NULL, coords=TRUE, units_in_rows=TRUE, 
-                     check_params=TRUE) {
+cosAngle <- function(x, y = NULL, coords = TRUE, units_in_rows = TRUE, 
+                     check_params = TRUE) {
     checkFn <- function(xx) {
         if (!units_in_rows) xx <- t(xx)
-        if (length(dim(xx))<=1 || ncol(xx)<2) {
+        if (length(dim(xx)) <= 1 || ncol(xx)<2) {
             stop("Provide a matrix or data.frame with at least 2 columns.")
         }
         if (coords) {
@@ -1763,12 +1992,13 @@ cosAngle <- function(x, y = NULL, coords=TRUE, units_in_rows=TRUE,
 #' @param interp_pos interpolation positions, if they differ from ch_pos; 
 #' should be in the same format as ch_pos (default: NULL)
 #' @param maxNA numeric value given as ratio (0 < maxNA < 1) or integer 
-#' (maxNA >=1 ); it determines the maximum ratio or number of non-missing 
+#' (maxNA >= 1 ); it determines the maximum ratio or number of non-missing 
 #' channels in a time sample. If exceeded, no interpolation occurs in the given
 #' time sample.
 #' @param m integer value (default: 4); the flexibility of the spline
 #' @param N integer value (default: 7); number of terms in the Legendre 
-#' polynomial
+#' polynomial. You should probably increase it (even up to 100L) for 
+#' realistic (i.e. non-spherical) electrode arrangements.
 #' @param lambda numeric value (default: 1e-10); smoothing factor
 #' @param type character value, do not use yet
 #' @param alarm_tolerance numeric value (default: 1e-2); if the maximal absolute 
@@ -1779,10 +2009,10 @@ cosAngle <- function(x, y = NULL, coords=TRUE, units_in_rows=TRUE,
 #' @import orthopolynom
 #' @import corpcor
 #' @import Kmisc
-chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3, 
-                       m=4L, N=7L, lambda=1e-10, 
-                       type=c("voltage", "laplacian", "scd"),
-                       alarm_tolerance=1e-2) {
+chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3, 
+                       m = 4L, N = 7L, lambda = 1e-10, 
+                       type = c("voltage", "laplacian", "scd"),
+                       alarm_tolerance = 1e-2) {
     require(orthopolynom)
     require(corpcor)
     require(Kmisc)
@@ -1792,15 +2022,15 @@ chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3,
     compGmat <- function(cos_angles, m, N) {
         n <- seq.int(N)
         series <- (2*n + 1) / (n^m * (n+1)^m)
-        k <- 1/(4*pi)
+        k <- 1/4 / pi
         P <- polynomial.values(
-            legendre.polynomials(N, normalized=FALSE)[-1], cos_angles)
-        G <- k * Reduce("+", mapply("*", P, series, SIMPLIFY=FALSE))
+            legendre.polynomials(N, normalized = FALSE)[-1], cos_angles)
+        G <- k * Reduce("+", mapply("*", P, series, SIMPLIFY = FALSE))
         return( G )
     }
     # Function to compute C coefficients
     compCmat <- function(x, G, tol) {
-        Gx <- array(1, dim(G)+1)
+        Gx <- array(1, dim(G) + 1)
         Gx[-1, -1] <- G
         Gx[1, 1] <- 0
         diag(Gx) <- diag(Gx) + tol
@@ -1810,23 +2040,23 @@ chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3,
     # Function to perform spherical spline interpolation
     interpFn <- function(y, m, N, lambda, type) {
         na_ind <- is.na(y)
-        message("...Looking for missing value patterns - ", appendLF=FALSE)
+        message("...Looking for missing value patterns - ", appendLF = FALSE)
         if (is.null(interp_pos)) {
-            keep_columns <- colMeans(na_ind)<=maxNA & colMeans(na_ind)>0
-            missing_patterns <- fastUnique(na_ind[, keep_columns, drop=F], 
-                                           units_in_rows=FALSE)
+            keep_columns <- colMeans(na_ind) <= maxNA & colMeans(na_ind) > 0
+            missing_patterns <- fastUnique(na_ind[, keep_columns, drop = F], 
+                                           units_in_rows = FALSE)
             mischan <- which(rowAnys(missing_patterns))
             mischan <- 
                 if (!is.null(rownames(ch_pos))) {
-                    paste(rownames(ch_pos)[mischan], collapse=", ")
+                    paste(rownames(ch_pos)[mischan], collapse = ", ")
                 } else {
-                    paste(seq_along(mischan), collapse=", ")
+                    paste(seq_along(mischan), collapse = ", ")
                 }
             message("Done")
             message("...There are missing values in the following channels: ",
                     mischan)
         } else {
-            missing_patterns <- fastUnique(na_ind, units_in_rows=FALSE)
+            missing_patterns <- fastUnique(na_ind, units_in_rows = FALSE)
             message("Done")
             yy <- array(0, c(nrow(interp_pos), ncol(y)),
                         list(rownames(interp_pos), colnames(y)))
@@ -1837,34 +2067,34 @@ chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3,
             names(dev) <- colnames(y)
             maxdev <- 0
         }
-        message("...Perform interpolation - ", appendLF=FALSE) 
+        message("...Perform interpolation - ", appendLF = FALSE) 
         for (i in 1:ncol(missing_patterns)) {
             na_vec <- missing_patterns[, i]
-            y_ind <- colSums(abs(sweep(na_ind, 1, na_vec, "-")))==0
-            ch_good <- ch_pos[!na_vec, , drop=F]
+            y_ind <- colSums(abs(sweep(na_ind, 1, na_vec, "-"))) == 0
+            ch_good <- ch_pos[!na_vec, , drop = F]
             ch_interp <- 
-                if (is.null(interp_pos)) ch_pos[na_vec,,drop=F] else interp_pos
+                if (is.null(interp_pos)) ch_pos[na_vec,,drop = F] else interp_pos
             #
-            G <- compGmat(cosAngle(ch_good, check_params=FALSE), m, N)
-            Coef <- compCmat(y[!na_vec, y_ind, drop=F], G, lambda)
-            interpG <- compGmat(cosAngle(ch_good, ch_interp, check_params=FALSE), 
+            G <- compGmat(cosAngle(ch_good, check_params = FALSE), m, N)
+            Coef <- compCmat(y[!na_vec, y_ind, drop = F], G, lambda)
+            interpG <- compGmat(cosAngle(ch_good, ch_interp, check_params = FALSE), 
                                 m, N)
             if (is.null(interp_pos)) {
-                res <- sweep(crossprod(Coef[-1, , drop=F], interpG), 1, 
-                             Coef[1, , drop=F], "+")
+                res <- sweep(crossprod(Coef[-1, , drop = F], interpG), 1, 
+                             Coef[1, , drop = F], "+")
                 y[na_vec, y_ind] <- c(t(res))
             } else {
-                yy[, y_ind] <- c(t(sweep(crossprod(Coef[-1, , drop=F], interpG),
-                                         1, Coef[1, , drop=F], "+")))
+                yy[, y_ind] <- c(t(sweep(crossprod(Coef[-1, , drop = F], interpG),
+                                         1, Coef[1, , drop = F], "+")))
             }
             if (!is.null(alarm_tolerance)) {
                 ch_interp <- ch_pos
                 interpG <- compGmat(cosAngle(ch_good, 
-                                             ch_interp, check_params=FALSE), 
+                                             ch_interp, check_params = FALSE), 
                                     m, N)
-                res <- sweep(crossprod(Coef[-1, , drop=F], interpG), 1, 
-                             Coef[1, , drop=F], "+")
-                mdevs <- colMaxs(abs(y[, y_ind] - t(res)), na.rm=TRUE)
+                res <- sweep(crossprod(Coef[-1, , drop = F], interpG), 1, 
+                             Coef[1, , drop = F], "+")
+                mdevs <- colMaxs(abs(y[, y_ind] - t(res)), na.rm = TRUE)
                 maxdev <- max(c(maxdev, mdevs))
                 dev[y_ind] <- ( maxdev > alarm_tolerance )
             }
@@ -1876,9 +2106,9 @@ chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3,
                 message(
                     "****\nThe maximum absolute interpolation error exceeds the limit 
                     at the following time samples (only the first 20 are shown):\n-----\n", 
-                    paste(names(dev)[devind], collapse=" ") 
+                    paste(names(dev)[devind], collapse = " ") 
                 )
-                message(paste("Maximal deviation = ", maxdev, sep=""))
+                message(paste("Maximal deviation = ", maxdev, sep = ""))
             }
         }
         message("Done") 
@@ -1891,7 +2121,7 @@ chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3,
     #
     type <- match.arg(type)
     if (is.null(lambda)) {
-        lambda <- if (type=="voltage") 1e-7 else 1e-5
+        lambda <- if (type == "voltage") 1e-7 else 1e-5
     }
     #
     # check if ch_pos has an appropriate format
@@ -1918,19 +2148,19 @@ chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3,
     #
     # set up interpolation infos
     argnames <- setdiff(names(as.list(args(chanInterp))), "dat")
-    argnames <- argnames[argnames != ""]
-    procsteps <- attr(dat, "processing_steps")
-    procsteps$interpolation <- list(
-        options=mget(argnames), call=match.call(),
-        nr_of_missings=sum(is.na(dat)))
+    argnames <- argnames[argnames  != ""]
+    procstep <- list(
+        what = "interpolation", call = match.call(),
+        options = mget(argnames), nr_of_missings = sum(is.na(dat)))
     #
     # check input data and run interpolation
     dim_names <- dimnames(dat)
     if (is.list(dat) || !is.numeric(dat)) {
         stop("Provide a numeric vector, matrix, data.frame or array as input!")
     } else if (is.null(interp_pos) && 
-                   procsteps$interpolation$nr_of_missings==0) {
-        attr(dat, "processing_steps") <- procsteps
+                   procstep$nr_of_missings == 0) {
+        attr(dat, "processing_steps") <- c(
+            attr(dat, "processing_steps"), list(procstep))
         message("...No missing data to interpolate.\nInterpolation finished.")
         return(dat)
     } else if (is.vector(dat)) {
@@ -1943,19 +2173,21 @@ chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3,
             stop("Number of channels and data size do not match!")
         }
         target_dim <- if (!is.null(dim_names$chan)) "chan" else 1
-        arg_list <- list(m=m, N=N, lambda=lambda, type=type)
+        arg_list <- list(m = m, N = N, lambda = lambda, type = type)
         if (length(arg_list) == 0) arg_list <- NULL
-        out <- fnDims(dat, "chan", interpFn, arg_list=arg_list, vectorized=TRUE)
+        out <- fnDims(dat, "chan", interpFn, arg_list = arg_list, vectorized = TRUE)
     }
     #
     if (is.null(interp_pos)) {
         NAs_left <- sum(is.na(out))
-        procsteps$interpolation$nr_of_interp <- 
-            procsteps$interpolation$nr_of_missings - NAs_left
+        procstep$nr_of_interp <- 
+            procstep$nr_of_missings - NAs_left
         message("Number of NAs after bad channel interpolation: ", 
                 NAs_left)
     }
     message("Interpolation finished.")
+    attr(out, "processing_steps") <- c(
+        attr(dat, "processing_steps"), list(procstep))
     return(out)
     }
 
@@ -1964,31 +2196,31 @@ chanInterp <- function(dat, ch_pos, interp_pos=NULL, maxNA=0.3,
 #' \code{project3dMap} projects 3D coordinates onto a 2D plane or vice versa
 #' @param pos electrode positions (matrix or data.frame)
 #' @param r radius
-#' @param projection character string (default="laea"). See 
+#' @param projection character string (default = "laea"). See 
 #' \link{http://www.remotesensing.org/geotiff/proj_list/} for common projections
-#' @param projref projection reference (pole [=default] or equator)
-#' @param origo a named character vector of lat (=latitude) and long (longitude)
-#' @param inverse if set to TRUE, back-projection is performed (default=FALSE)
+#' @param projref projection reference (pole [ = default] or equator)
+#' @param origo a named character vector of lat ( = latitude) and long (longitude)
+#' @param inverse if set to TRUE, back-projection is performed (default = FALSE)
 #' @import proj4
 #' @export
 #' @return A data.frame containing the projected coordinates
-project3dMap <- function(pos, r=1,
-                         projection="laea", projref=c("pole", "equator"),
-                         origo=c(lat=ifelse(projref=="pole", 90, 0),
-                                 long=ifelse(projref=="pole", 270, 0)), 
-                         inverse=FALSE) {
+project3dMap <- function(pos, r = 1,
+                         projection = "laea", projref = c("pole", "equator"),
+                         origo = c(lat = ifelse(projref == "pole", 90, 0),
+                                 long = ifelse(projref == "pole", 270, 0)), 
+                         inverse = FALSE) {
     #
-    xyfn <- function(dat) data.frame(x=dat[,1], y=dat[,2])
+    xyfn <- function(dat) data.frame(x = dat[,1], y = dat[,2])
     projfn <- function(p, projcall, ...) { 
         res <- lapply(unique(projcall), function(x) {
-            ind <- projcall==x
-            out <- project(as.data.frame(p[ind, , drop=F]), proj=x, ...)
+            ind <- projcall == x
+            out <- project(as.data.frame(p[ind, , drop = F]), proj = x, ...)
             out <- as.data.frame(out)
             rownames(out) <- which(ind)
             return( out )
         })
         res <- Reduce("rbind", res)
-        res <- res[order(as.numeric(rownames(res))), , drop=F]
+        res <- res[order(as.numeric(rownames(res))), , drop = F]
         return( xyfn(res) )
     }
     #
@@ -1996,37 +2228,37 @@ project3dMap <- function(pos, r=1,
         stop("Pos can be a vector, matrix, or data.frame.")
     }
     if (is.atomic(pos) && is.vector(pos)) {
-        if (length(pos) != 2) {
+        if (length(pos)  != 2) {
             stop("If pos is a vector, it must contain exactly two elements!")
         }
-        pos <- cbind(x=pos[1], y=pos[2])
+        pos <- cbind(x = pos[1], y = pos[2])
     }
     pos <- as.data.frame(pos)
     if (is.null(pos$r)) pos$r <- 1
     projref <- match.arg(projref)
-    proj4call <- paste("+proj=", projection, 
-                       " +lat_0=", origo[1], 
-                       " +lon_0=", origo[2],
-                       paste(" +R=", pos$r, sep=""),
-                       sep="")
+    proj4call <- paste("+ proj = ", projection, 
+                       " + lat_0 = ", origo[1], 
+                       " + lon_0 = ", origo[2],
+                       paste(" + R = ", pos$r, sep = ""),
+                       sep = "")
     #
     if (inverse) {
         if (is.null(colnames(pos))) colnames(pos)[1:2] <- c("x", "y")
         if (!all(c("x", "y") %in% colnames(pos))) {
             stop("Provide a matrix or data.frame with x and y coordinates!")
         }
-        mapxy <- projfn(as.matrix(pos[, c("x", "y")]), proj4call, inverse=TRUE) 
+        mapxy <- projfn(as.matrix(pos[, c("x", "y")]), proj4call, inverse = TRUE) 
         colnames(mapxy) <- c("long", "lat")
     } else {
         if (!all(c("long", "lat") %in% colnames(pos))) {
             if (!all(c("theta", "phi") %in% colnames(pos))) 
                 pos <- cart2sph(pos)
-            if (projref=="equator") {
+            if (projref == "equator") {
                 temp <- sph2cart(pos)
                 colnames(temp) <- c("y", "z", "x")
                 pos <- cart2sph(temp)
             }
-            pos <- sph2geo(pos, long360=FALSE)
+            pos <- sph2geo(pos, long360 = FALSE)
         } 
         mapxy <- projfn(pos[, c("long", "lat")], proj4call) 
     }
@@ -2038,7 +2270,7 @@ project3dMap <- function(pos, r=1,
 # <<< ERP functions >>> --------
 #
 
-# import functions ===========
+# import functions =========== 
 
 #' Import options for importBVdat
 #' 
@@ -2081,15 +2313,15 @@ importOptions <- function(eeg_ext = "dat", marker_ext = "vmrk", info_ext = "vhdr
                           marker_keepstim = "*", 
                           marker_badchan = c("badchan_start",
                                              "badchan_stop"),
-                          marker_time0 = "Ref",
+                          marker_time0 = "Time 0",
                           segment_dpoints = (-100):1023,
                           marker_regexp = T,
                           marker_ignorecase = T,  
-                          marker_header=FALSE, marker_fill=TRUE, 
-                          marker_asis=TRUE, marker_sep=",") {
+                          marker_header = FALSE, marker_fill = TRUE, 
+                          marker_asis = TRUE, marker_sep = ",") {
     #
-    if (length(marker_badchan)==1) {
-        marker_badchan <- paste(marker_badchan, c("start", "stop"), sep="_")
+    if (length(marker_badchan) == 1) {
+        marker_badchan <- paste(marker_badchan, c("start", "stop"), sep = "_")
     }
     return(mget(ls()))
 }
@@ -2111,9 +2343,9 @@ importOptions <- function(eeg_ext = "dat", marker_ext = "vmrk", info_ext = "vhdr
 #' @export
 #' @return A list with three named elements: eeg (array), markers (data.frame), 
 #' channels (data.frame)
-importBVdat <- function(file_name, file_path=getwd(), id="",
-                        import_options=importOptions()) {
-    message(paste("\nImport ", file_name, "...", sep=""))
+importBVdat <- function(file_name, file_path = getwd(), id = "",
+                        import_options = importOptions()) {
+    message(paste("\nImport ", file_name, "...", sep = ""))
     mygrepl <- function(patterns, ...) {
         if (is.null(patterns)) {
             rep(F, length(list(...)$x))
@@ -2122,12 +2354,12 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
                            grepl, 
                            ignore.case = marker_ignorecase, 
                            fixed = !marker_regexp,
-                           ...))>0
+                           ...)) > 0
         }
     }
-    extractInfo <- function(x, type="char") {
+    extractInfo <- function(x, type = "char") {
         out <- tolower(strsplit(info[grep(x, info)], "=")[[1]][2])
-        if (type=="num") out <- as.numeric(out)
+        if (type == "num") out <- as.numeric(out)
         return(out)
     }
     chanInfo <- function() {
@@ -2137,13 +2369,13 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
         chan_pos <- t(sapply(chan[-(1:(length(chan)/2))],
                              function(x) as.numeric(strsplit(x[[2]], ",")[[1]])))
         colnames(chan_pos) <- c("r", "theta", "phi")
-        return( data.frame(chan_pos, row.names=chan_names) )
+        return( data.frame(chan_pos, row.names = chan_names) )
     }
     #
-    assignList(import_options, verbose=FALSE)
+    assignList(import_options, verbose = FALSE)
     #
     # info from vhdr file
-    con1 <- file(file.path(file_path, paste(file_name, info_ext, sep=".")))
+    con1 <- file(file.path(file_path, paste(file_name, info_ext, sep = ".")))
     info <- readLines(con1)
     close(con1)
     eeg_orientation <- extractInfo("DataOrientation=")
@@ -2155,22 +2387,22 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
     #
     # import eeg data
     if (!is.null(eeg_ext)) {
-        eeg <- readBin(file.path(file_path, paste(file_name, eeg_ext, sep=".")),
-                       what="integer", n=eeg_length)
-        eeg <- eeg/1000
+        eeg <- readBin(file.path(file_path, paste(file_name, eeg_ext, sep = ".")),
+                       what = "integer", n = eeg_length)
+        eeg <- eeg / 1000
         eeg <- 
-            if (eeg_orientation=="vectorized") {
-                matrix(eeg, nrow=nr_chan, ncol=eeg_length/nr_chan, byrow=TRUE) 
+            if (eeg_orientation == "vectorized") {
+                matrix(eeg, nrow = nr_chan, ncol = eeg_length/nr_chan, 
+                       byrow = TRUE) 
             } else {
-                matrix(eeg, nrow=nr_chan, ncol=eeg_length/nr_chan)
+                matrix(eeg, nrow = nr_chan, ncol = eeg_length/nr_chan)
             }
         rownames(eeg) <- rownames(chan)
-        attr(eeg, "processing_steps") <- list()
-        attr(eeg, "processing_steps")$id <- as.character(id)
-        attr(eeg, "processing_steps")$import <- import_options
-        attr(eeg, "processing_steps")$import$file_name <- file_name
-        attr(eeg, "processing_steps")$import$file_name <- file_path
-        attr(eeg, "processing_steps")$import$call <- match.call()
+        attr(eeg, "subject_id") <- as.character(id)
+        procstep <- list(
+            what = "import", call = match.call(),
+            file_name = file_name, file_path = file_path,
+            options = import_options)
     } else {
         eeg <- NULL
     }
@@ -2178,9 +2410,9 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
     # import markers
     markers.orig <- read.table(
         file.path(file_path, 
-                  paste(file_name, import_options$marker_ext, sep=".")),
-        header=marker_header, fill=marker_fill, 
-        as.is=marker_asis, sep=marker_sep, skip=marker_skip)
+                  paste(file_name, import_options$marker_ext, sep = ".")),
+        header = marker_header, fill = marker_fill, 
+        as.is = marker_asis, sep = marker_sep, skip = marker_skip)
     markers.orig[,3] <- suppressWarnings(as.numeric(markers.orig[, 3]))
     markers.orig[,5] <- suppressWarnings(as.integer(markers.orig[, 5]))
     markers.orig <- markers.orig[!is.na(markers.orig[, 3]), 1:5]
@@ -2188,30 +2420,30 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
         markers.orig[,3],
         markers.orig[grepl("New Segment", 
                            markers.orig[, 1]), 3])
-    if (eeg_length/nr_chan/nr_tpoints != max(markers.orig$segmind))
+    if (eeg_length/nr_chan/nr_tpoints  != max(markers.orig$segmind))
         stop("Marker and data files do not match!")
     #
     # remove data in bad channel intervals
     if (!is.null(marker_badchan)) {
         chan_names <- rownames(chan)
         bch <- markers.orig[, 2]
-        ind <- markers.orig[, 5]>0
+        ind <- markers.orig[, 5] > 0
         bch[ind] <- paste(bch[ind],
                           chan_names[markers.orig[ind, 5]],
-                          sep="_")
+                          sep = "_")
         bch <- paste0(bch, "_")
         badchanFn <- function(i) {
             indstart <- grep(paste(marker_badchan[1], ".*_", 
-                                   chan_names[i], "_", sep=""), 
+                                   chan_names[i], "_", sep = ""), 
                              bch)
             indstart <- unique(markers.orig[indstart, 3])
             indstop <- grep(paste(marker_badchan[2], ".*_", 
-                                  chan_names[i], "_", sep=""), 
+                                  chan_names[i], "_", sep = ""), 
                             bch)
             indstop <- unique(markers.orig[indstop, 3])
             len1 <- length(indstart)
             len2 <- length(indstop)
-            if (len1==0 & len2==0) {
+            if (len1 == 0 & len2 == 0) {
                 return(NULL)
             } else {
                 lendiff <- len1 - len2
@@ -2232,9 +2464,9 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
                         paste0("Badchan_start and badchan_stop markers do not match at channel ", chan_names[i], ".")
                     )
                 }
-                return(cbind(start=indstart, stop=indstop))
+                return(cbind(start = indstart, stop = indstop))
             }
-            if (any((indstop-indstart)<0)) {
+            if (any((indstop - indstart) < 0)) {
                 stop(
                     paste0("Badchan_start and badchan_stop markers do not match at channel ", chan_names[i], ".")
                 )
@@ -2248,11 +2480,11 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
                 eeg[i, unlist(mapply(seq, 
                                      badchans[[i]][, "start"], 
                                      badchans[[i]][, "stop"], 
-                                     SIMPLIFY=FALSE), 
+                                     SIMPLIFY = FALSE), 
                               use.names = FALSE)] <- NA
             }
         }
-        attr(eeg, "processing_steps")$bad_channels <- badchans
+        procstep$bad_channels <- badchans
     } 
     # 
     # remove bad segments
@@ -2260,15 +2492,15 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
         sapply(
             split(markers.orig, markers.orig$segmind), 
             function(x) 
-                any(mygrepl(marker_badcat, x=x[, 1]) | 
-                        mygrepl(marker_badstim, x=x[, 2]))
+                any(mygrepl(marker_badcat, x = x[, 1]) | 
+                        mygrepl(marker_badstim, x = x[, 2]))
         ),
         table(markers.orig$segmind))
     keepind <- 
-        mygrepl(marker_segment, x=markers.orig[, 1]) & 
-        mygrepl(marker_keepstim, x=markers.orig[, 2]) &
-        rep(markers.orig[mygrepl("Time 0", x=markers.orig[, 1]), 3] %in% 
-                markers.orig[mygrepl(marker_time0, x=markers.orig[, 1]), 3],
+        mygrepl(marker_segment, x = markers.orig[, 1]) & 
+        mygrepl(marker_keepstim, x = markers.orig[, 2]) &
+        rep(markers.orig[mygrepl("Time 0", x = markers.orig[, 1]), 3] %in% 
+                markers.orig[mygrepl(marker_time0, x = markers.orig[, 1]), 3],
             table(markers.orig$segmind)) &
         !markers.orig$badsegm
     markers <- markers.orig[keepind, ]
@@ -2281,19 +2513,18 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
     #
     # format eeg data
     if (!is.null(eeg_ext)) {
-        procsteps <- attr(eeg, "processing_steps")
         eeg <- eeg[, c(outer(segment_dpoints, markers$dpoint,"+"))]
         eeg <- array(eeg, 
                      c(nr_chan, length(segment_dpoints), nrow(markers)),
-                     dimnames=list(chan=rownames(chan),
-                                   time=segment_dpoints*1000/eeg_Hz,
-                                   trial=paste(markers$segment, 
+                     dimnames = list(chan = rownames(chan),
+                                   time = segment_dpoints * 1000 / eeg_Hz,
+                                   trial = paste(markers$segment, 
                                                markers$fullcode, 
-                                               sep="_")))
-        attr(eeg, "processing_steps") <- procsteps
+                                               sep = "_")))
     }
     # export results
-    return(list(eeg=eeg, markers=markers, channels=chan))
+    attr(eeg, "processing_steps") <- list(procstep)
+    return(list(eeg = eeg, markers = markers, channels = chan))
 }
 
 #' Split concatenated strings. 
@@ -2315,29 +2546,29 @@ importBVdat <- function(file_name, file_path=getwd(), id="",
 #' @return A data.frame with header and appropriate classes, containing the 
 #' spltted substrings of the original vector elements
 #' @seealso \code{\link{strsplit}}
-splitMarker <- function(marker, header, type=NULL, splitchar="_") {
+splitMarker <- function(marker, header, type = NULL, splitchar = "_") {
     out <- data.frame(
         matrix(unlist(strsplit(as.character(marker), splitchar), 
                       use.names = FALSE), 
-               nrow=length(marker), ncol=length(header), byrow=TRUE))
+               nrow = length(marker), ncol = length(header), byrow = TRUE))
     colnames(out) <- header
     if (!is.null(type)) {
         if (length(type) < length(header)) {
-            type <- rep(type, length.out=length(header))
+            type <- rep(type, length.out = length(header))
         }
         for (i in 1:length(type)) {
             if (is.factor(out[, i])) {
-                out[, i] <- do.call(paste("as", type[i], sep="."), 
+                out[, i] <- do.call(paste("as", type[i], sep = "."), 
                                     list(as.character(out[, i])))
             } else {
-                out[, i] <- do.call(paste("as", type[i], sep="."), list(out[, i]))
+                out[, i] <- do.call(paste("as", type[i], sep = "."), list(out[, i]))
             }
         }
     }
     return(out)
 }
 
-# base functions ===========
+# base functions =========== 
 
 #' Baseline correction 
 #' 
@@ -2349,19 +2580,19 @@ splitMarker <- function(marker, header, type=NULL, splitchar="_") {
 #' form the baseline
 #' @export
 #' @return A numeric array with the same attributes as dat
-baselineCorr <- function(dat, basedim="chan", baseind=NULL) {
-    message("\n****\nPerform baseline correction ... ", appendLF=FALSE)
+baselineCorr <- function(dat, basedim = "chan", baseind = NULL) {
+    message("\n****\nPerform baseline correction ... ", appendLF = FALSE)
     origattr <- attributes(dat)
     if (is.null(baseind)) baseind <- as.numeric(dimnames(dat)$time)<0
-    if (length(basedim)==1) {
-        means <- fnDims(subsetArray(dat, list(time=baseind)),
-                        basedim, rowMeans, list(na.rm=TRUE), vectorized=TRUE, columnwise=FALSE)
-        out <- sweep(dat, which(names(dimnames(dat))==basedim), means, "-")
+    if (length(basedim) == 1) {
+        means <- fnDims(subsetArray(dat, list(time = baseind)),
+                        basedim, rowMeans, list(na.rm = TRUE), vectorized = TRUE, columnwise = FALSE)
+        out <- sweep(dat, which(names(dimnames(dat)) == basedim), means, "-")
     } else {
         dat <- mergeDims(dat, basedim)
-        means <- fnDims(subsetArray(dat, list(time=baseind)),
-                        names(dimnames(dat))[1], rowMeans, list(na.rm=TRUE), 
-                        vectorized=TRUE, columnwise=FALSE)
+        means <- fnDims(subsetArray(dat, list(time = baseind)),
+                        names(dimnames(dat))[1], rowMeans, list(na.rm = TRUE), 
+                        vectorized = TRUE, columnwise = FALSE)
         out <- array(sweep(dat, 1, means, "-"),
                      c(sapply(origattr$dimnames[basedim], length), dim(dat)[-1]),
                      c(origattr$dimnames[basedim], 
@@ -2369,8 +2600,11 @@ baselineCorr <- function(dat, basedim="chan", baseind=NULL) {
         out <- aperm(out, names(origattr$dimnames))
     }
     attributes(out) <- origattr
-    attr(out, "processing_steps")$baseline_correction <- list(
-        call=match.call(), base_dimensions=basedim, base_indices=baseind)
+    attr(out, "processing_steps") <- c(
+        attr(out, "processing_steps"),
+        list(list(what = "baseline correction", 
+             call = match.call(), base_dimensions = basedim, 
+             base_indices = baseind)))
     message("Done")
     return(out)
 }
@@ -2422,11 +2656,11 @@ baselineCorr <- function(dat, basedim="chan", baseind=NULL) {
 #' @export
 #' @return A list object with all parameters.
 artrejOptions <- function(
-    sampling_freq=1000, channels="all", do_reject=TRUE,
-    apply_maxgrad=TRUE, maxgrad_limit=50, maxgrad_mark=c(-200, 200),
-    apply_diffrange=TRUE, diffrange_limit=c(0.5, 100), diffrange_mark=c(-200, 200), 
-    diffrange_interval=200,
-    apply_amplrange=TRUE, amplrange_limit=c(-200, 200), amplrange_mark=c(-200, 200)) {
+    sampling_freq = 1000, channels = "all", do_reject = TRUE,
+    apply_maxgrad = TRUE, maxgrad_limit = 50, maxgrad_mark = c(-200, 200),
+    apply_diffrange = TRUE, diffrange_limit = c(0.5, 100), diffrange_mark = c(-200, 200), 
+    diffrange_interval = 200,
+    apply_amplrange = TRUE, amplrange_limit = c(-200, 200), amplrange_mark = c(-200, 200)) {
     #
     opt <- mget(setdiff(ls(), "sampling_freq"))
     freqmod <- sampling_freq/1000
@@ -2450,16 +2684,20 @@ artrejOptions <- function(
 #' artifact rejection criteria. See \code{\link{artrejOptions}} for details.
 #' @param return_data logical value, if TRUE (default), dat and markers without
 #' rejected trials are returned
+#' @param return_details logical value, if TRUE (default), the full array of 
+#' results (e.g., bad trials for each channel and for each criterion) is 
+#' returned as an attribute of bad_trials (see Values section)
 #' @param print_result logical value, if TRUE (default), a summary of the 
 #' results is printed to the console
 #' @export
 #' @return A named list containing bad_trials (trials identified with artifacts)
 #' and the modified input data (dat and markers without contaminated trials)
-artifactRejection <- function(dat, markers=NULL, artrej_options=artrejOptions(),
-                              return_data=TRUE, print_result=TRUE) {
+artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOptions(),
+                              return_data = TRUE, return_details = TRUE,
+                              print_result = TRUE) {
     # main function
-    aRej <- function(x) {
-        assignList(artrej_options, verbose=FALSE)
+    aRej <- function(x, details = return_details) {
+        assignList(artrej_options, verbose = FALSE)
         crits <- sub("apply_", "", 
                      names(artrej_options)[grep("apply", 
                                                 names(artrej_options))])
@@ -2475,38 +2713,40 @@ artifactRejection <- function(dat, markers=NULL, artrej_options=artrejOptions(),
         colnames(out) <- crits
         message("\n****\nStart artifact rejection / Criterion: ...\n")
         if (apply_maxgrad) {
-            message("... Maximum gradient - ", appendLF=FALSE)
+            message("... Maximum gradient - ", appendLF = FALSE)
             out[, "maxgrad"] <- colAnys( abs(x[-1,]-x[-nrow(x),]) > maxgrad_limit )
             message(" done\n")
         }
         if (apply_diffrange) {
-            message("... Difference range - ", appendLF=FALSE)
-            ind <- rollFun(x, diffrange_interval, max, endrule="NA") - 
-                rollFun(x, diffrange_interval, min, endrule="NA")
+            message("... Difference range - ", appendLF = FALSE)
+            ind <- rollFun(x, diffrange_interval, max, endrule = "NA") - 
+                rollFun(x, diffrange_interval, min, endrule = "NA")
             ind <- ind[!rowAlls(is.na(ind)), ]
             out[, "diffrange"] <- colAnys( abs(ind) < diffrange_limit[1] ) |
                 colAnys( abs(ind) > diffrange_limit[2] )
             message(" done\n")
         }
         if (apply_amplrange) {
-            message("... Amplitude range - ", appendLF=FALSE)
+            message("... Amplitude range - ", appendLF = FALSE)
             out[, "amplrange"] <- ( colMaxs(x) > amplrange_limit[2] |
                                         colMins(x) < amplrange_limit[1] )
             message(" done\n")
         }
-        out <- array(out, c(dims, ncol(out)), c(dimn, list(crit=crits)))
+        out <- array(out, c(dims, ncol(out)), c(dimn, list(crit = crits)))
         artrej_summary <- matrix(0, dims["chan"]+1, length(crits)+1,
-                                 dimnames=list(chan=c(dimn$chan, "all"),
-                                               crit=c(crits, "all")))
+                                 dimnames = list(chan = c(dimn$chan, "all"),
+                                               crit = c(crits, "all")))
         dimres <- dim(artrej_summary)
         artrej_summary[-dimres[1], -dimres[2]] <- avgDims(out, "trial")
         artrej_summary[dimres[1], -dimres[2]] <- 
             colMeans(apply(out, c("trial", "crit"), any))
         artrej_summary[-dimres[1], dimres[2]] <- 
             colMeans(apply(out, c("trial", "chan"), any))
+        out.details <- out
         out <- apply(out, "trial", any)
         artrej_summary[dimres[1], dimres[2]] <- mean( out )
         attr(out, "summary") <- artrej_summary
+        if (details) attr(out, "details") <- out.details
         return( out )
     }
     # input data check
@@ -2518,7 +2758,7 @@ artifactRejection <- function(dat, markers=NULL, artrej_options=artrejOptions(),
              chan, time, trial.")
     }
     if (is.null(markers)) {
-        markers <- data.frame(fullcode=seq_along(dimnames(dat)$trial))
+        markers <- data.frame(fullcode = seq_along(dimnames(dat)$trial))
     }
     if (length(dimnames(dat)$trial) != nrow(markers)) {
         stop("EEG and marker data contain different number of trials!")
@@ -2527,11 +2767,12 @@ artifactRejection <- function(dat, markers=NULL, artrej_options=artrejOptions(),
         stop("The artrej_options parameter must be a list; provide it through 
              artrejOptions() to avoid inconsistent results!")
     }
-    if (artrej_options$channels=="all") {
+    if (artrej_options$channels == "all") {
         keepchan <- dimnames(dat)$chan
     }
     # run artifact rejection
-    tempdat <- array2mat(subsetArray(dat, list(chan=keepchan), drop=FALSE), "time")
+    tempdat <- array2mat(subsetArray(dat, list(chan = keepchan), drop = FALSE),
+                         "time")
     badtrials <- aRej(tempdat)
     if (print_result) {
         cat("\n----- Proportion of bad trials -----\n")
@@ -2539,17 +2780,19 @@ artifactRejection <- function(dat, markers=NULL, artrej_options=artrejOptions(),
         cat("\n------------------------------------\n")
     }
     if (return_data) {
-        dat <- subsetArray(dat, list(trial=which(!badtrials)))
-        if (is.null(attr(dat, "processing_steps"))) {
-            attr(dat, "processing_steps") <- list()
-        }
-        attr(dat, "processing_steps")$artifact_rejection <- 
-            list(results=badtrials, options=artrej_options, call=match.call())
+        dat <- subsetArray(dat, list(trial = which(!badtrials)))
+        attr(dat, "processing_steps") <- c(
+            attr(dat, "processing_steps"),
+            list(list(
+                what = "artifact rejection",
+                call = match.call(), results = badtrials, 
+                options = artrej_options))
+            )
         markers <- droplevels( markers[!badtrials, ] )
-        return(list(bad_trials=badtrials, eeg=dat, markers=markers))
+        return(list(bad_trials = badtrials, eeg = dat, markers = markers))
     } else {
         attr(badtrials, "options") <- artrej_options
-        return(list(bad_trials=badtrials, eeg=NULL, markers=NULL))
+        return(list(bad_trials = badtrials, eeg = NULL, markers = NULL))
     }
     }
 
@@ -2561,16 +2804,16 @@ artifactRejection <- function(dat, markers=NULL, artrej_options=artrejOptions(),
 #' must be "chan")
 #' @param keep_channels logical value; if TRUE, the original channels are 
 #' retained, and the GFP values are added with a channel code of "GFP"
-#' (default=FALSE)
+#' (default = FALSE)
 #' @export
 #' @return The function returns a matrix or an array. Note that if
 #' the original channels are not retained, the channel dimension is dropped.
-compGfp <- function(dat, keep_channels=FALSE) {
+compGfp <- function(dat, keep_channels = FALSE) {
     dat <- aperm(dat, c("chan", setdiff(names(dimnames(dat)), "chan")))
-    dat.mat <- matrix(dat, nrow=nrow(dat))
+    dat.mat <- matrix(dat, nrow = nrow(dat))
     tempn <- colSums(!is.na(dat.mat))
-    out <- sweep(dat.mat, 2, colMeans(dat.mat, na.rm=TRUE), "-")
-    out <- sqrt(colSums(out^2, na.rm=TRUE)/tempn)
+    out <- sweep(dat.mat, 2, colMeans(dat.mat, na.rm = TRUE), "-")
+    out <- sqrt(colSums(out^2, na.rm = TRUE)/tempn)
     if (keep_channels) {
         out <- rbind(dat.mat, out)
         dims <- dim(dat)
@@ -2582,7 +2825,7 @@ compGfp <- function(dat, keep_channels=FALSE) {
         dims.n <- dimnames(dat)
         dims.n[[1]] <- NULL
     }
-    out <- array(out, dims, dimnames=dims.n)
+    out <- array(out, dims, dimnames = dims.n)
     return( out )
 }
 
@@ -2598,16 +2841,16 @@ compGfp <- function(dat, keep_channels=FALSE) {
 #' the first dimension in the resulting matrix or array
 #' @export
 #' @return A numeric matrix or array
-scaleChan <- function(dat, keep_dimorder=TRUE) {
+scaleChan <- function(dat, keep_dimorder = TRUE) {
     dimnames.orig <- names(dimnames(dat))
     dat <- aperm(dat, c("chan", setdiff(names(dimnames(dat)), "chan")))
     dim.dat <- dim(dat)
     dimnames.dat <- dimnames(dat)
-    dat <- matrix(dat, nrow=nrow(dat))
+    dat <- matrix(dat, nrow = nrow(dat))
     tempn <- colSums(!is.na(dat))
-    dat <- sweep(dat, 2, colMeans(dat, na.rm=TRUE), "-")
-    dat <- sweep(dat, 2, sqrt(colSums(dat^2, na.rm=TRUE)/tempn), "/")
-    dat <- array(dat, dim.dat, dimnames=dimnames.dat)
+    dat <- sweep(dat, 2, colMeans(dat, na.rm = TRUE), "-")
+    dat <- sweep(dat, 2, sqrt(colSums(dat^2, na.rm = TRUE)/tempn), "/")
+    dat <- array(dat, dim.dat, dimnames = dimnames.dat)
     if (keep_dimorder) dat <- aperm(dat, dimnames.orig)
     return(dat)
 }
@@ -2627,13 +2870,13 @@ scaleChan <- function(dat, keep_dimorder=TRUE) {
 #' @export
 #' @return A data.frame containing the positions of the negative and positive 
 #' centroids 
-centroid <- function(dat, ch_pos, proj2map=TRUE, proj_unitsphere=FALSE, ...) {
+centroid <- function(dat, ch_pos, proj2map = TRUE, proj_unitsphere = FALSE, ...) {
     ch_pos <- as.data.frame(ch_pos)
     if (!all(c("x", "y", "z") %in% colnames(ch_pos))) {
         ch_pos <- sph2cart(ch_pos)
     }
-    ind.neg <- dat<0
-    ind.pos <- dat>=0
+    ind.neg <- dat < 0
+    ind.pos <- dat >= 0
     centroids <- as.data.frame(
         rbind(colMeans(ch_pos[ind.neg, c("x", "y", "z")]),
               colMeans(ch_pos[ind.pos, c("x", "y", "z")]))
@@ -2656,13 +2899,13 @@ centroid <- function(dat, ch_pos, proj2map=TRUE, proj_unitsphere=FALSE, ...) {
 #' @param markers data.frame containing marker definitions
 #' @param which_factors numeric or character vector indicating which columns
 #' from markers should be used for averaging. If NULL (default), all columns
-#' is used.
+#' are used.
 #' @export
 #' @return numeric array
-avgTrials <- function(dat, markers, which_factors=NULL) {
+avgTrials <- function(dat, markers, which_factors = NULL) {
     stopifnot(is.numeric(dat))
     stopifnot(!is.null(markers))
-    message("\n****\nAverage single-trials ... ", appendLF=FALSE)
+    message("\n****\nAverage single-trials ... ", appendLF = FALSE)
     if (is.character(which_factors)) {
         if (!all(which_factors %in% colnames(markers))) {
             stop("markers and which_factors do not match")
@@ -2673,28 +2916,30 @@ avgTrials <- function(dat, markers, which_factors=NULL) {
         }
     }
     if (!is.null(which_factors)) markers <- markers[, which_factors]
-    groups <- interaction(markers, drop=TRUE, sep="|")
+    groups <- interaction(markers, drop = TRUE, sep = "|")
     out <- fnDims(dat, "trial", 
                   function(x, g) sweep(rowsum(x, g), 1, table(g), "/"), 
-                  list(g=groups), vectorized=TRUE, 
-                  newdims=list(factor_level = levels(groups)))
+                  list(g = groups), vectorized = TRUE, 
+                  newdims = list(factor_level = levels(groups)))
     tempfac <- strsplit(dimnames(out)$factor_level, "\\|")
-    procsteps <- attr(dat, "processing_steps")
-    if (is.null(procsteps)) {
-        attr(dat, "processing_steps") <- list()
-    }
-    attr(out, "processing_steps") <- procsteps
-    attr(out, "processing_steps")$averaging <-
-        list(call=match.call(),
-             factors=as.data.frame(
-                 matrix(unlist(tempfac, use.names = FALSE), 
-                        nrow=length(tempfac), ncol=length(tempfac[[1]]), byrow=TRUE,
-                        dimnames=list(1:length(tempfac), colnames(markers)))))
+    attr(out, "processing_steps") <- c(
+        attr(out, "processing_steps"),
+        list(list(
+            what = "averaging",
+            call = match.call(),
+            factors = as.data.frame(
+                matrix(unlist(tempfac, use.names = FALSE), 
+                       nrow = length(tempfac), ncol = length(tempfac[[1]]), 
+                       byrow = TRUE,
+                       dimnames = list(1:length(tempfac), colnames(markers))))
+            )
+        )
+    )
     message("Done")
     return(out)
 }
 
-# tfce functions ===========
+# tfce functions =========== 
 
 #' Low-level TFCE function which calls C code
 #' 
@@ -2711,24 +2956,24 @@ tfce.fnc <- function(x, chn, eh) {
         dims <- as.integer(dim(tdat))
         dims2 <- as.integer(dim(chn))
         indat <- as.double(tdat)
-        outdat <- as.double(rep(0,length(indat)))
+        outdat <- as.double(rep(0, length(indat)))
         chn  <- as.double(chn)
         eh <- as.double(eh)
         result <- .C("tfce",
-                     inData=indat,
-                     outData=outdat,
-                     ChN=chn,
-                     dims=dims,
-                     dims2=dims2,
-                     EH=eh)$outData
+                     inData = indat,
+                     outData = outdat,
+                     ChN = chn,
+                     dims = dims,
+                     dims2 = dims2,
+                     EH = eh)$outData
         return(result)
     }
     edat <- x
-    edat[edat<0] <- 0
+    edat[edat < 0] <- 0
     out <- callc(edat)
     edat <- -x
-    edat[edat<0] <- 0
-    out <- out-callc(edat)
+    edat[edat < 0] <- 0
+    out <- out - callc(edat)
     return(array(out, dim(x)))
 }
 
@@ -2746,7 +2991,7 @@ tfce.fnc <- function(x, chn, eh) {
 #' @param nperm integer value giving the number of permutations (default: 100L)
 #' @param useparallel logical value; if TRUE (default), computations are done
 #' in parallel
-#' @param ncpus integer value corresponding to the number of cores; 
+#' @param ncores integer value corresponding to the number of cores; 
 #' if NULL (default), it is set to the maximum number of cores available
 #' @param par_method parallelization method; can be "snow" (default) or "mc"
 #' (multicore)
@@ -2760,14 +3005,14 @@ tfce.fnc <- function(x, chn, eh) {
 #' @return A list containing traditional t-values, TFCE-corrected t-values and
 #' p-values
 # TODO: no p-values and effect sizes in attributes as in the arrayTtest
-tfceTtest <- function(dat, ChN, EH=c(0.66, 2), 
-                      type=c("o", "i", "d"), nperm=100L, 
-                      useparallel=TRUE, ncpus=NULL, par_method=c("snow", "mc"),
-                      cl=NULL, groups=NULL, use_subset=NULL, seed=NULL,
-                      save.random2matlab=FALSE) {
+tfceTtest <- function(dat, ChN, EH = c(0.66, 2), 
+                      type = c("o", "i", "d"), nperm = 100L, 
+                      useparallel = TRUE, ncores = NULL, par_method = c("snow", "mc"),
+                      cl = NULL, groups = NULL, use_subset = NULL, seed = NULL,
+                      save.random2matlab = FALSE) {
     if (useparallel) {
         stopifnot(require(parallel))
-        if (is.null(ncpus)) ncpus <- detectCores()
+        if (is.null(ncores)) ncores <- detectCores()
     }
     type <- match.arg(type)
     par_method <- match.arg(par_method)
@@ -2776,14 +3021,14 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
                         setdiff(names(dimnames(dat)),c("id","chan","time"))))
     if (is.list(use_subset)) tfce_dat <- subsetArray(tfce_dat, use_subset)
     # two independent samples
-    if (type=="i") {
+    if (type == "i") {
         if (is.null(groups)) stop("\nGroup memberships were not provided!\n")
-        if (!is.list(groups) || length(groups)!=2) 
+        if (!is.list(groups) || length(groups) != 2) 
             stop("\nGroup argument should be a list of two character vectors!\n")
         ids <- c(groups[[1]], groups[[2]])
-        tfce_dat <- subsetArray(tfce_dat, list(id=ids))
-        t_obs <- arrayTtest(subsetArray(tfce_dat, list(id=groups[[1]])),
-                            subsetArray(tfce_dat, list(id=groups[[2]])))$t
+        tfce_dat <- subsetArray(tfce_dat, list(id = ids))
+        t_obs <- arrayTtest(subsetArray(tfce_dat, list(id = groups[[1]])),
+                            subsetArray(tfce_dat, list(id = groups[[2]])))$t
         t_obs.dimn <- dimnames(t_obs)
         t_obs.temp <- array(t_obs, c(dim(t_obs)[1:2],
                                      length(t_obs)/prod(dim(t_obs)[1:2])))
@@ -2791,20 +3036,20 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
                                         function(ii) tfce.fnc(t_obs.temp[,,ii], 
                                                               ChN, EH)), 
                                  use.names = FALSE),
-                          dim(t_obs), dimnames=t_obs.dimn)
+                          dim(t_obs), dimnames = t_obs.dimn)
         if (!is.null(seed)) set.seed(seed)  
         randval <- rep(c(T, F), sapply(groups, length))
         randval <- sapply(1:nperm, function(i) sample(randval))
-        randval <- matrix(randval, ncol=nperm)
-        if (save.random2matlab) { # 1=group1, 2=group2
-            writeMat("randval_i.mat", randval=2-randval) 
+        randval <- matrix(randval, ncol = nperm)
+        if (save.random2matlab) { # 1 = group1, 2 = group2
+            writeMat("randval_i.mat", randval = 2 - randval) 
         }
         tempfn <- function(i) {
             iind <- randval[,i]
             igroups <- list(ids[iind],ids[!iind])
             t.perm <- arrayTtest(
-                subsetArray(tfce_dat, list(id=igroups[[1]])),
-                subsetArray(tfce_dat, list(id=igroups[[2]])))$t
+                subsetArray(tfce_dat, list(id = igroups[[1]])),
+                subsetArray(tfce_dat, list(id = igroups[[2]])))$t
             t.perm <- array(t.perm, c(dim(t.perm)[1:2],
                                       length(t.perm)/prod(dim(t.perm)[1:2])))
             maxtfce <- sapply(1:dim(t.perm)[3], 
@@ -2812,7 +3057,7 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
             return(maxtfce)
         }
         # one-sample (can be difference of two paired samples as well)
-    } else if (type=="o" | type=="d") {
+    } else if (type == "o" | type == "d") {
         t_obs <- arrayTtest(tfce_dat)$t
         t_obs.dimn <- dimnames(t_obs)
         t_obs.temp <- array(t_obs, c(dim(t_obs)[1:2],
@@ -2821,12 +3066,12 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
                                         function(ii) tfce.fnc(t_obs.temp[,,ii], 
                                                               ChN, EH)), 
                                  use.names = FALSE),
-                          dim(t_obs), dimnames=t_obs.dimn)
+                          dim(t_obs), dimnames = t_obs.dimn)
         if (!is.null(seed)) set.seed(seed) 
-        randval <- ifelse(runif(nrow(tfce_dat)*nperm)<0.5,-1,1)
-        randval <- matrix(randval, ncol=nperm)
+        randval <- ifelse(runif(nrow(tfce_dat)*nperm) < 0.5, -1, 1)
+        randval <- matrix(randval, ncol = nperm)
         if (save.random2matlab) {
-            writeMat("randval_o.mat", randval=randval)
+            writeMat("randval_o.mat", randval = randval)
         }
         tempfn <- function(i) {
             signs <- randval[,i]
@@ -2834,40 +3079,42 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
             t.perm <- array(t.perm, c(dim(t.perm)[1:2],
                                       length(t.perm)/prod(dim(t.perm)[1:2])))
             maxtfce <- sapply(1:dim(t.perm)[3], 
-                              function(ii) max(abs(tfce.fnc(t.perm[,,ii], ChN, EH))))
+                              function(ii) max(abs(tfce.fnc(t.perm[,,ii], 
+                                                            ChN, EH))))
             return(maxtfce)
         }
     }
     if (!useparallel) {
         maxtfce.perm <- lapply(1:nperm, tempfn)
-    } else if (par_method=="snow") {
-        if (is.null(cl)) cl <- makePSOCKcluster(ncpus)
+    } else if (par_method == "snow") {
+        if (is.null(cl)) cl <- makePSOCKcluster(ncores)
         clusterExport(cl, 
-                      varlist=c("tfce.fnc", "arrayTtest", "asub", "randval",
+                      varlist = c("tfce.fnc", "arrayTtest", "asub", "randval",
                                 "array2mat", "colSds", "ChN", "EH", 
                                 "subsetArray","fnDims"),
-                      envir=environment())
+                      envir = environment())
         #clusterEvalQ(cl, dyn.load("ept_TFCE3_R.so"))
         maxtfce.perm <- parLapply(cl, 1:nperm, tempfn)
         stopCluster(cl)
         rm(cl)
-    } else if (par_method=="multicore") {
-        maxtfce.perm <- mclapply(1:nperm, tempfn, mc.cores=ncpus)
+    } else if (par_method == "multicore") {
+        maxtfce.perm <- mclapply(1:nperm, tempfn, mc.cores = ncores)
     } 
     chantime.n <- prod(sapply(t_obs.dimn[1:2], length))
-    maxtfce_obs <- colMaxs(matrix(abs(tfce_obs), nrow=chantime.n))
-    maxtfce.perm <- matrix(unlist(maxtfce.perm, use.names = FALSE), ncol=nperm)
+    maxtfce_obs <- colMaxs(matrix(abs(tfce_obs), nrow = chantime.n))
+    maxtfce.perm <- matrix(unlist(maxtfce.perm, use.names = FALSE), ncol = nperm)
     maxtfce.perm <- sweep(
-        maxtfce.perm[rep(1:nrow(maxtfce.perm), each=chantime.n),],
+        maxtfce.perm[rep(1:nrow(maxtfce.perm), each = chantime.n),],
         1, abs(c(tfce_obs)), "-")
     sig <- array(
-        (rowSums(maxtfce.perm>=0)+1)/(nperm+1),
-        dim(tfce_obs), dimnames=t_obs.dimn)
-    return(list(call=match.call(), effect_t_obs=t_obs, effect_tfce_obs=tfce_obs, 
-                perm_pvalues=sig))
+        (rowSums(maxtfce.perm >= 0) + 1)/(nperm + 1),
+        dim(tfce_obs), dimnames = t_obs.dimn)
+    return(list(call = match.call(), 
+                effect_t_obs = t_obs, effect_tfce_obs = tfce_obs, 
+                perm_pvalues = sig))
 }
 
-# TANOVA functions ===========
+# TANOVA functions =========== 
 
 #' Topographical ANOVA (TANOVA) and related methods
 #' 
@@ -2895,7 +3142,7 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
 #' @param nperm integer value giving the number of permutations (default: 999L)
 #' @param useparallel logical value; if TRUE (default), computations are done
 #' in parallel
-#' @param ncpus integer value corresponding to the number of cores; 
+#' @param ncores integer value corresponding to the number of cores; 
 #' if NULL (default), it is set to the maximum number of cores available
 #' @param par_method parallelization method; can be "snow" (default) or "mc"
 #' (multicore)
@@ -2918,11 +3165,11 @@ tfceTtest <- function(dat, ChN, EH=c(0.66, 2),
 #' @return A list object with effect statistics, uncorrected p-values, and 
 #' two types of corrected p-values: length correction or global correction
 #' @references Koenig (2011) RAGU
-tanova <- function(arraydat, factordef, bwdat=NULL, 
-                   type=c("tanova", "dissimilarity", "gfp"), 
-                   verbose=TRUE, nperm=999L, useparallel=FALSE, ncpus=NULL,
-                   par_method=c("snow", "mc"), cl=NULL,
-                   iaterms_last=TRUE, seed=NULL, pcrit=0.05) {
+tanova <- function(arraydat, factordef, bwdat = NULL, 
+                   type = c("tanova", "dissimilarity", "gfp"), 
+                   verbose = TRUE, nperm = 999L, useparallel = FALSE, ncores = NULL,
+                   par_method = c("snow", "mc"), cl = NULL,
+                   iaterms_last = TRUE, seed = NULL, pcrit = 0.05) {
     # some checks
     stopifnot(is.array(arraydat))
     stopifnot(is.list(factordef))
@@ -2931,13 +3178,13 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
     }
     if (useparallel) {
         stopifnot(require(parallel))
-        if (is.null(ncpus)) ncpus <- detectCores()
+        if (is.null(ncores)) ncores <- detectCores()
     }
     #
     out <- list(call = match.call())
     #
     effSize <- function(means) {
-        datfn <- if (type=="gfp") abs else compGfp
+        datfn <- if (type == "gfp") abs else compGfp
         out <- lapply(means, function(x) avgDims(datfn(x), "modelterm"))
         out <- rearrangeList(out, "modelterm")
         out <- drop(out)
@@ -2947,19 +3194,19 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
     par_method <- match.arg(par_method)
     #
     type <- match.arg(type)
-    if (type=="gfp") {
+    if (type == "gfp") {
         if (verbose) {
             arraydat_orig <- arraydat
             arraydat_orig <- preAnova(arraydat, factordef, bwdat, 
-                                      useparallel, ncpus, par_method)$arraydat
+                                      useparallel, ncores, par_method)$arraydat
         }
         arraydat <- compGfp(arraydat)
     }
-    if (type=="dissimilarity") arraydat <- scaleChan(arraydat)
+    if (type == "dissimilarity") arraydat <- scaleChan(arraydat)
     #
-    temp <- preAnova(arraydat, factordef, bwdat, useparallel, ncpus, par_method)
+    temp <- preAnova(arraydat, factordef, bwdat, useparallel, ncores, par_method)
     # assign variables to this environment, and potentially overwrite existing ones
-    assignList(temp, verbose=FALSE)
+    assignList(temp, verbose = FALSE)
     rm(temp)
     # formula of anova
     aov_formula <- as.formula(paste(
@@ -2967,7 +3214,7 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
         sub("^\\*", "", paste(
             paste(as.character(factordef$between), collapse = "*"), 
             paste(as.character(factordef$within), collapse = "*"),
-            sep="*"))
+            sep = "*"))
     )
     )
     # compute marginal means
@@ -2976,63 +3223,68 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
     keepdims <- setdiff(names(origdimnames), modeldims)
     term_means <- marginalMeans(aov_formula, dat, arraydat, 
                                 origdimnames[keepdims], 
-                                keep_term_order=!iaterms_last, residualmean=TRUE)
+                                keep_term_order = !iaterms_last, 
+                                residualmean = TRUE)
     es_obs <- effSize(term_means)
-    out <- c(out, list(effect=es_obs, residual_means=term_means))
-    names(out)[1] <- paste(names(out)[1], type, sep="_")
+    out <- c(out, list(effect = es_obs, residual_means = term_means))
+    names(out)[1] <- paste(names(out)[1], type, sep = "_")
     if (verbose) {
-        if (type=="gfp") {
+        if (type == "gfp") {
             factor_means <- marginalMeans(aov_formula, dat, arraydat_orig, 
                                           origdimnames[keepdims], 
-                                          keep_term_order=!iaterms_last, residualmean=FALSE)
+                                          keep_term_order = !iaterms_last, 
+                                          residualmean = FALSE)
             
         } else {
             factor_means <- marginalMeans(aov_formula, dat, arraydat, 
                                           origdimnames[keepdims], 
-                                          keep_term_order=!iaterms_last, residualmean=FALSE)
+                                          keep_term_order = !iaterms_last, 
+                                          residualmean = FALSE)
         }
-        out <- c(out, list(factor_means=factor_means))
+        out <- c(out, list(factor_means = factor_means))
     }
-    if (nperm>1) {
+    if (nperm > 1) {
         #
         permfn <- function(i) {
             x <- marginalMeans(aov_formula, dat, arraydat[randind[i,], ], 
                                origdimnames[keepdims], 
-                               keep_term_order=!iaterms_last, residualmean=TRUE) 
+                               keep_term_order = !iaterms_last, 
+                               residualmean = TRUE) 
             return( effSize(x) )
         }
         #
         # generate random orders (dim(randind) = nperm X nrow(dat))
         if (!is.null(seed)) set.seed(seed)
         randind <- shuffleSet(nrow(dat), nperm, 
-                              how(within=Within(type="free"), 
-                                  plots=Plots(strata=dat[,factordef$w_id], 
-                                              type="free")))
+                              how(within = Within(type = "free"), 
+                                  plots = Plots(strata = dat[,factordef$w_id], 
+                                              type = "free")))
         #
         if (!useparallel) {
             es_perm <- lapply(1:nperm, permfn)
-        } else if (par_method=="snow") {
-            if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncpus, outfile="")
+        } else if (par_method == "snow") {
+            if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncores, outfile = "")
             clusterExport(cl, 
-                          varlist=par_params$varlist2snow,
-                          envir=environment())
+                          varlist = par_params$varlist2snow,
+                          envir = environment())
             es_perm <- parLapply(cl, 1:nperm, permfn)
             stopCluster(cl)
             rm(cl)
-        } else if (par_method=="mc") {
-            es_perm <- mclapply(1:nperm, permfn, mc.cores=par_params$ncpus)
+        } else if (par_method == "mc") {
+            es_perm <- mclapply(1:nperm, permfn, mc.cores = par_params$ncores)
         } 
         # permuted F values
         es_perm <- c(list(es_obs), es_perm)
         names(es_perm) <- seq.int(nperm + 1)
         es_perm <- rearrangeList(es_perm, "perm")
-        #if (!is.null(perm_fname)) save(es_perm, file=perm_fname)
+        #if (!is.null(perm_fname)) save(es_perm, file = perm_fname)
         # p-values
         pvalues_perm <- fnDims(es_perm, "perm", colRanks, 
-                               arg_list=list(preserveShape = TRUE),
-                               vectorized=TRUE, keep_dimorder=TRUE)
+                               arg_list = list(preserveShape = TRUE),
+                               vectorized = TRUE, keep_dimorder = TRUE)
         pvalues_perm <- (nperm + 2 - pvalues_perm) / (nperm + 1)
-        pvalues <- avgDims(subsetArray(pvalues_perm, list(perm = 1), drop=FALSE),
+        pvalues <- avgDims(subsetArray(pvalues_perm, 
+                                       list(perm = 1), drop = FALSE),
                            "perm")
         pvalues_perm <- (pvalues_perm < pcrit)
         # consecutive sign. criterion
@@ -3041,8 +3293,8 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
                                        setdiff(names(dimnames(pvalues_perm)), 
                                                c("time", "perm")))
         pvalues_maxconsec <- apply(pvalues_maxconsec, 1, function(x) {
-            res <- fnDims(x, "time", matrixRle, vectorized=TRUE)
-            res <- quantile(res$lengths[res$values>0], 1 - pcrit)
+            res <- fnDims(x, "time", matrixRle, vectorized = TRUE)
+            res <- quantile(res$lengths[res$values > 0], 1 - pcrit)
             return( res )
         })
         temp <- matrixRle(array2mat(pvalues, "time") < pcrit)
@@ -3050,22 +3302,22 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
                      (temp$values == 1) )
         temp$values[ind] <- 0
         temp <- inverse.matrixRle(temp)
-        pvalues_consec[temp==0] <- 1
+        pvalues_consec[temp == 0] <- 1
         pvalues_consec <- aperm(pvalues_consec, names(dimnames(pvalues))) 
         # number of sign. time points criterion
-        pvalues_global <- fnDims(pvalues_perm, "time", colSums, vectorized=TRUE)
+        pvalues_global <- fnDims(pvalues_perm, "time", colSums, vectorized = TRUE)
         tempfn <- function(x) colSums(sweep(x, 2, x[1, ], ">="))
-        pvalues_global <- fnDims(pvalues_global, "perm", tempfn, vectorized=TRUE)
+        pvalues_global <- fnDims(pvalues_global, "perm", tempfn, vectorized = TRUE)
         pvalues_global <- pvalues_global / (nperm + 1)
         # return
-        out <- c(out, list(perm_pvalues=pvalues,
-                           perm_pvalues_consec=pvalues_consec,
-                           perm_pvalues_global=pvalues_global))
+        out <- c(out, list(perm_pvalues = pvalues,
+                           perm_pvalues_consec = pvalues_consec,
+                           perm_pvalues_global = pvalues_global))
     } 
     return(out)
 }
 
-# Peak Anova functions ===========
+# Peak Anova functions =========== 
 
 #' ANOVA on individual peaks
 #' 
@@ -3096,7 +3348,7 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
 #' @param nperm integer value giving the number of permutations (default: 999L)
 #' @param useparallel logical value; if TRUE (default), computations are done
 #' in parallel
-#' @param ncpus integer value corresponding to the number of cores; 
+#' @param ncores integer value corresponding to the number of cores; 
 #' if NULL (default), it is set to the maximum number of cores available
 #' @param par_method parallelization method; can be "snow" (default) or "mc"
 #' (multicore)
@@ -3117,27 +3369,27 @@ tanova <- function(arraydat, factordef, bwdat=NULL,
 #' @return A list object with effect statistics, uncorrected p-values, and 
 #' two types of corrected p-values: length correction or global correction
 #' @references Koenig (2011) RAGU
-peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
-                      verbose=TRUE, avg_around_peak=2, 
-                      nperm=1, useparallel=FALSE, ncpus=NULL,
-                      par_method=c("snow", "mc"), cl=NULL,
-                      iaterms_last=TRUE, seed=NULL) {
+peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
+                      verbose = TRUE, avg_around_peak = 2, 
+                      nperm = 1, useparallel = FALSE, ncores = NULL,
+                      par_method = c("snow", "mc"), cl = NULL,
+                      iaterms_last = TRUE, seed = NULL) {
     # some checks
     stopifnot(is.array(arraydat) | missing(arraydat))
     stopifnot(is.list(factordef) | missing(factordef))
-    stopifnot(length(peakdef)!=2 | missing(peakdef))
+    stopifnot(length(peakdef) != 2 | missing(peakdef))
     if (!is.null(factordef$between) && is.null(bwdat)) {
         stop("No between-participant data provided")
     }
     if (useparallel) {
         stopifnot(require(parallel))
-        if (is.null(ncpus)) ncpus <- detectCores()
+        if (is.null(ncores)) ncores <- detectCores()
     }
     #
     out <- list(call = match.call())
     #
-    sumSq <- function(arraydat, f_dat, aov_form, labels=FALSE) {
-        out <- summary(aov(as.formula(aov_form), data=f_dat))
+    sumSq <- function(arraydat, f_dat, aov_form, labels = FALSE) {
+        out <- summary(aov(as.formula(aov_form), data = f_dat))
         if (!labels) {
             out <- matrix(unlist(lapply(out, "[", "Mean Sq"), 
                                  use.names = FALSE),
@@ -3146,23 +3398,23 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
             out <- matrix(unlist(lapply(out, "[", "Mean Sq"), 
                                  use.names = FALSE),
                           nrow(out[[1]]), ncol(arraydat),
-                          dimnames=list(term=gsub(" ","",rownames(out[[1]])), 
-                                        peak=seq_along(out)))
+                          dimnames = list(term = gsub(" ","",rownames(out[[1]])), 
+                                        peak = seq_along(out)))
         }         
         return(out)
     }
     # 
     par_method <- match.arg(par_method)
     # prepare data
-    temp <- preAnova(arraydat, factordef, bwdat, useparallel, ncpus, par_method)
+    temp <- preAnova(arraydat, factordef, bwdat, useparallel, ncores, par_method)
     # assign variables to this environment, and potentially overwrite existing ones
-    assignList(temp, verbose=FALSE)
+    assignList(temp, verbose = FALSE)
     rm(temp)
-    timedim <- which(names(dimnames(arraydat))=="time")
-    origtimedim <- which(names(origdimnames)=="time")
+    timedim <- which(names(dimnames(arraydat)) == "time")
+    origtimedim <- which(names(origdimnames) == "time")
     origdimnames_peaks <- origdimnames
     arraydat_peaks <- subsetArray(arraydat, 
-                                  list(time=dimnames(arraydat)$time[seq_along(peakdef)]))
+                                  list(time = dimnames(arraydat)$time[seq_along(peakdef)]))
     origdimnames_peaks$time <- 
         dimnames(arraydat_peaks)$time <- seq_along(peakdef)
     names(origdimnames_peaks)[origtimedim] <- 
@@ -3173,20 +3425,20 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
             paste(
                 as.character(quote(arraydat)), " ~ ", 
                 paste(as.character(factordef$between), collapse = "*"),
-                sep="")
+                sep = "")
         } else if (is.null(factordef$between)) {
             paste(
                 as.character(quote(arraydat)), " ~ ", 
                 paste(as.character(factordef$within), collapse = "*"),
-                sep="")
+                sep = "")
         } else {
             paste(
                 as.character(quote(arraydat)), " ~ ", 
                 paste(
                     paste(as.character(factordef$between), collapse = "*"), 
                     paste(as.character(factordef$within), collapse = "*"),
-                    sep="*"),
-                sep="")
+                    sep = "*"),
+                sep = "")
         }
     aov_formula <- as.formula(aov_formula_char)
     mean_formula <- as.formula(gsub("\\*", ":", aov_formula_char))
@@ -3201,7 +3453,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
     # find peaks
     fmeans <- marginalMeans(mean_formula, dat, arraydat, 
                             origdimnames[keepdims], 
-                            keep_term_order=!iaterms_last, residualmean=FALSE)
+                            keep_term_order = !iaterms_last, residualmean = FALSE)
     datrowind <- match(
         interaction(dat[, strsplit(names(fmeans), ":")[[1]] ]), 
         rownames(fmeans[[1]]) )
@@ -3209,14 +3461,14 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
     peakind_facs <- structure(data.frame(
         matrix(unlist(peakind_facs), 
                length(peakind_facs), length(peakind_facs[[1]]), T)),
-        names=strsplit(names(fmeans), ":")[[1]])
+        names = strsplit(names(fmeans), ":")[[1]])
     peakind <- sapply(peakdef, function(x) {
-        minmax <- if (x[3]<0) which.min else which.max
+        minmax <- if (x[3] < 0) which.min else which.max
         x[1] -1 + apply(fmeans[[1]][,seq(x[1],x[2])], 1, minmax)})
     #
     # peak amplitudes
     arraydat_peaks[] <- sapply(1:ncol(peakind), function(i) {
-        out <- matrix(0, nrow(arraydat), avg_around_peak*2 +1)
+        out <- matrix(0, nrow(arraydat), avg_around_peak*2 + 1)
         avgind <- outer(peakind[,i], c(-avg_around_peak:avg_around_peak), "+")
         out[] <- arraydat[
             cbind(seq_along(datrowind), as.integer(avgind[datrowind,]))]
@@ -3226,34 +3478,36 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
     # Compute ANOVA on peak amplitudes
     Fvals_obs <- arrayAnovaSub(arraydat_peaks, 
                                factordef, origdimnames_peaks, dat, verbose)
-    out <- c(out, list(F_obs=Fvals_obs))
+    out <- c(out, list(F_obs = Fvals_obs))
     # if verbose, save factor means
     if (verbose) {
         factor_means <- data.frame(
-            group=peakind_facs[rep(1:nrow(peakind_facs), 
-                                   length(peakdef)), , drop=F],
-            peak=factor(rep(seq_along(peakdef), each=nrow(fmeans[[1]]))),
-            ampl=c(marginalMeans(mean_formula, dat, arraydat_peaks, 
+            group = peakind_facs[rep(1:nrow(peakind_facs), 
+                                   length(peakdef)), , drop = F],
+            peak = factor(rep(seq_along(peakdef), each = nrow(fmeans[[1]]))),
+            ampl = c(marginalMeans(mean_formula, dat, arraydat_peaks, 
                                  origdimnames_peaks["peak"], 
-                                 keep_term_order=!iaterms_last, residualmean=FALSE)[[1]]),
-            lat=tpoints[c(peakind)])
-        out <- c(out, list(factor_means=factor_means))
+                                 keep_term_order = !iaterms_last, 
+                                 residualmean = FALSE)[[1]]),
+            lat = tpoints[c(peakind)])
+        out <- c(out, list(factor_means = factor_means))
     }
     #
     # Compute permutation statistics for peak latencies
     #
     # observed sum of squares
-    lateff_obs <- sumSq(peakind, peakind_facs, aov_formula_char, labels=TRUE)
+    lateff_obs <- sumSq(peakind, peakind_facs, aov_formula_char, labels = TRUE)
     # permutations
-    if (nperm>1) {
+    if (nperm > 1) {
         #
         permfn <- function(i) {
             facmeans <- marginalMeans(mean_formula, dat, arraydat[randind[i,], ], 
                                       origdimnames[keepdims], 
-                                      keep_term_order=!iaterms_last, residualmean=FALSE)[[1]]
+                                      keep_term_order = !iaterms_last, 
+                                      residualmean = FALSE)[[1]]
             peaki <- sapply(peakdef, function(x) {
-                minmax <- if (x[3]<0) which.min else which.max
-                x[1] -1 + apply(facmeans[,seq(x[1],x[2])], 1, minmax)})
+                minmax <- if (x[3] < 0) which.min else which.max
+                x[1] - 1 + apply(facmeans[, seq(x[1], x[2])], 1, minmax)})
             out <- sumSq(peaki, peakind_facs, aov_formula_char)
             return(out)
         }
@@ -3262,34 +3516,35 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
         if (!is.null(seed)) set.seed(seed)
         randind <- mclapply(1:nperm, function(i) 
             shuffle(nrow(dat),  
-                    how(within=Within(type="free"), 
-                        plots=Plots(strata=dat[,factordef$w_id], 
-                                    type="free"))),
-            mc.cores=par_params$ncpus)
+                    how(within = Within(type = "free"), 
+                        plots = Plots(strata = dat[,factordef$w_id], 
+                                    type = "free"))),
+            mc.cores = par_params$ncores)
         randind <- matrix(unlist(randind, use.names = FALSE), 
                           nperm, nrow(dat), T)
         #
         if (!useparallel) {
             lateff_perm <- lapply(1:nperm, permfn)
-        } else if (par_method=="snow") {
-            if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncpus, outfile="")
+        } else if (par_method == "snow") {
+            if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncores, outfile = "")
             clusterExport(cl, 
-                          varlist=par_params$varlist2snow,
-                          envir=environment())
+                          varlist = par_params$varlist2snow,
+                          envir = environment())
             lateff_perm <- parLapply(cl, 1:nperm, permfn)
             #             stopCluster(cl)
             #             rm(cl)
-        } else if (par_method=="mc") {
-            lateff_perm <- mclapply(1:nperm, permfn, mc.cores=par_params$ncpus)
+        } else if (par_method == "mc") {
+            lateff_perm <- mclapply(1:nperm, permfn, mc.cores = par_params$ncores)
         } 
         lateff_perm <- cbind(c(lateff_obs), 
                              matrix(unlist(lateff_perm, use.names = FALSE),
-                                    ncol=nperm))
-        lateff_perm <- sweep(lateff_perm[,-1, drop=F], 1, lateff_perm[,1], "-")
+                                    ncol = nperm))
+        lateff_perm <- sweep(lateff_perm[, -1, drop = F], 1, 
+                             lateff_perm[, 1], "-")
         pvalues <- array(
-            (rowSums(lateff_perm>=0)+1)/(nperm+1),
-            dim(lateff_obs), dimnames=dimnames(lateff_obs))
-        out <- c(out, list(lat_pvalues=pvalues))
+            (rowSums(lateff_perm >= 0) + 1) / (nperm + 1),
+            dim(lateff_obs), dimnames = dimnames(lateff_obs))
+        out <- c(out, list(lat_pvalues = pvalues))
     } 
     return(out)
 }
@@ -3322,17 +3577,21 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat=NULL,
 #' of the plot is set up automatically
 #' @param ... additional parameters to be passed to \code{matlines}
 #' @export
-plotERParray <- function(dat, xdim="time", sepdim="chan", title="", subtitle.col = "black",
-                         gfp_plot=TRUE, gfp_col="black", gfp_lwd=1.3, minus_up = NULL,
-                         grid_labels=c("time", "ampl"), grid_dim=NULL, ...) {
-    emptyplot <- function() 
-        plot(0, 0, xlim=c(-1,1), type="n", axes=FALSE, frame.plot=FALSE, xlab="", ylab="")
-    if (length(dim(dat))>3) {
+plotERParray <- function(dat, xdim = "time", sepdim = "chan", 
+                         title = "", subtitle.col = "black",
+                         gfp_plot = TRUE, gfp_col = "black", gfp_lwd = 1.3, 
+                         minus_up = NULL, grid_labels = c("time", "ampl"), 
+                         grid_dim = NULL, ...) {
+    emptyplot <- function() {
+        plot(0, 0, xlim = c(-1,1), type = "n", axes = FALSE, 
+             frame.plot = FALSE, xlab = "", ylab = "")
+    }
+    if (length(dim(dat)) > 3) {
         dat <- mergeDims(dat, setdiff(names(dimnames(dat)), c(xdim, sepdim)))
     }
     wrapdim <- setdiff(names(dimnames(dat)), c(xdim, sepdim))
     dat <- aperm(dat, c(xdim, sepdim, wrapdim))
-    subtitle.col <- rep(subtitle.col, length_out=dim(dat)[3])
+    subtitle.col <- rep(subtitle.col, length_out = dim(dat)[3])
     if (gfp_plot) gfpdat <- compGfp(dat)
     x <- as.numeric(as.character(dimnames(dat)[[1]]))
     xrange <- if (is.null(list(...)$xlim)) range(x) else list(...)$xlim 
@@ -3350,28 +3609,28 @@ plotERParray <- function(dat, xdim="time", sepdim="chan", title="", subtitle.col
     layoutmat <- cbind(
         c(0, rep(2, grid_dim[1]), 0, 0),
         rbind(rep(1, grid_dim[2]),
-              matrix(1:prod(grid_dim), grid_dim[1], grid_dim[2], T)+3,
+              matrix(1:prod(grid_dim), grid_dim[1], grid_dim[2], T) + 3,
               rep(0, grid_dim[2]),
               rep(3, grid_dim[2])),
-        c(rep(0, grid_dim[1]+3)))
-    layout(layoutmat, widths=c(0.3, rep(1, grid_dim[2]), 0.3),
-           heights=c(0.3, rep(1, grid_dim[1]), 0.3, 0.3))
-    par(mar=rep(0, 4))
-    emptyplot(); text(0, 0, title, cex=1.5)
-    emptyplot(); text(0, 0, grid_labels[2], cex=1.3, srt=90)
-    emptyplot(); text(0, 0, grid_labels[1], cex=1.3)
-    par(mar=c(0, 0, 2, 0))
+        c(rep(0, grid_dim[1] + 3)))
+    layout(layoutmat, widths = c(0.3, rep(1, grid_dim[2]), 0.3),
+           heights = c(0.3, rep(1, grid_dim[1]), 0.3, 0.3))
+    par(mar = rep(0, 4))
+    emptyplot(); text(0, 0, title, cex = 1.5)
+    emptyplot(); text(0, 0, grid_labels[2], cex = 1.3, srt = 90)
+    emptyplot(); text(0, 0, grid_labels[1], cex = 1.3)
+    par(mar = c(0, 0, 2, 0))
     for (i in 1:dim(dat)[3]) {
-        matplot(x, dat[,,i], xlim=xrange, ylim=yrange, yaxs="i",  
-                axes=FALSE, frame.plot=TRUE, type="n")
+        matplot(x, dat[,,i], xlim = xrange, ylim = yrange, yaxs = "i",  
+                axes = FALSE, frame.plot = TRUE, type = "n")
         grid()
-        mtext(dimnames(dat)[[3]][i], 3, cex=0.7, col=subtitle.col[i])
-        matlines(x, dat[,,i], axes=FALSE, ...)
-        if (i==max(dim(dat)[3])) {
+        mtext(dimnames(dat)[[3]][i], 3, cex = 0.7, col = subtitle.col[i])
+        matlines(x, dat[,,i], axes = FALSE, ...)
+        if (i == max(dim(dat)[3])) {
             axis(1)
             axis(4)
         }
-        if (gfp_plot) lines(x, gfpdat[, i], col=gfp_col, lwd=gfp_lwd)
+        if (gfp_plot) lines(x, gfpdat[, i], col = gfp_col, lwd = gfp_lwd)
     }
 }
 
@@ -3388,22 +3647,22 @@ plotERParray <- function(dat, xdim="time", sepdim="chan", title="", subtitle.col
 #' amplitudes (default: c(-5, 5))
 #' @param resol integer value, the resolution of the projection (default: 100L)
 #' @param resolcol integer value, the resolution of the colours (default: 1000L)
-#' @param projection character value (default="laea"). See 
+#' @param projection character value (default = "laea"). See 
 #' \link{http://www.remotesensing.org/geotiff/proj_list/} for common projections
-#' @param projref projection reference (pole [=default] or equator)
+#' @param projref projection reference (pole [ = default] or equator)
 #' @param gfp a numeric vector of the GFP values in the whole time window
 #' @importFrom sgeostat in.polygon
 #' @importFrom gplots colorpanel redgreen greenred bluered redblue
 #' @export
-plot2dview <- function(dat, ch_pos, r=1, timepoint=NULL, ampl_range=c(-5, 5), 
-                       resol=100L, resolcol=1000L,
-                       projection="laea", projref=c("pole", "equator"),
-                       origo=c(lat=ifelse(projref=="pole", 90, 0),
-                               long=ifelse(projref=="pole", 270, 0)),
-                       plot_centroid=TRUE, centroid_circle=0.5, centroid_unitsphere=FALSE,
-                       plot_bar=TRUE, plot_ch=TRUE, plot_chnames=TRUE, 
-                       title=NULL,
-                       gfp=NULL, gfp_max=NULL, ...) {
+plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 5), 
+                       resol = 100L, resolcol = 1000L,
+                       projection = "laea", projref = c("pole", "equator"),
+                       origo = c(lat = ifelse(projref == "pole", 90, 0),
+                               long = ifelse(projref == "pole", 270, 0)),
+                       plot_centroid = TRUE, centroid_circle = 0.5, centroid_unitsphere = FALSE,
+                       plot_bar = TRUE, plot_ch = TRUE, plot_chnames = TRUE, 
+                       title = NULL,
+                       gfp = NULL, gfp_max = NULL, ...) {
     #
     ch_pos <- as.data.frame(ch_pos)
     if (!all(c("theta", "phi") %in% colnames(ch_pos))) {
@@ -3413,10 +3672,10 @@ plot2dview <- function(dat, ch_pos, r=1, timepoint=NULL, ampl_range=c(-5, 5),
     if (is.matrix(dat)) {
         if (all(c("chan", "id") %in% names(dimnames(dat))))
             dat <- aperm(dat, c("id", "chan"))
-        if (ncol(dat)!=nrow(ch_pos)) 
-            stop("Wrong data format! Should be: Rows=participants, Columns=channels")
+        if (ncol(dat) != nrow(ch_pos)) 
+            stop("Wrong data format! Should be: Rows = participants, Columns = channels")
         subjdat <- dat
-        dat <- colMeans(dat, na.rm=TRUE)
+        dat <- colMeans(dat, na.rm = TRUE)
     } else {
         centroid_circle <- NA
     }
@@ -3425,131 +3684,139 @@ plot2dview <- function(dat, ch_pos, r=1, timepoint=NULL, ampl_range=c(-5, 5),
     posgeo <- sph2geo(ch_pos)
     #
     boundarypos <- 
-        if (projref=="pole") {
+        if (projref == "pole") {
             data.frame(
-                long=seq(-180, 180, length.out=180),
-                lat=rep(min(posgeo$lat), 180))
+                long = seq(-180, 180, length.out = 180),
+                lat = rep(min(posgeo$lat), 180))
         } else {
             data.frame(
-                long=c(rep(border*max(abs(posgeo$long)), 90),
+                long = c(rep(border*max(abs(posgeo$long)), 90),
                        rep(-border*max(abs(posgeo$long)), 90)),
-                lat=c(seq(-90, 90, length.out=90), seq(90, -90, length.out=90)))
+                lat = c(seq(-90, 90, length.out = 90), 
+                        seq(90, -90, length.out = 90)))
         }
-    boundarypos <- unique(project3dMap(boundarypos, projection="laea", 
-                                       projref=projref, origo=origo))
+    boundarypos <- unique(project3dMap(boundarypos, projection = "laea", 
+                                       projref = projref, origo = origo))
     #
-    xlim <- range(boundarypos$x)*1.1
-    ylim <- range(boundarypos$y)*1.1
+    xlim <- range(boundarypos$x) * 1.1
+    ylim <- range(boundarypos$y) * 1.1
     ylim.cm <- ylim.cp <- 0.1
     if (plot_bar) {
-        ypos.bar <- c(0, ylim[1]*(1+ylim.cm))
-        ylim.cm <- ylim.cm+0.1
-        ypos.bar[1] <- 0.75*ypos.bar[2] + 0.25*(ylim[1]*(1+ylim.cm))    
+        ypos.bar <- c(0, ylim[1] * (1 + ylim.cm))
+        ylim.cm <- ylim.cm + 0.1
+        ypos.bar[1] <- 0.75 * ypos.bar[2] + 0.25 * ylim[1] * (1 + ylim.cm)    
     }
     if (!is.null(gfp)) {
-        ypos.gfp <- c(ylim[2]*(1+ylim.cp*1.1), 0)
+        ypos.gfp <- c(ylim[2] * (1 + ylim.cp * 1.1), 0)
         ylim.cp <- ylim.cp + 0.3
-        ypos.gfp[2] <- 0.1*ypos.gfp[1] + 0.9*ylim[2]*(1+ylim.cp)
-        if (is.null(gfp_max)) gfp_max <- max(gfp)*1.05
-        gfp <- ypos.gfp[1] + (gfp*diff(ypos.gfp)/gfp_max)
+        ypos.gfp[2] <- 0.1 * ypos.gfp[1] + 0.9 * ylim[2] * (1 + ylim.cp)
+        if (is.null(gfp_max)) gfp_max <- max(gfp) * 1.05
+        gfp <- ypos.gfp[1] + gfp * diff(ypos.gfp) / gfp_max
     } else {
         ypos.gfp <- c(ylim[2], ylim[2])
     }
     if (!is.null(title) | !is.null(timepoint)) {
         ylim.cp <- ylim.cp + 0.2
-        ypos.title <- 0.3*ypos.gfp[2] + 0.7*(ylim[2]*(1+ylim.cp))
+        ypos.title <- 0.3 * ypos.gfp[2] + 0.7 * ylim[2] * (1+ylim.cp)
     }
-    ylim[1] <- ylim[1]*(1+ylim.cm)
-    ylim[2] <- ylim[2]*(1+ylim.cp)
+    ylim[1] <- ylim[1] * (1 + ylim.cm)
+    ylim[2] <- ylim[2] * (1 + ylim.cp)
     #
-    gridx <- seq(min(boundarypos$x), max(boundarypos$x), length.out=resol)
-    gridy <- seq(min(boundarypos$y), max(boundarypos$y), length.out=resol)
-    gridpos <- expand.grid(x=gridx, y=gridy)
+    gridx <- seq(min(boundarypos$x), max(boundarypos$x), length.out = resol)
+    gridy <- seq(min(boundarypos$y), max(boundarypos$y), length.out = resol)
+    gridpos <- expand.grid(x = gridx, y = gridy)
     ind <- in.polygon(gridpos$x, gridpos$y, 
-                      boundarypos$x*1.1, boundarypos$y*1.1)
-    gridgeo <- project3dMap(gridpos[ind,], projection="laea", 
-                            projref=projref, origo=origo, inverse=TRUE)
+                      boundarypos$x * 1.1, boundarypos$y * 1.1)
+    gridgeo <- project3dMap(gridpos[ind,], projection = "laea", 
+                            projref = projref, origo = origo, inverse = TRUE)
     gridcart <- geo2cart(gridgeo)
     z <- matrix(NA_real_, resol, resol)
     z[ind] <- chanInterp(dat, ch_pos, gridcart)
-    par(mar=rep(0, 4))
-    image(gridx, gridy, z, useRaster=TRUE, col=bluered(resolcol),
-          xlim=xlim, ylim=ylim,
-          zlim=ampl_range, xlab="", ylab="", axes=FALSE)
+    par(mar = rep(0, 4))
+    image(gridx, gridy, z, useRaster = TRUE, col = bluered(resolcol),
+          xlim = xlim, ylim = ylim,
+          zlim = ampl_range, xlab = "", ylab = "", axes = FALSE)
     gridx <- seq(min(boundarypos$x), max(boundarypos$x), 
-                 length.out=1000) * 1.1
+                 length.out = 1000) * 1.1
     gridy <- seq(min(boundarypos$y), max(boundarypos$y), 
-                 length.out=1000) * 1.1
-    gridpos <- expand.grid(x=gridx, y=gridy)
+                 length.out = 1000) * 1.1
+    gridpos <- expand.grid(x = gridx, y = gridy)
     ind <- !in.polygon(gridpos$x, gridpos$y, 
                        boundarypos$x*1, boundarypos$y*1)
     z <- matrix(NA_integer_, 1000, 1000)
     z[ind] <- 1L
-    image(gridx, gridy, z, useRaster=TRUE, col="white", add=TRUE)
-    lines(boundarypos, col="white", lwd=1)
+    image(gridx, gridy, z, useRaster = TRUE, col = "white", add = TRUE)
+    lines(boundarypos, col = "white", lwd = 1)
     #
     if (plot_ch) {
         ch_pos_xy <- project3dMap(ch_pos)
-        points(ch_pos_xy,, pch=20)
+        points(ch_pos_xy,, pch = 20)
         if (plot_chnames) {
-            indleft <- ch_pos_xy$x<=0; indright <- ch_pos_xy$x>0
-            text(ch_pos_xy[indleft,], , rownames(ch_pos[indleft, ]), pos=4)
-            text(ch_pos_xy[indright,], , rownames(ch_pos[indright, ]), pos=2)
+            indleft <- ch_pos_xy$x <= 0
+            indright <- ch_pos_xy$x > 0
+            text(ch_pos_xy[indleft,], , rownames(ch_pos[indleft, ]), pos = 4)
+            text(ch_pos_xy[indright,], , rownames(ch_pos[indright, ]), pos = 2)
         }
     }
     #
     if (plot_bar) {
-        xpos.bar <- seq(min(boundarypos$x/3), max(boundarypos$x/3), 
-                        length.out=resolcol)
+        xpos.bar <- seq(min(boundarypos$x / 3), max(boundarypos$x / 3), 
+                        length.out = resolcol)
         image(xpos.bar, ypos.bar,
-              matrix(seq(ampl_range[1], ampl_range[2], length.out=resolcol), 
+              matrix(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
                      resolcol, 2),
-              zlim=ampl_range, col=bluered(resolcol), add=TRUE)
+              zlim = ampl_range, col = bluered(resolcol), add = TRUE)
         text(min(xpos.bar), ypos.bar[1], 
-             substitute(paste(k, " ", mu, "V", sep=""), 
-                        list(k=ampl_range[1])), pos=2)
+             substitute(paste(k, " ", mu, "V", sep = ""), 
+                        list(k = ampl_range[1])), pos = 2)
         text(max(xpos.bar), ypos.bar[1], 
-             substitute(paste(k, " ", mu, "V", sep=""), 
-                        list(k=ampl_range[2])), pos=4)
+             substitute(paste(k, " ", mu, "V", sep = ""), 
+                        list(k = ampl_range[2])), pos = 4)
     }
     if (!is.null(title) | !is.null(timepoint)) {
         if (is.null(title)) {
             title <- paste("Time:", timepoint, "ms")
         }
-        text(0, ypos.title, title, cex=1.1)
+        text(0, ypos.title, title, cex = 1.1)
     }
     if (!is.null(gfp)) {
         lgfp <- length(gfp)
-        gfp.x <- seq(xlim[1]*0.8, xlim[2]*0.8, length.out=lgfp)
-        rect(min(gfp.x), ypos.gfp[1], max(gfp.x), ypos.gfp[2], border=NA, col="grey60")
-        axis(1, at=gfp.x[seq(1, lgfp, 25)], labels=names(gfp)[seq(1, lgfp, 25)], 
-             pos=ypos.gfp[1], cex.axis=0.7, padj=-1)
-        lines(gfp.x, gfp, col="white")
-        smpl <- which(as.numeric(names(gfp))==timepoint)
-        if (length(smpl)==1) {
-            points(gfp.x[smpl], gfp[smpl], pch=16, col="red", cex=1.1)
+        gfp.x <- seq(xlim[1] * 0.8, xlim[2] * 0.8, length.out = lgfp)
+        rect(min(gfp.x), ypos.gfp[1], max(gfp.x), ypos.gfp[2], 
+             border = NA, col = "grey60")
+        axis(1, at = gfp.x[seq(1, lgfp, 25)], 
+             labels = names(gfp)[seq(1, lgfp, 25)], 
+             pos = ypos.gfp[1], cex.axis = 0.7, padj = -1)
+        lines(gfp.x, gfp, col = "white")
+        smpl <- which(as.numeric(names(gfp)) == timepoint)
+        if (length(smpl) == 1) {
+            points(gfp.x[smpl], gfp[smpl], pch = 16, col = "red", cex = 1.1)
         }
     }
     if (plot_centroid) {
-        c1 <- centroid(dat, ch_pos, proj_unitsphere=centroid_unitsphere)
+        c1 <- centroid(dat, ch_pos, proj_unitsphere = centroid_unitsphere)
         if (!is.na(centroid_circle)) {
             if (require(plotrix)) {
                 cc <- apply(subjdat, 1, centroid, ch_pos, 
-                            proj_unitsphere=centroid_unitsphere)
+                            proj_unitsphere = centroid_unitsphere)
                 temp <- matrix(unlist(lapply(cc, function(x) abs(x-c1))), 
-                               ncol=length(cc))
+                               ncol = length(cc))
                 rads <- apply(temp, 2, quantile, 
-                              probs=centroid_circle, na.rm=TRUE)
-                draw.ellipse(x=c1$x, y=c1$y, 
-                             a=rads[c(1, 3)], b=rads[c(2, 4)], 
-                             col=c(rgb(0, 0, 0.5, 0.15), rgb(0.5, 0, 0, 0.15)), 
-                             border=NA)
+                              probs = centroid_circle, na.rm = TRUE)
+                draw.ellipse(x = c1$x, y = c1$y, 
+                             a = rads[c(1, 3)], b = rads[c(2, 4)], 
+                             col = c(rgb(0, 0, 0.5, 0.15), rgb(0.5, 0, 0, 0.15)), 
+                             border = NA)
             }
         }
-        points(c1["neg", "x"], c1["neg", "y"], col="white", pch=15, cex=2.5)
-        points(c1["neg", "x"], c1["neg", "y"], col="blue", pch=15, cex=2)
-        points(c1["pos", "x"], c1["pos", "y"], col="white", pch=15, cex=2.5)
-        points(c1["pos", "x"], c1["pos", "y"], col="red", pch=15, cex=2)
+        points(c1["neg", "x"], c1["neg", "y"], col = "white", 
+               pch = 15, cex = 2.5)
+        points(c1["neg", "x"], c1["neg", "y"], col = "blue", 
+               pch = 15, cex = 2)
+        points(c1["pos", "x"], c1["pos", "y"], col = "white", 
+               pch = 15, cex = 2.5)
+        points(c1["pos", "x"], c1["pos", "y"], col = "red", 
+               pch = 15, cex = 2)
     }
 }
 
@@ -3564,15 +3831,15 @@ plot2dview <- function(dat, ch_pos, r=1, timepoint=NULL, ampl_range=c(-5, 5),
 #' @seealso \code{\link{plot2dview}}
 #' @export
 complexplot2dview <- function(dat, ch_pos, timepoint, 
-                              datgrid=NULL, layout_matrix=NULL, 
-                              heights=NULL, widths=NULL, 
-                              title_row=NULL, title_col=NULL, 
-                              title_main=paste("Time:", timepoint, "ms"), 
-                              plot_bar=TRUE, ampl_range=NULL, resolcol=1000,
-                              gfp=NULL, ...) {
+                              datgrid = NULL, layout_matrix = NULL, 
+                              heights = NULL, widths = NULL, 
+                              title_row = NULL, title_col = NULL, 
+                              title_main = paste("Time:", timepoint, "ms"), 
+                              plot_bar = TRUE, ampl_range = NULL, resolcol = 1000,
+                              gfp = NULL, ...) {
     #
-    emptyplot <- function() plot(0, 0, xlim=c(-1, 1), type="n", 
-                                 axes=FALSE, frame.plot=FALSE, xlab="", ylab="")
+    emptyplot <- function() plot(0, 0, xlim = c(-1, 1), type = "n", 
+                                 axes = FALSE, frame.plot = FALSE, xlab = "", ylab = "")
     if (is.null(layout_matrix)) {
         if (is.null(datgrid)) {
             datgrid <- c(floor(sqrt(length(dat))), 
@@ -3584,12 +3851,12 @@ complexplot2dview <- function(dat, ch_pos, timepoint,
         layout_matrix <- rbind(
             matrix(c(
                 0, rep(1, colnum), 
-                0, 2:(colnum+1)), 2, colnum+1, T), 
+                0, 2:(colnum + 1)), 2, colnum + 1, T), 
             matrix(c(
-                (colnum+2):(colnum+rownum+1), 
-                (colnum+rownum+1)+1:datnum), rownum, colnum+1))
+                (colnum + 2):(colnum + rownum + 1), 
+                (colnum + rownum + 1) + 1:datnum), rownum, colnum + 1))
         layout_matrix <- rbind(layout_matrix, 
-                               c(0, rep(max(layout_matrix)+1, colnum)))
+                               c(0, rep(max(layout_matrix) + 1, colnum)))
         if (is.null(heights)) 
             heights <- c(0.3, 0.2, rep(1, rownum), 0.2)
         if (is.null(widths)) 
@@ -3598,122 +3865,126 @@ complexplot2dview <- function(dat, ch_pos, timepoint,
         if (is.null(heights)) heights <- rep(1, nrow(layout_matrix))
         if (is.null(widths)) widths <- rep(1, ncol(layout_matrix))
     }
-    layout(layout_matrix, widths=widths, heights=heights)
-    par(mar=rep(0, 4))
-    emptyplot(); text(0, 0, title_main, cex=1.5)
-    for (i in 1:length(unique(layout_matrix[2,-1]))) {
+    layout(layout_matrix, widths = widths, heights = heights)
+    par(mar = rep(0, 4))
+    emptyplot(); text(0, 0, title_main, cex = 1.5)
+    for (i in 1:length(unique(layout_matrix[2, -1]))) {
         emptyplot()
-        text(0, 0, title_col[i], cex=1.3)
+        text(0, 0, title_col[i], cex = 1.3)
     }
-    for (i in 1:length(unique(layout_matrix[-c(1,2,nrow(layout_matrix)),1]))) {
+    for (i in 1:length(unique(layout_matrix[-c(1, 2, nrow(layout_matrix)),1]))) {
         emptyplot()
-        text(-1, 0, title_row[i], cex=1.3, pos=4)
+        text(-1, 0, title_row[i], cex = 1.3, pos = 4)
     }    
     if (is.null(ampl_range)) {
         ampl_range <- c(min(unlist(dat, use.names = FALSE)), 
                         max(unlist(dat, use.names = FALSE)))
-        ampl_range <- round(c((1 - 0.2*sign(ampl_range)[1]) * ampl_range[1],
-                              (1 + 0.2*sign(ampl_range)[2]) * ampl_range[2]), 1)
+        ampl_range <- round(c((1 - 0.2 * sign(ampl_range)[1]) * ampl_range[1],
+                              (1 + 0.2 * sign(ampl_range)[2]) * ampl_range[2]), 
+                            1)
     }
-    if (length(unlist(gfp, use.names = FALSE))==1 && gfp==TRUE) {
+    if (length(unlist(gfp, use.names = FALSE)) == 1 && gfp == TRUE) {
         gfp <- lapply(dat, compGfp)    
     }
     gfp_max <- if (is.null(gfp)) NULL else max(unlist(gfp, use.names = FALSE))
     for (i in 1:length(dat)) {
-        plot2dview(dat[[i]], ch_pos=ch_pos, timepoint=timepoint, 
-                   gfp=gfp[[i]], gfp_max=gfp_max,
-                   plot_bar=FALSE, ampl_range=ampl_range, title="", ...)
+        plot2dview(dat[[i]], ch_pos = ch_pos, timepoint = timepoint, 
+                   gfp = gfp[[i]], gfp_max = gfp_max,
+                   plot_bar = FALSE, ampl_range = ampl_range, title = "", ...)
     }
     if (plot_bar) {
-        xpos.bar <- seq(0.4, 0.6, length.out=resolcol)
+        xpos.bar <- seq(0.4, 0.6, length.out = resolcol)
         ypos.bar <- c(0.45, 0.55)
         image(xpos.bar, ypos.bar,
-              matrix(seq(ampl_range[1], ampl_range[2], length.out=resolcol), 
+              matrix(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
                      resolcol, 2),
-              xlim=c(0, 1), ylim=c(0, 1), zlim=ampl_range, useRaster=TRUE,
-              col=bluered(resolcol), xlab="", ylab="", axes=FALSE, 
+              xlim = c(0, 1), ylim = c(0, 1), zlim = ampl_range, 
+              useRaster = TRUE, col = bluered(resolcol), 
+              xlab = "", ylab = "", axes = FALSE 
         )
         text(min(xpos.bar), ypos.bar[1], 
-             substitute(paste(k, " ", mu, "V", sep=""), 
-                        list(k=ampl_range[1])), pos=2)
+             substitute(paste(k, " ", mu, "V", sep = ""), 
+                        list(k = ampl_range[1])), pos = 2)
         text(max(xpos.bar), ypos.bar[1], 
-             substitute(paste(k, " ", mu, "V", sep=""), 
-                        list(k=ampl_range[2])), pos=4)
+             substitute(paste(k, " ", mu, "V", sep = ""), 
+                        list(k = ampl_range[2])), pos = 4)
     }
 }
 
 # plot p-values with across-country similarity matrices 
-reprPlot <- function(p, e, title="Reproducibility", 
-                     plim=c(0.05, 0.01), plim_shading=TRUE, plim_outline=0.05,
-                     corr_range=c(-0.99, 0.99), 
-                     corr_method=c("pearson", "spearman")) {
+reprPlot <- function(p, e, title = "Reproducibility", plim = c(0.05, 0.01), 
+                     plim_shading = TRUE, plim_outline = 0.05,
+                     corr_range = c(-0.99, 0.99), 
+                     corr_method = c("pearson", "spearman")) {
     #
-    emptyplot <- function() plot(0, 0, xlim=c(-1, 1), type="n", 
-                                 axes=FALSE, frame.plot=FALSE, xlab="", ylab="")
-    pPolygon <- function(x, y, direction="h") {
+    emptyplot <- function() {
+        plot(0, 0, xlim = c(-1, 1), type = "n", 
+             axes = FALSE, frame.plot = FALSE, xlab = "", ylab = "")
+    }
+    pPolygon <- function(x, y, direction = "h") {
         plim <- sort(unique(c(0, plim, 1)))
         y_cat <- findInterval(y, plim)
-        y_phase <- c(1, cumsum(abs(diff(y_cat)))+1)
-        yy <- 0.04 + -log(y)/(-log(p_min))*0.15
+        y_phase <- c(1, cumsum(abs(diff(y_cat))) + 1)
+        yy <- 0.04 + -log(y) / (-log(p_min)) * 0.15
         cols <- grey(c(seq(0.4, 0.6, 
-                           length.out=(length(plim)-2)), 0.95))
-        if (direction=="h") {
+                           length.out = (length(plim)-2)), 0.95))
+        if (direction == "h") {
             for (i in unique(y_phase)) {
-                ind <- y_phase==i
+                ind <- y_phase == i
                 polygon(c(x[ind], rev(x[ind])), 
                         c(-yy[ind], rep(-0.04, sum(ind))),
-                        col=cols[y_cat[ind][1]], border="grey20")
+                        col = cols[y_cat[ind][1]], border = "grey20")
                 if (plim_shading && y_cat[ind]<(length(plim)-1)) {
-                    acol <- col2rgb(cols[y_cat[ind][1]], T)/255
+                    acol <- col2rgb(cols[y_cat[ind][1]], T) / 255
                     acol[4] <- 0.2
                     rect(x[min(which(ind))], 0,
                          x[max(which(ind))], 1,
-                         col=rgb(acol[1], acol[2], acol[3], acol[4]), 
-                         border=rgb(0, 1, 0, acol[4]), lty="1F")
+                         col = rgb(acol[1], acol[2], acol[3], acol[4]), 
+                         border = rgb(0, 1, 0, acol[4]), lty = "1F")
                 }
             }
             if (!is.na(plim_outline)) {
                 sig <- rep(NA_integer_, length(x))
-                sig[y<=plim_outline] <- 1L
-                lines(x, sig, col="green", lwd=3)
+                sig[y <= plim_outline] <- 1L
+                lines(x, sig, col = "green", lwd = 3)
             }
         } else {
             for (i in unique(y_phase)) {
-                ind <- y_phase==i
+                ind <- y_phase == i
                 polygon(c(-yy[ind], rep(-0.04, sum(ind))), 
                         c(x[ind], rev(x[ind])),
-                        col=cols[y_cat[ind][1]], border="grey20")
+                        col = cols[y_cat[ind][1]], border = "grey20")
                 if (plim_shading && y_cat[ind]<(length(plim)-1)) {
-                    acol <- col2rgb(cols[y_cat[ind][1]], T)/255
+                    acol <- col2rgb(cols[y_cat[ind][1]], T) / 255
                     acol[4] <- 0.2
                     rect(0, x[min(which(ind))],
                          1, x[max(which(ind))],
-                         col=rgb(acol[1], acol[2], acol[3], acol[4]), 
-                         border=rgb(0, 1, 0, acol[4]), lty="1F")
+                         col = rgb(acol[1], acol[2], acol[3], acol[4]), 
+                         border = rgb(0, 1, 0, acol[4]), lty = "1F")
                 }
             }
             if (!is.na(plim_outline)) {
                 sig <- rep(NA_integer_, length(x))
-                sig[y<=plim_outline] <- 1L
-                lines(sig, x, col="green", lwd=3)
+                sig[y <= plim_outline] <- 1L
+                lines(sig, x, col = "green", lwd = 3)
             }
         }
     }                     
     implot <- function(corrmat, pp) {
         zlim <- atanh(corr_range)
         mat <- atanh(corrmat)
-        mat[mat<zlim[1]] <- zlim[1]
-        mat[mat>zlim[2]] <- zlim[2]
-        image(mat, zlim=zlim, xlim=c(-0.2, 1), ylim=c(-0.2,1),
-              axes=FALSE, xlab="", ylab="", col=bluered(1000))
-        lines(c(0, 1), c(0, 1), col="grey70")
+        mat[mat < zlim[1]] <- zlim[1]
+        mat[mat > zlim[2]] <- zlim[2]
+        image(mat, zlim = zlim, xlim = c(-0.2, 1), ylim = c(-0.2, 1),
+              axes = FALSE, xlab = "", ylab = "", col = bluered(1000))
+        lines(c(0, 1), c(0, 1), col = "grey70")
         tpoints <- as.numeric(rownames(corrmat))
         seqtpoints <- tpoints[seq(1, length(tpoints), 25)]
-        at <- (seqtpoints-min(tpoints))/(max(tpoints)-min(tpoints))
-        x <- (tpoints-min(tpoints))/(max(tpoints)-min(tpoints))
+        at <- (seqtpoints - min(tpoints)) / (max(tpoints) - min(tpoints))
+        x <- (tpoints - min(tpoints)) / (max(tpoints) - min(tpoints))
         for (ii in 1:2) {
-            axis(ii+2, at=at, labels=tpoints[tpoints %in% seqtpoints],
-                 cex.axis=0.8)
+            axis(ii + 2, at = at, labels = tpoints[tpoints %in% seqtpoints],
+                 cex.axis = 0.8)
             y <- pp[, ii]
             pPolygon(x, y, c("h", "v")[ii])
         }
@@ -3725,7 +3996,7 @@ reprPlot <- function(p, e, title="Reproducibility",
     p_min <- min(p)
     natnum <- ncol(p)
     nations <- colnames(p)
-    imlayout <- matrix((2*natnum+1), natnum, natnum)
+    imlayout <- matrix((2 * natnum + 1), natnum, natnum)
     diagpos <- diag(matrix(1:natnum^2, natnum, natnum))
     for (i in 1:length(imlayout)) {
         imlayout[i] <- 
@@ -3734,27 +4005,27 @@ reprPlot <- function(p, e, title="Reproducibility",
     }
     layout_matrix <- 
         rbind(c(0, rep(1, natnum)),
-              c(0, rep(2:(natnum+1))),
-              cbind((natnum+2):(2*natnum+1),
+              c(0, rep(2:(natnum + 1))),
+              cbind((natnum + 2):(2 * natnum + 1),
                     imlayout))
     layout(layout_matrix, 
-           widths=c(0.4, rep(1, natnum)),
-           heights=c(0.2, 0.1, rep(1, natnum)))
-    par(mar=rep(0, 4))
-    emptyplot(); text(0, 0, title, cex=1.5)
+           widths = c(0.4, rep(1, natnum)),
+           heights = c(0.2, 0.1, rep(1, natnum)))
+    par(mar = rep(0, 4))
+    emptyplot(); text(0, 0, title, cex = 1.5)
     for (i in 1:(2*natnum)) {
         emptyplot()
-        if (i<5) { 
-            text(0, 0, nations[i], cex=1.2)
+        if (i < 5) { 
+            text(0, 0, nations[i], cex = 1.2)
         } else {
-            text(-1, 0, nations[i-4], cex=1.2, pos=4)
+            text(-1, 0, nations[i-4], cex = 1.2, pos = 4)
         }
     }
-    par(mar=c(1, 1, 3, 3))
+    par(mar = c(1, 1, 3, 3))
     for (nat in 1:natnum) {
         for (i in 1:natnum) {
-            if (nat!=i) {
-                corrs <- cor(e[,,nat], e[,,i], method=corr_method)
+            if (nat != i) {
+                corrs <- cor(e[,,nat], e[,,i], method = corr_method)
                 implot(corrs, p[, c(nat, i)])
             }
         }
@@ -3780,27 +4051,27 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
     timebreaks <- as.numeric( as.character( dimnames(pvalues)$time ) )
     timebreaks <- range( timebreaks %/% 100)
     timebreaks <- seq(timebreaks[1], timebreaks[2]) * 100
-    pvalues_df <- array2df(pvalues, response_name="p", 
-                           dim_types=list(time="numeric"))
+    pvalues_df <- array2df(pvalues, response_name = "p", 
+                           dim_types = list(time = "numeric"))
     pvalues_df$pcrit <- findInterval(pvalues_df$p, pcrit)
     for (i in colnames(pvalues_df)) {
         if (is.character(pvalues_df[[i]])) {
             pvalues_df[[i]] <- factor(pvalues_df[[i]], 
-                                      levels=dimnames(pvalues)[[i]])
+                                      levels = dimnames(pvalues)[[i]])
         }
     }
     pp <- ggplot(pvalues_df, aes(x = time, y = chan)) + 
         geom_tile(aes(fill = pcrit), size = 0) + 
-        scale_fill_gradient(guide="legend", 
-                            high="white", 
-                            low="#a50f15",
+        scale_fill_gradient(guide = "legend", 
+                            high = "white", 
+                            low = "#a50f15",
                             name = "p-value",
                             breaks = 0:2,
-                            labels = paste("< ", pcrit, sep=""),
+                            labels = paste("< ", pcrit, sep = ""),
                             limits = c(0, length(pcrit))) + 
         scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
                          name = "channels") + 
-        scale_x_continuous(breaks = timebreaks, expand=c(0.05, 0.1))
+        scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1))
     if (!is.null(grid)) {
         pp <- pp + facet_grid( as.formula(grid) )
     } else if (!is.null(wrap)) {
@@ -3827,19 +4098,19 @@ imageValues <- function(dat, grid = NULL, wrap = NULL) {
     timebreaks <- as.numeric( as.character( dimnames(dat)$time ) )
     timebreaks <- range( timebreaks %/% 100)
     timebreaks <- seq(timebreaks[1], timebreaks[2]) * 100
-    dat_df <- array2df(dat, response_name="effect", 
-                       dim_types=list(time="numeric"))
+    dat_df <- array2df(dat, response_name = "effect", 
+                       dim_types = list(time = "numeric"))
     for (i in colnames(dat_df)) {
         if (is.character(dat_df[[i]])) {
             dat_df[[i]] <- factor(dat_df[[i]], 
-                                  levels=dimnames(dat)[[i]])
+                                  levels = dimnames(dat)[[i]])
         }
     }
     pp <- ggplot(dat_df, aes(x = time, y = chan)) + 
         geom_tile(aes(fill = effect), size = 0) + 
         scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
                          name = "channels") + 
-        scale_x_continuous(breaks = timebreaks, expand=c(0.05, 0.1))
+        scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1))
     if (!is.null(grid)) {
         pp <- pp + facet_grid( as.formula(grid) )
     } else if (!is.null(wrap)) {
@@ -3850,9 +4121,9 @@ imageValues <- function(dat, grid = NULL, wrap = NULL) {
 
 
 # simple function to plot TFCE effects
-tfce.plot <- function(arraydat, breaks=c(0, 0.001, 0.01, 0.05), 
-                      colors=rev(brewer.pal(length(breaks), "Reds")[-1]), title="",
-                      gridlines_step=50) {
+tfce.plot <- function(arraydat, breaks = c(0, 0.001, 0.01, 0.05), 
+                      colors = rev(brewer.pal(length(breaks), "Reds")[-1]), title = "",
+                      gridlines_step = 50) {
     extradim <- setdiff(names(dimnames(arraydat)), 
                         c("chan", "time", "modelterm", "nation"))
     if (!is.null(extradim)) arraydat <- avgDims(arraydat, extradim)
@@ -3864,107 +4135,109 @@ tfce.plot <- function(arraydat, breaks=c(0, 0.001, 0.01, 0.05),
         max(tpoints) %/% gridlines_step * gridlines_step,
         gridlines_step)
     dims <- sapply(dimnms, length)
-    emptyplot <- function() plot(0, 0, xlim=c(-1, 1), 
-                                 type="n", axes=FALSE, frame.plot=FALSE, xlab="", ylab="")
+    emptyplot <- function() {
+        plot(0, 0, xlim = c(-1, 1), 
+             type = "n", axes = FALSE, frame.plot = FALSE, xlab = "", ylab = "")
+    }
     layoutmat <- rbind(
         c(0, rep(1, dims[3])),
-        c(0, (1:dims[3])+dims[4]+1),
-        cbind(1:dims[4]+1,
-              matrix((1:prod(dims[3:4]))+sum(dims[3:4])+1, 
+        c(0, (1:dims[3]) + dims[4] + 1),
+        cbind(1:dims[4] + 1,
+              matrix((1:prod(dims[3:4])) + sum(dims[3:4]) + 1, 
                      dims[4], dims[3], T)))
     layout(layoutmat, 
-           widths=c(0.3, rep(1, dims[3])),
-           heights=c(0.5, 0.3, rep(1, dims[4])))
-    par(mar=c(0,0,0,0))
+           widths = c(0.3, rep(1, dims[3])),
+           heights = c(0.5, 0.3, rep(1, dims[4])))
+    par(mar = c(0, 0, 0, 0))
     # row and column labels
     emptyplot()
-    text(0, 0, title, cex=1.3)
+    text(0, 0, title, cex = 1.3)
     for (i in 1:dims[4]) {
         emptyplot()
-        text(0, 0, dimnms[[4]][i], srt=90)
+        text(0, 0, dimnms[[4]][i], srt = 90)
     }
     for (i in 1:dims[3]) {
         emptyplot()
         text(0, 0, dimnms[[3]][i])
     }
-    par(mar=c(2,2,0,0.5))
+    par(mar = c(2, 2, 0, 0.5))
     # plot images
     for (i in 1:dims[4]) {
         for (ii in 1:dims[3]) {
             temp <- aperm(arraydat[,,ii,i], c("time", "chan"))
             plot(0, 0,
-                 xlim=range(tpoints), ylim=range(1:dims["chan"]),  
-                 type="n", 
-                 xlab="", ylab="", yaxt="n")
-            abline(v=gridlines, lty=1, col="grey95")
+                 xlim = range(tpoints), ylim = range(1:dims["chan"]),  
+                 type = "n", 
+                 xlab = "", ylab = "", yaxt = "n")
+            abline(v = gridlines, lty = 1, col = "grey95")
             image(tpoints, 1:dims["chan"], temp, 
-                  breaks=breaks, col=colors, add=TRUE,
-                  xlab="", ylab="", yaxt="n")
-            axis(2, at=1:dims["chan"], labels=FALSE, tick=FALSE)
-            text(par("usr")[1]-21, 1:dims["chan"], cex=0.6, pos=2,
-                 labels = dimnms$chan, xpd=TRUE)
-            abline(v=0, col="grey40")
+                  breaks = breaks, col = colors, add = TRUE,
+                  xlab = "", ylab = "", yaxt = "n")
+            axis(2, at = 1:dims["chan"], labels = FALSE, tick = FALSE)
+            text(par("usr")[1] - 21, 1:dims["chan"], cex = 0.6, pos = 2,
+                 labels = dimnms$chan, xpd = TRUE)
+            abline(v = 0, col = "grey40")
         }
     }
 }
 
 ###
 
-plot.tanova <- function(results, plot_title="", only_p=FALSE) {
+plot.tanova <- function(results, plot_title = "", only_p = FALSE) {
     reshapefn <- function(slot, headername) {
         x <- results[[slot]]
-        x <- array2df(x, response_name=headername, 
-                      dim_types=list(time="numeric"))
+        x <- array2df(x, response_name = headername, 
+                      dim_types = list(time = "numeric"))
         return(x)
     }
     #
     pcrit <- as.list(results$call)$pcrit
     if (is.null(pcrit)) pcrit <- formals(tanova)$pcrit
     #
-    dat <- array2df(results$effect, "effect", dim_types=list(time="numeric"))
+    dat <- array2df(results$effect, "effect", 
+                    dim_types = list(time = "numeric"))
     dat$pvalue <- -log(c(results$perm_pvalues))
     dat$pvalue_consec <- -log(c(results$perm_pvalues_consec))
     dat$pcrit <- factor(dat$pvalue_consec > -log(pcrit))
-    legendtitle <- paste("pvalue <", substitute(pcrit), sep=" ")
+    legendtitle <- paste("pvalue <", substitute(pcrit), sep = " ")
     #
     if (only_p) {
         qp <- ggplot(dat[order(dat$time),], 
-                     aes(x=time, y=pvalue, col=pcrit, group=NA)) + 
-            geom_hline(yintercept=-log(pcrit), lty=3) + 
+                     aes(x = time, y = pvalue, col = pcrit, group = NA)) + 
+            geom_hline(yintercept = -log(pcrit), lty = 3) + 
             ylab("-log(P-value)")
     } else {
         qp <- ggplot(dat[order(dat$time),], 
-                     aes(x=time, y=effect, col=pcrit, group=NA)) + 
+                     aes(x = time, y = effect, col = pcrit, group = NA)) + 
             ylab("Effect")
     }
     qp <- qp + geom_line() + facet_wrap(~modelterm) +
         ggtitle(plot_title) + 
-        scale_colour_manual(name=legendtitle,
-                            values=c("FALSE"="grey60","TRUE"="red")) + 
+        scale_colour_manual(name = legendtitle,
+                            values = c("FALSE"="grey60","TRUE"="red")) + 
         theme(panel.background = element_rect(fill = "white"),
-              panel.grid.major = element_line(color="grey95"),
-              panel.grid.minor = element_line(color="grey97"),
-              panel.border = element_rect(color="grey70", fill=NA))
+              panel.grid.major = element_line(color = "grey95"),
+              panel.grid.minor = element_line(color = "grey97"),
+              panel.border = element_rect(color = "grey70", fill = NA))
     print(qp)
 }
 
 
-
-
 # plot neurodys tanova results
-fastplot_tanova <- function(results, plot_title="", pcrit=0.05, only_p=FALSE) {
+fastplot_tanova <- function(results, plot_title = "", pcrit = 0.05, 
+                            only_p = FALSE) {
     reshapefn <- function(slot, headername) {
         x <- lapply(results, "[[", slot)
         #x <- rearrangeList(x, "nation")
         if (length(x) > 1) {
             temp <- matrix(unlist(strsplit(names(x), "-")), 
-                           nrow=length(x), byrow=TRUE)
-            names(x) <- temp[,2]
-            x <- rearrangeList(x, temp[1,1])
+                           nrow = length(x), byrow = TRUE)
+            names(x) <- temp[, 2]
+            x <- rearrangeList(x, temp[1, 1])
         } else {
             x <- x[[1]]
         }
-        x <- as.data.frame.table(x, responseName=headername)
+        x <- as.data.frame.table(x, responseName = headername)
         x$time <- as.numeric(as.character(x$time))
         return(x)
     }
@@ -3973,29 +4246,30 @@ fastplot_tanova <- function(results, plot_title="", pcrit=0.05, only_p=FALSE) {
     dat$pvalue <- -log(reshapefn("perm_pvalues", "pvalue")$pvalue)
     dat$pvalue_consec <- reshapefn("perm_pvalues_consec", "pvalue")$pvalue
     dat$pcrit <- factor(dat$pvalue_consec<pcrit)
-    legendtitle <- paste("pvalue <", substitute(pcrit), sep=" ")
+    legendtitle <- paste("pvalue <", substitute(pcrit), sep = " ")
     #
     if (only_p) {
         qp <- ggplot(dat[order(dat$time),], 
-                     aes(x=time, y=pvalue, col=pcrit, group=NA)) + 
-            geom_hline(yintercept=-log(pcrit), lty=3) + 
+                     aes(x = time, y = pvalue, col = pcrit, group = NA)) + 
+            geom_hline(yintercept = -log(pcrit), lty = 3) + 
             ylab("-log(P-value)")
     } else {
         qp <- ggplot(dat[order(dat$time),], 
-                     aes(x=time, y=effect_size, col=pcrit, group=NA)) + 
+                     aes(x = time, y = effect_size, col = pcrit, group = NA)) + 
             ylab("Effect size")
     }
     qp <- qp + geom_line() + facet_grid(nation~modelterm) +
         ggtitle(plot_title) + 
-        scale_colour_manual(name=legendtitle,
-                            values=c("FALSE"="grey70","TRUE"="red"))
+        scale_colour_manual(name = legendtitle,
+                            values = c("FALSE"="grey70","TRUE"="red"))
     print(qp)
 }
 
 
 # plot peak results
-fastplot_peak <- function(results, plot_title="", pcrit=0.05, only_p=FALSE) {
-    reshapefn <- function(slot, headername, attr_slot=NULL) {
+fastplot_peak <- function(results, plot_title = "", 
+                          pcrit = 0.05, only_p = FALSE) {
+    reshapefn <- function(slot, headername, attr_slot = NULL) {
         if (is.null(attr_slot)) {
             x <- lapply(results, "[[", slot)
         } else {
@@ -4003,11 +4277,11 @@ fastplot_peak <- function(results, plot_title="", pcrit=0.05, only_p=FALSE) {
                         function(x) attr(x[[slot]], attr_slot))
         }
         x <- rearrangeList(x, "nation")
-        x <- as.data.frame.table(x, responseName=headername)
-        x$peak <- factor(x$peak, levels=rev(levels(x$peak)))
+        x <- as.data.frame.table(x, responseName = headername)
+        x$peak <- factor(x$peak, levels = rev(levels(x$peak)))
         return(x)
     }
-    dat_ampl <- reshapefn("F_obs", "pvalue", attr_slot="pvalues")
+    dat_ampl <- reshapefn("F_obs", "pvalue", attr_slot = "pvalues")
     dat_ampl <- dat_ampl[with(dat_ampl, order(nation, peak, modelterm)),
                          c("nation", "peak", "modelterm", "pvalue")]
     dat_ampl$measure <- "amplitude"
@@ -4017,13 +4291,13 @@ fastplot_peak <- function(results, plot_title="", pcrit=0.05, only_p=FALSE) {
     colnames(dat_lat)[3] <- "modelterm"
     dat_lat$measure <- "latency"
     dat <- rbind(dat_ampl, dat_lat)
-    dat$pcrit <- factor(dat$pvalue<pcrit)
-    legendtitle <- paste("pvalue <", substitute(pcrit), sep=" ")
-    qp <- ggplot(dat, aes(x=nation, y=peak, fill=pcrit)) + 
-        geom_tile(col="white") + facet_grid(modelterm~measure) + 
+    dat$pcrit <- factor(dat$pvalue < pcrit)
+    legendtitle <- paste("pvalue <", substitute(pcrit), sep = " ")
+    qp <- ggplot(dat, aes(x = nation, y = peak, fill = pcrit)) + 
+        geom_tile(col = "white") + facet_grid(modelterm ~ measure) + 
         ggtitle(plot_title) + 
-        scale_fill_manual(name=legendtitle,
-                          values=c("FALSE"="grey60","TRUE"="red3"))
+        scale_fill_manual(name = legendtitle,
+                          values = c("FALSE"="grey60","TRUE"="red3"))
     print(qp)
 }
 
@@ -4034,11 +4308,11 @@ fastplot_peak <- function(results, plot_title="", pcrit=0.05, only_p=FALSE) {
 # - cols:   Number of columns in layout
 # - layout: A matrix specifying the layout. If present, 'cols' is ignored.
 #
-# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# If the layout is something like matrix(c(1,2,3,3), nrow = 2, byrow = TRUE),
 # then plot 1 will go in the upper left, 2 will go in the upper right, and
 # 3 will go all the way across the bottom.
 #
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+multiplot <- function(..., plotlist = NULL, file, cols = 1, layout = NULL) {
     require(grid)
     # Make a list from the ... arguments and plotlist
     plots <- c(list(...), plotlist)
@@ -4051,7 +4325,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
         layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
                          ncol = cols, nrow = ceiling(numPlots/cols))
     }
-    if (numPlots==1) {
+    if (numPlots == 1) {
         print(plots[[1]])   
     } else {
         # Set up the page
@@ -4102,13 +4376,14 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 #' @return A data.frame if datfr is TRUE, and an array if datfr is FALSE
 #
 prepare2plot <- function(dat, datid, 
-                         bwFac=NULL, wiFac=NULL, collFac=NULL, diffFac=NULL, 
-                         compGFP=TRUE, sc=NULL, 
-                         datfr=TRUE, iaFac=NULL, ...) {
+                         bwFac = NULL, wiFac = NULL, 
+                         collFac = NULL, diffFac = NULL, 
+                         compGFP = TRUE, sc = NULL, 
+                         datfr = TRUE, iaFac = NULL, ...) {
     bool_collFac <- !is.null(collFac) && collFac%in%names(dimnames(dat))
     if (!is.null(sc)) {
-        sc.options.default <- list(method="phase", indiv=TRUE, div=NULL)
-        if (with(sc, exists("sc.options", inherits=FALSE))) {
+        sc.options.default <- list(method = "phase", indiv = TRUE, div = NULL)
+        if (with(sc, exists("sc.options", inherits = FALSE))) {
             sc.options <- lapply(1:length(sc.options.default), function(i) {
                 tt <- sc$sc.options[[names(sc.options.default)[i]]]
                 if (is.null(tt)) sc.options.default[[i]] else tt
@@ -4119,21 +4394,21 @@ prepare2plot <- function(dat, datid,
             sc.options <- sc.options.default
         }
     }
-    facs <- nofac_facs <- data.frame(id="all")
+    facs <- nofac_facs <- data.frame(id = "all")
     if (!is.null(bwFac)) {
         facs <- do.call(expand.grid, bwFac)
-        if (nrow(facs)==0) facs <- nofac_facs
+        if (nrow(facs) == 0) facs <- nofac_facs
     }
     out <- lapply(1:nrow(facs), function(i) {
         if (identical(nofac_facs, facs)) {
             ids <- datid$id
         } else {
             ids <- datid$id[rowSums(sapply(1:length(bwFac), function(f) 
-                datid[, names(bwFac)[f]]==facs[i, f]))==length(bwFac)]
+                datid[, names(bwFac)[f]] == facs[i, f])) == length(bwFac)]
         }
-        subFac <- append(wiFac, list(id=ids))
+        subFac <- append(wiFac, list(id = ids))
         temp <- subsetArray(dat, subFac)
-        if (!is.null(sc) && sc.options$method!="fix" && sc.options$indiv==TRUE) {
+        if (!is.null(sc) && sc.options$method != "fix" && sc.options$indiv == TRUE) {
             if (bool_collFac) {
                 tempcoll <- setdiff(collFac, c("chan", "id", "time"))
                 temp <- avgDims(temp, tempcoll)
@@ -4141,11 +4416,13 @@ prepare2plot <- function(dat, datid,
             } 
             tt0 <- subsetArray(temp, sc)
             tempcoll <- setdiff(names(dimnames(tt0)), c("chan", "id", "time"))
-            if (length(tempcoll)>0) tt0 <- avgDims(tt0, tempcoll)
+            if (length(tempcoll) > 0) tt0 <- avgDims(tt0, tempcoll)
             tt0 <- compGfp(tt0)
-            if (sc.options$method=="phase") {
-                tt0 <- apply(tt0, which(names(dimnames(tt0))=="id"), mean, na.rm=TRUE)
-                temp <- sweep(temp, which(names(dimnames(temp))=="id"), tt0, "/")
+            if (sc.options$method == "phase") {
+                tt0 <- apply(tt0, which(names(dimnames(tt0)) == "id"), 
+                             mean, na.rm = TRUE)
+                temp <- sweep(temp, which(names(dimnames(temp)) == "id"), 
+                              tt0, "/")
             } else {
                 temp <- sweep(temp, 
                               match(names(dimnames(tt0)), names(dimnames(temp))), 
@@ -4155,23 +4432,23 @@ prepare2plot <- function(dat, datid,
         } else {
             if (bool_collFac) temp <- avgDims(temp, collFac)
         }
-        if (!is.null(sc) && sc.options$method!="fix" && sc.options$indiv==FALSE) {
+        if (!is.null(sc) && sc.options$method != "fix" && sc.options$indiv == FALSE) {
             tt0 <- subsetArray(temp, sc)
             tempcoll <- setdiff(names(dimnames(tt0)), c("chan", "id", "time"))
-            if (length(tempcoll)>0) tt0 <- avgDims(tt0, tempcoll)
+            if (length(tempcoll) > 0) tt0 <- avgDims(tt0, tempcoll)
             tt0 <- compGfp(tt0)
-            if (sc.options$method=="phase") {
+            if (sc.options$method == "phase") {
                 tt0 <- mean(tt0)
             } 
             if (is.vector(tt0)) {
-                temp <- temp/tt0
+                temp <- temp / tt0
             } else {
                 temp <- sweep(temp, 
                               match(names(dimnames(tt0)), names(dimnames(temp))), 
                               tt0, "/")
             }
         }
-        if (!is.null(sc) && sc.options$method=="fix") {
+        if (!is.null(sc) && sc.options$method == "fix") {
             temp <- temp/sc.options$div[i]
         }
         if (!is.null(diffFac)) {
@@ -4181,22 +4458,27 @@ prepare2plot <- function(dat, datid,
                 diffFac <- matrix(unlist(diffFac), length(diffFac), 4, T)
             }
             for (ii in 1:nrow(diffFac)) {
-                c1 <- parse(text=paste("list(", diffFac[ii,1], "='", diffFac[ii,2], "')", sep=""))
-                c2 <- parse(text=paste("list(", diffFac[ii,1], "='", diffFac[ii,3], "')", sep=""))
-                tempd <- subsetArray(temp, eval(c1))-
+                c1 <- parse(text = paste("list(", diffFac[ii,1], "='", 
+                                         diffFac[ii,2], "')", sep = ""))
+                c2 <- parse(text = paste("list(", diffFac[ii,1], "='", 
+                                         diffFac[ii,3], "')", sep = ""))
+                tempd <- subsetArray(temp, eval(c1)) - 
                     subsetArray(temp, eval(c2))
                 dimn.orig <- dimnames(temp)
-                temp <- aperm(temp, c(setdiff(names(dimn.orig),diffFac[ii,1]),diffFac[ii,1]))
+                temp <- aperm(temp, c(setdiff(names(dimn.orig),
+                                              diffFac[ii,1]),
+                                      diffFac[ii,1]))
                 dimn.perm <- dimnames(temp)
                 temp <- c(temp,tempd)
-                dimn.perm[[diffFac[ii,1]]] <- dimn.orig[[diffFac[ii,1]]] <- 
-                    c(dimn.orig[[diffFac[ii,1]]],diffFac[ii,4])
-                temp <- array(temp, vapply(dimn.perm,length,0), dimnames=dimn.perm)
+                dimn.perm[[diffFac[ii, 1]]] <- dimn.orig[[diffFac[ii, 1]]] <- 
+                    c(dimn.orig[[diffFac[ii, 1]]], diffFac[ii, 4])
+                temp <- array(temp, vapply(dimn.perm,length,0), 
+                              dimnames = dimn.perm)
                 temp <- aperm(temp, names(dimn.orig))
             }
         }
         if (compGFP) {
-            temp <- compGfp(temp, keep_channels=FALSE)
+            temp <- compGfp(temp, keep_channels = FALSE)
             if (datfr) {
                 temp <- array2df(temp, ...)
                 temp[colnames(facs)] <- facs[i, ]
@@ -4210,16 +4492,17 @@ prepare2plot <- function(dat, datid,
     if (datfr) {
         out <- do.call(rbind, out)
         if (!is.null(iaFac)) {
-            out[, paste(iaFac, collapse=".")] <- interaction(out[, iaFac])
+            out[, paste(iaFac, collapse = ".")] <- interaction(out[, iaFac])
         }
     } else {
         names.mat <- sapply(1:ncol(facs), 
                             function(cc) sapply(1:nrow(facs), function(rr) 
-                                paste(colnames(facs)[cc], facs[rr, cc], sep="-")))
-        if (nrow(facs)>1) {
-            names(out) <- apply(names.mat, 1, paste, collapse="_")
-        } else if (ncol(facs)>1) {
-            names(out) <- paste(names.mat, collapse="_")
+                                paste(colnames(facs)[cc], 
+                                      facs[rr, cc], sep = "-")))
+        if (nrow(facs) > 1) {
+            names(out) <- apply(names.mat, 1, paste, collapse = "_")
+        } else if (ncol(facs) > 1) {
+            names(out) <- paste(names.mat, collapse = "_")
         } else {
             names(out) <- names.mat
         }
@@ -4231,9 +4514,9 @@ prepare2plot <- function(dat, datid,
 #
 # <<< Rcpp functions >>> -----------
 #
-consectrue <- function(x, col=TRUE) {
+consectrue <- function(x, col = TRUE) {
     if (is.vector(x)) {
-        x <- matrix(x, ncol=1)
+        x <- matrix(x, ncol = 1)
         col <- T
     }
     if (!col) x <- t(x)
@@ -4244,12 +4527,12 @@ consectrue <- function(x, col=TRUE) {
 
 
 # rle on the columns or rows of a matrix
-matrixRle <- function(x, col=TRUE) {
-    if (length(dim(x))>2 || (!is.atomic(x) && !is.data.frame(x)) )
+matrixRle <- function(x, col = TRUE) {
+    if (length(dim(x)) > 2 || (!is.atomic(x) && !is.data.frame(x)) )
         stop("Provide vector, matrix, or data.frame as input!")
-    if (length(dim(x))==1) {
+    if (length(dim(x)) == 1) {
         col <- T
-        x <- matrix(x, ncol=1)
+        x <- matrix(x, ncol = 1)
     }
     out <- if (col) rleRcpp(x) else rleRcpp(t(x))
     if (!col) names(out)[3] <- "matrixrow"
@@ -4257,7 +4540,7 @@ matrixRle <- function(x, col=TRUE) {
 }
 # inverse of matrixRle
 inverse.matrixRle <- function(x) {
-    out <- matrix(rep(x$values, x$lengths), ncol=max(x$matrix))
+    out <- matrix(rep(x$values, x$lengths), ncol = max(x$matrix))
     if ("matrixrow" %in% names(x)) {
         out <- t(out)
     }
