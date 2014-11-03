@@ -28,10 +28,10 @@ amplitudes (default: c(-5, 5))}
 
 \item{resolcol}{integer value, the resolution of the colours (default: 1000L)}
 
-\item{projection}{character value (default="laea"). See
+\item{projection}{character value (default = "laea"). See
 \link{http://www.remotesensing.org/geotiff/proj_list/} for common projections}
 
-\item{projref}{projection reference (pole [=default] or equator)}
+\item{projref}{projection reference (pole [ = default] or equator)}
 
 \item{gfp}{a numeric vector of the GFP values in the whole time window}
 }

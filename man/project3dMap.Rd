@@ -12,14 +12,14 @@ project3dMap(pos, r = 1, projection = "laea", projref = c("pole",
 
 \item{r}{radius}
 
-\item{projection}{character string (default="laea"). See
+\item{projection}{character string (default = "laea"). See
 \link{http://www.remotesensing.org/geotiff/proj_list/} for common projections}
 
-\item{projref}{projection reference (pole [=default] or equator)}
+\item{projref}{projection reference (pole [ = default] or equator)}
 
-\item{origo}{a named character vector of lat (=latitude) and long (longitude)}
+\item{origo}{a named character vector of lat ( = latitude) and long (longitude)}
 
-\item{inverse}{if set to TRUE, back-projection is performed (default=FALSE)}
+\item{inverse}{if set to TRUE, back-projection is performed (default = FALSE)}
 }
 \value{
 A data.frame containing the projected coordinates

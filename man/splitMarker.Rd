@@ -18,7 +18,7 @@ factors.}
 
 \item{splitchar}{a character vector of length one indicating the splitting
 character (default: _). Splitting characters which are special characters in
-R (e.g. "|", ".", etc.) should be given as in strsplit (e.g. "\\|")}
+R (e.g. "|", ".", etc.) should be given as in strsplit (e.g. "\\\|")}
 }
 \value{
 A data.frame with header and appropriate classes, containing the

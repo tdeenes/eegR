@@ -4,9 +4,9 @@
 \title{T-test with TFCE correction}
 \usage{
 tfceTtest(dat, ChN, EH = c(0.66, 2), type = c("o", "i", "d"),
-  nperm = 100L, useparallel = TRUE, ncpus = NULL, par_method = c("snow",
-  "mc"), cl = NULL, groups = NULL, use_subset = NULL, seed = NULL,
-  save.random2matlab = FALSE)
+  nperm = 100L, useparallel = TRUE, ncores = NULL,
+  par_method = c("snow", "mc"), cl = NULL, groups = NULL,
+  use_subset = NULL, seed = NULL, save.random2matlab = FALSE)
 }
 \arguments{
 \item{dat}{numeric array with named dimensions (at least "id", "chan" and
@@ -25,7 +25,7 @@ tfceTtest(dat, ChN, EH = c(0.66, 2), type = c("o", "i", "d"),
 \item{useparallel}{logical value; if TRUE (default), computations are done
 in parallel}
 
-\item{ncpus}{integer value corresponding to the number of cores;
+\item{ncores}{integer value corresponding to the number of cores;
 if NULL (default), it is set to the maximum number of cores available}
 
 \item{par_method}{parallelization method; can be "snow" (default) or "mc"

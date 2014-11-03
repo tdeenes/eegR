@@ -3,7 +3,7 @@
 \alias{chanInterp}
 \title{Spherical spline interpolation}
 \usage{
-chanInterp(dat, ch_pos, interp_pos = NULL, maxNA = 0.3, m = 4, N = 7,
+chanInterp(dat, ch_pos, interp_pos = NULL, maxNA = 0.3, m = 4L, N = 7L,
   lambda = 1e-10, type = c("voltage", "laplacian", "scd"),
   alarm_tolerance = 0.01)
 }
@@ -18,7 +18,7 @@ with the following column names (order is not important): "theta", "phi"
 should be in the same format as ch_pos (default: NULL)}
 
 \item{maxNA}{numeric value given as ratio (0 < maxNA < 1) or integer
-(maxNA >=1 ); it determines the maximum ratio or number of non-missing
+(maxNA >= 1 ); it determines the maximum ratio or number of non-missing
 channels in a time sample. If exceeded, no interpolation occurs in the given
 time sample.}
 

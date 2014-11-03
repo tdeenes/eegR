@@ -8,16 +8,19 @@ avgDims(dat, dims, na_rm = TRUE)
 \arguments{
 \item{dat}{matrix or array to average}
 
-\item{dims}{character vector of dimension names or numeric vector of dimension indices
-across which averaging should ocuur. If character vector, dat must have named dimnames.}
+\item{dims}{character vector of dimension names or numeric vector of
+dimension indices across which averaging should ocuur. If character vector,
+dat must have named dimnames.}
 
-\item{na_rm}{logical variable; if TRUE (default), missing values are removed before averaging}
+\item{na_rm}{logical variable; if TRUE (default), missing values are removed
+before averaging}
 }
 \value{
-An array (or matrix) with averaged data (the number of dimensions of dat is
-decreased by the length of dims)
+An array (or matrix) with averaged data (the number of dimensions of
+dat is decreased by the length of dims)
 }
 \description{
-\code{avgDims} collapses data in array format across specific dimensions by simple averaging
+\code{avgDims} collapses data in array format across specific dimensions by
+simple averaging
 }
 

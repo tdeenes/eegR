@@ -3,7 +3,7 @@
 \alias{preAnova}
 \title{Parameter checks and data preparation before arrayAnovaSub}
 \usage{
-preAnova(arraydat, factordef, bwdat, useparallel, ncpus, par_method,
+preAnova(arraydat, factordef, bwdat, useparallel, ncores, par_method,
   usetfce = FALSE)
 }
 \description{

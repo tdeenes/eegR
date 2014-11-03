@@ -4,7 +4,7 @@
 \title{ANOVA on individual peaks}
 \usage{
 peakAnova(arraydat, factordef, peakdef, bwdat = NULL, verbose = TRUE,
-  avg_around_peak = 2, nperm = 1, useparallel = FALSE, ncpus = NULL,
+  avg_around_peak = 2, nperm = 1, useparallel = FALSE, ncores = NULL,
   par_method = c("snow", "mc"), cl = NULL, iaterms_last = TRUE,
   seed = NULL)
 }
@@ -43,7 +43,7 @@ which are considered +- in the "mean around the peak" measure}
 \item{useparallel}{logical value; if TRUE (default), computations are done
 in parallel}
 
-\item{ncpus}{integer value corresponding to the number of cores;
+\item{ncores}{integer value corresponding to the number of cores;
 if NULL (default), it is set to the maximum number of cores available}
 
 \item{par_method}{parallelization method; can be "snow" (default) or "mc"

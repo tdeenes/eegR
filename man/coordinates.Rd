@@ -28,7 +28,7 @@ or geographical coordinates of the electrode positions. It should contain
 at least the following (named) columns, respectively: theta and phi;
 x, y, and z; or lat and long.}
 
-\item{r}{radius (default=1)}
+\item{r}{radius (default = 1)}
 
 \item{deg}{logical variable indicating whether spherical or geographical
 coordinates are or should be given in degrees (TRUE, default)}

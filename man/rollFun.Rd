@@ -15,7 +15,7 @@ rolling statistics are computed column-wise.}
 See details.}
 
 \item{force_rollapply}{logical variable; if yes, zoo:::rollapply is called
-(default=FALSE).}
+(default = FALSE).}
 
 \item{...}{optional arguments to the corresponding function in caTools or
 zoo:::rollapply}

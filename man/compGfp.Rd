@@ -11,7 +11,7 @@ must be "chan")}
 
 \item{keep_channels}{logical value; if TRUE, the original channels are
 retained, and the GFP values are added with a channel code of "GFP"
-(default=FALSE)}
+(default = FALSE)}
 }
 \value{
 The function returns a matrix or an array. Note that if

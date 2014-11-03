@@ -5,7 +5,7 @@
 \usage{
 tanova(arraydat, factordef, bwdat = NULL, type = c("tanova",
   "dissimilarity", "gfp"), verbose = TRUE, nperm = 999L,
-  useparallel = FALSE, ncpus = NULL, par_method = c("snow", "mc"),
+  useparallel = FALSE, ncores = NULL, par_method = c("snow", "mc"),
   cl = NULL, iaterms_last = TRUE, seed = NULL, pcrit = 0.05)
 }
 \arguments{
@@ -36,7 +36,7 @@ should be also returned}
 \item{useparallel}{logical value; if TRUE (default), computations are done
 in parallel}
 
-\item{ncpus}{integer value corresponding to the number of cores;
+\item{ncores}{integer value corresponding to the number of cores;
 if NULL (default), it is set to the maximum number of cores available}
 
 \item{par_method}{parallelization method; can be "snow" (default) or "mc"

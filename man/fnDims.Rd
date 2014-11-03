@@ -5,7 +5,7 @@
 \usage{
 fnDims(dat, target_dim, target_fn, arg_list = NULL, newdims = list(),
   vectorized = FALSE, columnwise = TRUE, keep_dimorder = FALSE,
-  useparallel = FALSE, cl = NULL, ncpus = NULL)
+  useparallel = FALSE, cl = NULL, ncores = NULL)
 }
 \arguments{
 \item{dat}{matrix or array on which function should be called}
@@ -29,14 +29,14 @@ operates column-wise (TRUE, default) or row-wise (FALSE)}
 
 \item{keep_dimorder}{logical value; if TRUE, and the returned matrix or array
 is of the same size as dat, the order of dimensions in the returned matrix
-or array will be the same as in dat (default=FALSE)}
+or array will be the same as in dat (default = FALSE)}
 
 \item{useparallel}{logical value; if TRUE, a snow-type parallel backend is
 used (default: FALSE)}
 
 \item{cl}{cluster definition if useparallel is TRUE}
 
-\item{ncpus}{number of cpus if useparallel is TRUE and clust is NULL}
+\item{ncores}{number of cpus if useparallel is TRUE and clust is NULL}
 }
 \value{
 see Details
