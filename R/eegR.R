@@ -2767,9 +2767,12 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
         stop("The artrej_options parameter must be a list; provide it through 
              artrejOptions() to avoid inconsistent results!")
     }
-    if (artrej_options$channels == "all") {
-        keepchan <- dimnames(dat)$chan
-    }
+    keepchan <- 
+        if (identical(artrej_options$channels, "all")) {
+            dimnames(dat)$chan
+        } else {
+            artrej_options$channels
+        }
     # run artifact rejection
     tempdat <- array2mat(subsetArray(dat, list(chan = keepchan), drop = FALSE),
                          "time")
