@@ -2176,6 +2176,7 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
         arg_list <- list(m = m, N = N, lambda = lambda, type = type)
         if (length(arg_list) == 0) arg_list <- NULL
         out <- fnDims(dat, "chan", interpFn, arg_list = arg_list, vectorized = TRUE)
+        out <- aperm(out, names(dim_names))
     }
     #
     if (is.null(interp_pos)) {
