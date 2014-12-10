@@ -5,6 +5,25 @@
 
 using namespace Rcpp;
 
+// tfce
+NumericMatrix tfce(NumericMatrix inData, int chan_dim, IntegerMatrix ChN, NumericVector EH, int numSteps);
+RcppExport SEXP eegR_tfce(SEXP inDataSEXP, SEXP chan_dimSEXP, SEXP ChNSEXP, SEXP EHSEXP, SEXP numStepsSEXP) {
+BEGIN_RCPP
+    SEXP __sexp_result;
+    {
+        Rcpp::RNGScope __rngScope;
+        Rcpp::traits::input_parameter< NumericMatrix >::type inData(inDataSEXP );
+        Rcpp::traits::input_parameter< int >::type chan_dim(chan_dimSEXP );
+        Rcpp::traits::input_parameter< IntegerMatrix >::type ChN(ChNSEXP );
+        Rcpp::traits::input_parameter< NumericVector >::type EH(EHSEXP );
+        Rcpp::traits::input_parameter< int >::type numSteps(numStepsSEXP );
+        NumericMatrix __result = tfce(inData, chan_dim, ChN, EH, numSteps);
+        PROTECT(__sexp_result = Rcpp::wrap(__result));
+    }
+    UNPROTECT(1);
+    return __sexp_result;
+END_RCPP
+}
 // consectrueRcpp
 IntegerVector consectrueRcpp(LogicalMatrix x);
 RcppExport SEXP eegR_consectrueRcpp(SEXP xSEXP) {
