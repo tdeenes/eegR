@@ -8,14 +8,14 @@ splitArray(dat, whichdim)
 \arguments{
 \item{dat}{numeric array (preferably with named dimnames)}
 
-\item{whichdim}{numeric or character vector, the dimension of the array
+\item{whichdim}{numeric or character vector, the dimension(s) of the array
 to split along}
 }
 \value{
 A list of subsets of the original data matrix/array
 }
 \description{
-\code{splitArray} splits an array along a given dimension into a list of
+\code{splitArray} splits an array along given dimension(s) into a list of
 sub-arrays
 }
 
