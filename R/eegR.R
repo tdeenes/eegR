@@ -2236,11 +2236,10 @@ project3dMap <- function(pos, r = 1,
     pos <- as.data.frame(pos)
     if (is.null(pos$r)) pos$r <- 1
     projref <- match.arg(projref)
-    proj4call <- paste("+ proj = ", projection, 
-                       " + lat_0 = ", origo[1], 
-                       " + lon_0 = ", origo[2],
-                       paste(" + R = ", pos$r, sep = ""),
-                       sep = "")
+    proj4call <- paste0("+proj=", projection, 
+                       " +lat_0=", origo[1], 
+                       " +lon_0=", origo[2],
+                       paste0(" +R=", pos$r))
     #
     if (inverse) {
         if (is.null(colnames(pos))) colnames(pos)[1:2] <- c("x", "y")
@@ -2944,40 +2943,35 @@ avgTrials <- function(dat, markers, which_factors = NULL) {
 
 # tfce functions =========== 
 
-#' Low-level TFCE function which calls C code
+#' Low-level TFCE function which calls C++ code
 #' 
 #' \code{tfce.fnc} performs TFCE correction. This function is not 
 #' intended for direct use.
 #' @param x numeric matrix or array
 #' @param chn channel neighbourhood matrix
 #' @param eh numeric vector of E and H parameters
+#' @param nr_steps number of threshold steps (default: 50L)
 #' @export
 #' @keywords internal
 #' @return numeric matrix or array of the same dimensions as x
-tfce.fnc <- function(x, chn, eh) {
-    callc <- function(tdat) { 
-        dims <- as.integer(dim(tdat))
-        dims2 <- as.integer(dim(chn))
-        indat <- as.double(tdat)
-        outdat <- as.double(rep(0, length(indat)))
-        chn  <- as.double(chn)
-        eh <- as.double(eh)
-        result <- .C("tfce",
-                     inData = indat,
-                     outData = outdat,
-                     ChN = chn,
-                     dims = dims,
-                     dims2 = dims2,
-                     EH = eh)$outData
-        return(result)
+tfce.fnc <- function(x, chn, eh, nr_steps = 50L) {
+    chan_dim = which(names(dimnames(x)) == "chan")
+    out <- array(0, dim(x))
+    ind.neg <- x < 0
+    ind.pos <- x > 0
+    if (any(ind.pos)) {
+        sdat <- x
+        sdat[ind.neg] <- 0
+        out <- tfce(inData = sdat, chan_dim = chan_dim, 
+                    ChN = ChN, EH = eh, numSteps = nr_steps)
     }
-    edat <- x
-    edat[edat < 0] <- 0
-    out <- callc(edat)
-    edat <- -x
-    edat[edat < 0] <- 0
-    out <- out - callc(edat)
-    return(array(out, dim(x)))
+    if (any(ind.neg)) {
+        sdat <- -x
+        sdat[ind.pos] <- 0
+        out <- out - tfce(inData = sdat, chan_dim = chan_dim, 
+                          ChN = ChN, EH = eh, numSteps = nr_steps)
+    }
+    out
 }
 
 
