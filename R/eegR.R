@@ -4360,12 +4360,15 @@ multiplot <- function(..., plotlist = NULL, file, cols = 1, layout = NULL) {
 #' should be subtracted. The first element is the dimension name, the 2nd and 3rd
 #' are the levels to be compared (2nd-3rd), and the 4th element corresponds to
 #' the label of the new level.
-#' @param compGFP a logical variable; if TRUE (default), Global Field Power is
+#' @param compGFP a logical scalar; if TRUE (default), Global Field Power is
 #' also computed.
+#' @param keep_channels a logical scalar; if Global Field Power is requested,
+#' shall individual channels be included in the result (default: FALSE, if GFP
+#' is requested, ignored otherwise)
 #' @param sc if not NULL, must be a named list indicating how scaling by GFP 
 #' should be done - either individually (default) or group-based, and either 
 #' timepoint-by-timepoint or for averaged segments 
-#' @param datfr a logical variable (default: TRUE) determining if the resulting
+#' @param datfr a logical scalar (default: TRUE) determining if the resulting
 #' array shall be transformed to a data.frame
 #' @param iaFac a character vector indicating which dimensions should
 #' be combined (ia is the abbreviation of interaction), if datfr is TRUE
@@ -4376,7 +4379,8 @@ multiplot <- function(..., plotlist = NULL, file, cols = 1, layout = NULL) {
 prepare2plot <- function(dat, datid, 
                          bwFac = NULL, wiFac = NULL, 
                          collFac = NULL, diffFac = NULL, 
-                         compGFP = TRUE, sc = NULL, 
+                         compGFP = TRUE, keep_channels = !compGFP,
+                         sc = NULL, 
                          datfr = TRUE, iaFac = NULL, ...) {
     bool_collFac <- !is.null(collFac) && collFac%in%names(dimnames(dat))
     if (!is.null(sc)) {
@@ -4476,7 +4480,7 @@ prepare2plot <- function(dat, datid,
             }
         }
         if (compGFP) {
-            temp <- compGfp(temp, keep_channels = FALSE)
+            temp <- compGfp(temp, keep_channels = keep_channels)
             if (datfr) {
                 temp <- array2df(temp, ...)
                 temp[colnames(facs)] <- facs[i, ]

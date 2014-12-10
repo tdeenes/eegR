@@ -4,8 +4,8 @@
 \title{Data preparation mainly aimed at facilitating plotting in lattice or ggplot2}
 \usage{
 prepare2plot(dat, datid, bwFac = NULL, wiFac = NULL, collFac = NULL,
-  diffFac = NULL, compGFP = TRUE, sc = NULL, datfr = TRUE,
-  iaFac = NULL, ...)
+  diffFac = NULL, compGFP = TRUE, keep_channels = !compGFP, sc = NULL,
+  datfr = TRUE, iaFac = NULL, ...)
 }
 \arguments{
 \item{dat}{an array of ERP data. Must have named dimnames, one of which must
@@ -26,14 +26,18 @@ should be subtracted. The first element is the dimension name, the 2nd and 3rd
 are the levels to be compared (2nd-3rd), and the 4th element corresponds to
 the label of the new level.}
 
-\item{compGFP}{a logical variable; if TRUE (default), Global Field Power is
+\item{compGFP}{a logical scalar; if TRUE (default), Global Field Power is
 also computed.}
+
+\item{keep_channels}{a logical scalar; if Global Field Power is requested,
+shall individual channels be included in the result (default: FALSE, if GFP
+is requested, ignored otherwise)}
 
 \item{sc}{if not NULL, must be a named list indicating how scaling by GFP
 should be done - either individually (default) or group-based, and either
 timepoint-by-timepoint or for averaged segments}
 
-\item{datfr}{a logical variable (default: TRUE) determining if the resulting
+\item{datfr}{a logical scalar (default: TRUE) determining if the resulting
 array shall be transformed to a data.frame}
 
 \item{iaFac}{a character vector indicating which dimensions should
