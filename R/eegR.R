@@ -584,17 +584,28 @@ dim2multidim <- function(dat, whichdim, datfr) {
 
 #' Splits an array along a given dimension
 #' 
-#' \code{splitArray} splits an array along a given dimension into a list of 
+#' \code{splitArray} splits an array along given dimension(s) into a list of 
 #' sub-arrays
 #' @param dat numeric array (preferably with named dimnames)
-#' @param whichdim numeric or character vector, the dimension of the array 
+#' @param whichdim numeric or character vector, the dimension(s) of the array 
 #' to split along
 #' @export
 #' @return A list of subsets of the original data matrix/array
 splitArray <- function(dat, whichdim) {
-    dimn <- dimnames(dat)[[whichdim]]
-    out <- lapply(dimn, function(i) subsetArray(dat, listS(.whichdim = i)))
-    names(out) <- dimn
+    if (length(whichdim) > 1) {
+        out.dimnames <- dimnames(dat)[whichdim]
+        out.dim <- sapply(out.dimnames, length)
+        dat <- mergeDims(dat, whichdim)
+        whichdim <- paste(whichdim, collapse=".")
+    } else {
+        out.dimnames <- NULL
+        out.dim <- NULL
+    }
+    dimlevels <- dimnames(dat)[[whichdim]]
+    out <- lapply(dimlevels, function(i) subsetArray(dat, listS(.whichdim = i)))
+    dim(out) <- out.dim
+    dimnames(out) <- out.dimnames
+    names(out) <- dimlevels
     return( out )
 }
 
