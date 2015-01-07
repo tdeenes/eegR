@@ -3,7 +3,8 @@
 \alias{mergeDims}
 \title{Reshape array by merging specific dimensions}
 \usage{
-mergeDims(dat, dims, sep = ".", return_dimattributes = TRUE)
+mergeDims(dat, dims, return_attributes = TRUE, keep_dimnames = TRUE,
+  sep = ".")
 }
 \arguments{
 \item{dat}{array to reshape}
@@ -12,10 +13,13 @@ mergeDims(dat, dims, sep = ".", return_dimattributes = TRUE)
 only one group of dimensions should be merged. If any of the list elements is a
 character vector, dat must have named dimnames.}
 
-\item{sep}{character which separates dimension names after merging (default ".")}
-
 \item{return_attributes}{logical value (default: TRUE) whether original
 attributes should be appended to the resulting array}
+
+\item{keep_dimnames}{logical; if TRUE (default), dimension names are also
+merged and attached as dimnames attribute}
+
+\item{sep}{character which separates dimension names after merging (default ".")}
 }
 \value{
 Array with merged dimensions

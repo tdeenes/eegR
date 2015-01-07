@@ -14,9 +14,9 @@ other) data. Missing values are not allowed.}
 \item{factordef}{a named list of factor definitions, containing the following
 elements:
 \itemize{
-\item{"between"}{"character vector of between-subject factors (default: NULL)"}
-\item{"within"}{"character vector of within-subject factors (default: NULL)"}
-\item{"w_id"}{"name of the dimension which identifies the subjects
+\item{between:}{character vector of between-subject factors (default: NULL)}
+\item{within:}{character vector of within-subject factors (default: NULL)}
+\item{w_id:}{name of the dimension which identifies the subjects
 (default: "id")}
 }}
 
