@@ -8,7 +8,7 @@ importOptions(eeg_ext = "dat", marker_ext = "vmrk", info_ext = "vhdr",
   marker_badcat = "Bad Interval", marker_badstim = "resp_false",
   marker_keepstim = "*", marker_badchan = c("badchan_start",
   "badchan_stop"), marker_time0 = "Time 0", segment_dpoints = (-100):1023,
-  marker_regexp = T, marker_ignorecase = T, marker_header = FALSE,
+  marker_regexp = TRUE, marker_ignorecase = TRUE, marker_header = FALSE,
   marker_fill = TRUE, marker_asis = TRUE, marker_sep = ",")
 }
 \arguments{

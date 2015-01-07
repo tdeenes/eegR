@@ -4,7 +4,7 @@
 #
 
 #' @useDynLib eegR 
-#' @import matrixStats permute
+#' @import matrixStats permute data.table
 #' @importFrom Rcpp evalCpp
 NULL
 
@@ -13,6 +13,10 @@ NULL
                                  packageVersion("eegR"),
                                  " loaded ***"), 
                           appendLF = TRUE)
+}
+
+.onUnload <- function (libpath) {
+    library.dynam.unload("eegR", libpath)
 }
 
 #
@@ -60,8 +64,8 @@ NULL
 assignList <- function(listdat, verbose = TRUE, overwriteGlobal = FALSE) {
     min_calling_frame <- ifelse(overwriteGlobal, 1, 2)
     if (sys.nframe() >= min_calling_frame) {
-        if (is.null(names(listdat)) | 
-                any(sapply(names(listdat), function(x) x == ""))) {
+        if (is.null(names(listdat)) || 
+                any(names(listdat) == "")) {
             stop("All elements of the assigned list should have a name!")
         }
         for (i in names(listdat)) {
@@ -108,7 +112,8 @@ findExtremes <- function(x) {
     if (out[1] != out[2]) out[1] <- 0
     if (out[length(out)] != out[length(out)-1]) out[length(out)] <- 0
     names(out) <- names(x)
-    return(out)
+    # return
+    out
 }
 
 #' Compute rolling (a.k.a. moving) window statistics
@@ -166,7 +171,7 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
                 if (length(width) == 1) {
                     out <- FUN(dat, width, ...)
                 } else {
-                    out <- array(0, dims)
+                    out <- arrayIP(0, dims)
                     if (identical(FUN, runquantile)) {
                         for (i in unique(width)) {
                             ind <- width == i
@@ -197,7 +202,8 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
         out <- as.data.frame(out)
     }
     attributes(out) <- attribs
-    return(out)
+    # return
+    out
 }
 
 #' Fast version of unique for matrices
@@ -215,7 +221,8 @@ fastUnique <- function(x, units_in_rows = TRUE) {
     dupl <- duplicated(str_collapse(lapply(1:ncol(x), function(i) x[,i])))
     x <- x[, !dupl, drop = F]
     if (units_in_rows) x <- t(x)
-    return(x)
+    # return
+    out
 }
 
 #' Create list with substituted names
@@ -259,7 +266,8 @@ listS <- function(..., indices = NULL) {
         }
     }
     names(list_def)[indices] <- unlist(newnam, use.names = FALSE)
-    return( list_def )
+    # return
+    list_def
 }
 
 #' Correct p-values in time-series
@@ -291,12 +299,163 @@ pvalueConsec <- function(dat, sig_level = 0.05, min_length = 10) {
     } else {
         out <- pCorrMat(dat)
     }
-    return( out )
+    # return
+    out
 }
 
 #
 # <<< array reformatting functions >>> --------
 #
+
+#' Add dimension names to a matrix or array with (partially) missing dimension 
+#' names
+#' 
+#' \code{decorateDims} is not unlike \code{\link{provideDimnames}}. The main 
+#' difference is that \code{decorateDims} can modify the input data in place and
+#' it has a more convenient interface for providing names of dimensions
+#' @param dat a matrix or array
+#' @param names logical; if TRUE (default), named list of dimnames are returned. 
+#' Ignored if new_names is provided.
+#' @param new_names character vector for named dimnames
+#' @param new_dimnames list of new dimension names. If new_names is not 
+#' provided but new_dimnames is a named list, its names are considered as
+#' new_names
+#' @param in_place logical; if TRUE, dat is modified in place (without copy)
+#' and it is returned only invisibly (default: FALSE). Use in_place with extra 
+#' care because it modifies in place all objects which dat refers to.
+#' @return The original matrix or array with non-null dimension names
+#' @export
+#' @seealso \code{\link{provideDimnames}} for a slightly different solution
+decorateDims <- function(dat, names = TRUE, 
+                         new_names = NULL, new_dimnames = NULL,
+                         in_place = FALSE) {
+    dims <- dim(dat)
+    dimn <- dimnames(dat)
+    if (is.null(dimn)) dimn <- vector("list", length(dimn))
+    if (!is.null(new_dimnames) && !is.list(new_dimnames)) {
+        new_dimnames <- list(new_dimnames)
+    }
+    if (is.null(new_names) && !is.null(temp <- names(new_dimnames))) {
+        new_names <- temp
+    }
+    counter <- 1L
+    tempfn <- 
+        if (is.null(new_dimnames)) {
+            function() as.character(seq_len(dims[i]))
+        } else {
+            function() {
+                out <- rep_len(new_dimnames[[counter]], dims[i])
+                make.unique(as.character(out), "__")
+            }
+        }
+    for (i in which(vapply(dimn, is.null, NA))) {
+        dimn[[i]] <- tempfn()
+        counter <- counter + 1L
+    }
+    dimn.n <- names(dimn)
+    if (names || !is.null(new_names)) {
+        if (is.null(dimn.n)) dimn.n <- rep("", length(dimn))
+        ind <- dimn.n == "" | is.na(dimn.n)
+        dimn.n[ind] <- 
+            if (!is.null(new_names)) {
+                out <- rep_len(new_names, sum(ind))
+                make.unique(as.character(out), "__")
+            } else {
+                paste0("_Dim", which(ind))
+            }
+    }
+    if (in_place) {
+        setattr(dat, "dimnames", dimn)
+        setattr(dimnames(dat), "names", dimn.n)
+    } else {
+        dimnames(dat) <- dimn
+        names(dimnames(dat)) <- dimn.n
+        return(dat)
+    }
+}
+
+
+#' Fast in-place transformation to a matrix (without copy)
+#' 
+#' \code{matrixIP} transforms its data argument to a matrix by reference. No
+#' copy is made at all, and it invisibly returns the matrix.
+#' @param x a data vector, matrix or array
+#' @param nrow the desired number of rows
+#' @param ncol the desired number of columns
+#' @param dimnames A dimnames attribute for the matrix: NULL or a list of 
+#' length 2 giving the row and column names respectively. The list can be 
+#' named, and the list names will be used as names for the dimensions. An empty 
+#' list is treated as NULL, and a list of length one as row names. 
+#' @param force_length logical. If TRUE (the default), \code{matrixIP} checks if 
+#' length(x)==nrow*ncol. If not, x is recycled or subsetted to the desired 
+#' length.
+#' @note Use \code{matrixIP} with extra care because it modifies in place all
+#' objects which x refers to. If you want to avoid this, call 
+#' \code{x <- copy(x)} before calling \code{matrixIP} or use the standard way as
+#' described in the Note section of \code{\link{matrix}}. However, for input 
+#' objects created on-the-fly (e.g. a temporary vector), \code{matrixIP} is safe 
+#' and more compact than the latter solution. 
+#' @return A matrix (invisibly)
+#' @export
+#' @seealso \code{\link{arrayIP}} for in-place transformation of x to an array 
+#' (without copy) and \code{\link{matrix}} for creating a new matrix without 
+#' modifying the original input
+matrixIP <- function(x, nrow, ncol, dimnames = NULL, force_length = TRUE) {
+    if (missing(nrow) && missing(ncol)) {
+        nrow <- length(x)
+        ncol <- 1L
+    } else if (missing(nrow)) {
+        nrow <- length(x)/ncol
+    } else if (missing(ncol)) {
+        ncol <- length(x)/nrow
+    }
+    if (force_length && length(x) != nrow*ncol) {
+        x <- rep_len(x, nrow*ncol)
+    }
+    setattr(x, "dim", c(nrow, ncol))
+    if (!is.null(dimnames)) {
+        setattr(x, "dimnames", dimnames)
+    }
+    invisible(x)
+}
+
+#' Fast in-place transformation to an array (without copy)
+#' 
+#' \code{arrayIP} transforms its data argument to an array by reference. No
+#' copy is made at all, and it invisibly returns the array.
+#' @param x a data vector, matrix or array
+#' @param dim the dim attribute for the array to be created, that is an integer 
+#' vector of length one or more giving the maximal indices in each dimension
+#' @param dimnames either NULL or the names for the dimensions. This must a 
+#' list (or it will throw an error) with one component for each dimension, 
+#' either NULL or a character vector of the length given by dim for that 
+#' dimension. The list can be named, and the list names will be used as names 
+#' for the dimensions. If the list is shorter than the number of dimensions, it 
+#' is extended by NULLs to the length required.
+#' @param force_length logical. If TRUE (the default), \code{arrayIP} checks if 
+#' length(x)==nrow*ncol. If not, x is recycled or subsetted to the desired 
+#' length.
+#' @note Use \code{arrayIP} with extra care because it modifies in place all
+#' objects which x refers to. See \code{\link{matrixIP}} for further hints.
+#' @return An array (invisibly) or a matrix if length(dim)==2L.
+#' @export
+#' @seealso \code{\link{matrixIP}} for in-place transformation of x to a matrix 
+#' (without copy) and \code{\link{array}} for creating a new array without 
+#' modifying the original input
+arrayIP <- function(x, dim, dimnames = NULL, force_length = TRUE) {
+    if (missing(dim)) {
+        dim <- length(x)
+    } 
+    if (force_length && length(x) != prod(dim)) {
+        x <- rep_len(x, prod(dim))
+    }
+    setattr(x, "dim", dim)
+    if (!is.null(dimnames)) {
+        setattr(x, "dimnames", dimnames)
+    }
+    invisible(x)
+}
+
 
 #' Extract or replace a part of an array
 #' 
@@ -319,8 +478,6 @@ pvalueConsec <- function(dat, sig_level = 0.05, min_length = 10) {
 #' @export
 #' @return A subset of an array or the array with replaced values
 #' @import abind
-
-
 #' @rdname subsetArray
 #' @export
 # Extract a part of an array
@@ -333,15 +490,17 @@ subsetArray <- function(dat, subsets, keep_attr = TRUE, ...) {
                           c("class", "comment", "dim", "dimnames", "names", 
                             "row.names", "tsp"))
         a <- a[a2keep]
-        for (i in a2keep) attr(out, i) <- a[[i]]
+        for (i in a2keep) setattr(out, i, a[[i]])
         if (!is.null(attr(out, "factors")) && 
                 ("factor_level" %in% names(subsets)) ) {
-            attr(out, "factors") <- splitMarker(dimnames(out)$factor_level,
-                                                colnames(attr(out, "factors")),
-                                                splitchar = "\\|")
+            tempa <- splitMarker(dimnames(out)$factor_level,
+                        colnames(attr(out, "factors")),
+                        splitchar = "\\|")
+            setattr(out, "factors", tempa) 
         }
     }
-    return(out)
+    # return
+    out
 }
 
 #' @rdname subsetArray
@@ -355,7 +514,8 @@ subsetArray <- function(dat, subsets, keep_attr = TRUE, ...) {
                      paste(paste0("dimn$", names(dimn)), collapse = ","), 
                      "] <- value", sep = ""))
         )
-    return( dat )
+    # return
+    dat
 }
 
 
@@ -366,35 +526,38 @@ subsetArray <- function(dat, subsets, keep_attr = TRUE, ...) {
 #' @param row_dim name or index of dimension which should be the row dimension 
 #' of the returned matrix
 #' @param return_attributes logical value; if TRUE (default), the attributes 
-#' of the array is is saved as an additional attribute ("array_atributes") of 
+#' of the array is saved as an additional attribute ("array_atributes") of 
 #' the returned matrix including the row_dim parameter
-#' @details The function not only reshapes the array but retains the dimension 
-#' names separated by "|". Therefore this function is most useful if the input 
-#' array has dimension names.
+#' @param keep_dimnames logical value; if TRUE (default), the function not 
+#' only reshapes the array but retains the dimension names separated by "|"
 #' @export
 #' @return A matrix
 #' @seealso \code{\link{mat2array}} which is the inverse of array2mat
-array2mat <- function(dat, row_dim, return_attributes = TRUE) {
+array2mat <- function(dat, row_dim, return_attributes = TRUE, 
+                      keep_dimnames = TRUE) {
     if (is.character(row_dim)) {
         row_dim <- which(names(dimnames(dat)) == row_dim)
     }
     col_dims <- seq_along(dim(dat))[-row_dim]
     out <- aperm(dat, c(row_dim, col_dims))
-    out <- matrix(out, nrow = nrow(out))
-    rownames(out) <- dimnames(dat)[[row_dim]]
-    if (!is.null(dimnames(dat)[col_dims])) {
-        colnames(out) <- interaction(
-            expand.grid(dimnames(dat)[col_dims]), sep = "|")
+    if (!keep_dimnames || is.null(dimnames(dat))) {
+        out_dimnames <- NULL
+    } else {
+        dat <- decorateDims(dat) 
+        out_dimnames <- c(dimnames(dat)[row_dim], 
+                          list(interaction(expand.grid(dimnames(dat)[col_dims]), 
+                                           sep = "|")))
+        setattr(out_dimnames, "names", 
+                c(names(dimnames(dat))[row_dim], 
+                  paste(names(dimnames(dat))[col_dims], collapse = "|")))
     }
-    if (!is.null(dimnames(dat))) {
-        names(dimnames(out)) <- c(names(dimnames(dat))[row_dim], 
-                                  paste(names(dimnames(dat))[col_dims], collapse = "|"))
-    }
+    matrixIP(out, nrow(out), dimnames = out_dimnames)
     if (return_attributes) {
-        attr(out, "array_attributes") <- c(attributes(dat), 
-                                           list(row_dim = row_dim))
+        setattr(out, "array_attributes", 
+                c(attributes(dat), list(row_dim = row_dim)))
     }
-    return(out)
+    # return
+    out
 }
 
 #' (Back-)Transforms a matrix to an array. See array2mat as a related function.
@@ -426,14 +589,15 @@ mat2array <- function(dat, dims = NULL, row_dim = NULL) {
         if (is.character(row_dim)) row_dim <- which(names(dims) == row_dim)
         if (is.list(dims)) {
             dimn <- dims
-            dims <- sapply(dims, length)
+            dims <- vapply(dims, length, 0L)
         } 
     }
     matdims <- c(dims[row_dim], dims[-row_dim])
     dimord <- order( c(row_dim, seq_along(dims)[-row_dim]) )
     out <- aperm(array(dat, matdims), dimord)
     dimnames(out) <- dimn
-    return( out )
+    # return
+    out
 }
 
 #' Transforms an array to a data.frame
@@ -475,7 +639,8 @@ array2df <- function(dat, response_name = "values", dim_types = "character",
         }
     }
     if (na_omit) out <- na.omit(out)
-    return( out )
+    # return
+    out
 }
 
 #' Reshape array by merging specific dimensions
@@ -485,38 +650,60 @@ array2df <- function(dat, response_name = "values", dim_types = "character",
 #' @param dims list of dimension names or dimension indices to merge. Can be a vector if
 #' only one group of dimensions should be merged. If any of the list elements is a 
 #' character vector, dat must have named dimnames.
-#' @param sep character which separates dimension names after merging (default ".")
 #' @param return_attributes logical value (default: TRUE) whether original 
 #' attributes should be appended to the resulting array
+#' @param keep_dimnames logical; if TRUE (default), dimension names are also
+#' merged and attached as dimnames attribute
+#' @param sep character which separates dimension names after merging (default ".")
 #' @export
 #' @return Array with merged dimensions
-mergeDims <- function(dat, dims, sep = ".", return_dimattributes = TRUE) {
-    if (return_dimattributes) {
-        adim <- attr(dat, "dim")
-        adimn <- attr(dat, "dimnames")
-        attribs <- list(dim = setNames(adim, names(adimn)), 
-                        dimnames = adimn)
+mergeDims <- function(dat, dims, return_attributes = TRUE,
+                      keep_dimnames = TRUE, sep = ".") {
+    if (return_attributes) {
+        attribs <- attributes(dat)
+        dimattribs <- list(dim = setNames(attribs$dim, names(attribs$dimnames)), 
+                           dimnames = attribs$dimnames)
+        attribs <- attribs[setdiff(names(attribs), names(dimattribs))]
     }
     if (!is.list(dims)) dims <- list(dims)
-    for (i in length(dims):1) {
-        if (is.character(dims[[i]])) {
-            mdims <- match(dims[[i]], names(dimnames(dat)))
-        }
-        out <- aperm(dat, c(mdims, seq_along(dim(dat))[-mdims]))
-        dat <- array(out, 
-                     c(prod(dim(out)[1:length(mdims)]), 
-                       dim(out)[-(1:length(mdims))]),
-                     dimnames = append(
-                         list(interaction(expand.grid(dimnames(out)[1:length(mdims)]), 
-                                          sep = sep)),
-                         dimnames(out)[-(1:length(mdims))]))
-        names(dimnames(dat))[1] <- paste(dims[[i]], collapse = sep)
-    } 
-    if (return_dimattributes) {
-        attr(dat, "orig_dimattributes") <- c(attribs, 
-                                             list(sep = sep, merged_dims = dims))
+    dims <- lapply(dims, 
+                   function(x) {
+                       if (is.character(x)) {
+                           match(x, names(dimnames(dat)))
+                       } else {
+                           x
+                       }
+                   })
+    if (any(duplicated(unlist(dims)))) 
+        stop("Duplicated dimensions in the dims parameter are not allowed")
+    if (length(unlist(dims)) < length(dim(dat))) {
+        dims <- c(dims, as.list(setdiff(seq_along(dim(dat)), unlist(dims))))
     }
-    return(dat)
+    if (keep_dimnames) {
+        dat <- decorateDims(dat)
+        dimn <- lapply(dims, function(i) 
+            do.call(paste, 
+                    c(expand.grid(dimnames(dat)[i], 
+                                  stringsAsFactors = FALSE), 
+                      list(sep = sep))))
+        setattr(dimn, "names", 
+                vapply(relist(names(dimnames(dat))[unlist(dims)], dims),
+                       paste, "", collapse = sep))
+    } else {
+        dimn <- NULL
+    }
+    out <- arrayIP(aperm(dat, unlist(dims)),
+                   vapply(relist(dim(dat)[unlist(dims)], dims), prod, 0),
+                   dimn)
+    if (return_attributes) {
+        setattr(out, "orig_dimattributes",
+                c(dimattribs, list(sep = sep, merged_dims = dims)))
+        if (length(attribs) > 0) {
+            for (i in names(attribs)) setattr(out, i, attribs[[i]])    
+        }
+    }
+    # return
+    out
 }
 
 #' Reverse mergeDims transformation
@@ -528,19 +715,28 @@ mergeDims <- function(dat, dims, sep = ".", return_dimattributes = TRUE) {
 #'  @return An array of the same dimension attributes as the array which 
 #'  \code{\link{mergeDims}} was called on
 revMergeDims <- function(dat) {
-    attribs <- attr(dat, "orig_dimattributes")
-    orig_dim <- attribs$dim
-    orig_dimnames <- attribs$dimnames
-    merged_dims <- unlist(attribs$merged_dims, use.names = FALSE)
+    attribs <- attributes(dat)
+    if (!"orig_dimattributes" %in% names(attribs))
+        stop("The input is not a result of mergeDims(..., return_attributes=TRUE)")
+    dimattribs <- attr(dat, "orig_dimattributes")
+    attribs <- attribs[setdiff(names(attribs), 
+                               c("orig_dimattributes", names(dimattribs)))]
+    orig_dim <- dimattribs$dim
+    orig_dimnames <- dimattribs$dimnames
+    merged_dims <- unlist(dimattribs$merged_dims, use.names = FALSE)
     if (is.character(merged_dims)) {
         merged_dims <- match(merged_dims, names(orig_dimnames))
     }
     dimord <- c(merged_dims, 
                 setdiff(seq_along(orig_dim), merged_dims))
-    dat <- array(dat, orig_dim[dimord])
-    dat <- aperm(dat, order(dimord))
-    dimnames(dat) <- orig_dimnames
-    return( dat )
+    out <- array(dat, orig_dim[dimord])
+    out <- aperm(out, order(dimord))
+    dimnames(out) <- orig_dimnames
+    if (length(attribs) > 0) {
+        for (i in names(attribs)) setattr(out, i, attribs[[i]])    
+    }
+    # return
+    out
 }
 
 
@@ -571,7 +767,7 @@ dim2multidim <- function(dat, whichdim, datfr) {
                                        stringsAsFactors = FALSE)))) {
         stop("datfr is not commensurate with the result of expand.grid()")
     }
-    add_dims <- sapply(add_dimnames, length)
+    add_dims <- vapply(add_dimnames, length, 0L)
     if (is.character(whichdim)) 
         whichdim <- which(names(orig_dimnames) == whichdim)
     if (is.logical(whichdim)) 
@@ -579,7 +775,8 @@ dim2multidim <- function(dat, whichdim, datfr) {
     dim(dat) <- append(orig_dims[-whichdim], add_dims, whichdim - 1)
     dimnames(dat) <- append(orig_dimnames[-whichdim], add_dimnames, 
                             whichdim - 1)
-    return(dat)
+    # return
+    out
 }
 
 #' Splits an array along a given dimension
@@ -594,7 +791,7 @@ dim2multidim <- function(dat, whichdim, datfr) {
 splitArray <- function(dat, whichdim) {
     if (length(whichdim) > 1) {
         out.dimnames <- dimnames(dat)[whichdim]
-        out.dim <- sapply(out.dimnames, length)
+        out.dim <- vapply(out.dimnames, length, 0L)
         dat <- mergeDims(dat, whichdim)
         whichdim <- paste(whichdim, collapse=".")
     } else {
@@ -606,7 +803,8 @@ splitArray <- function(dat, whichdim) {
     dim(out) <- out.dim
     dimnames(out) <- out.dimnames
     names(out) <- dimlevels
-    return( out )
+    # return
+    out
 }
 
 #' Rearrange two-level list
@@ -662,7 +860,8 @@ rearrangeList <- function(dat, name_listdim, name_datadim = NULL) {
         })
         names(dat) <- names_at_level2
     }
-    return( dat )
+    # return
+    dat
 }
 
 
@@ -805,7 +1004,7 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
         out <- 
             if (length(x) == 1) {
                 rep(seq_len(x), 
-                    sapply(parallel::splitIndices(dimlen, x), length))
+                    vapply(parallel::splitIndices(dimlen, x), length, 0L))
             } else if (length(x) == dimlen) {
                 as.integer(x)
             } else {
@@ -854,7 +1053,7 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
     )
     na <- NA
     storage.mode(na) <- storage.mode(outpart)
-    out <- array(na, out.dims, out.dimnames)
+    out <- arrayIP(na, out.dims, out.dimnames)
     for (i in 1:nrow(chunkgrid)) {
         if (i > 1) {
             message(sprintf("\n==== Analyze Chunk %i/%i ====", 
@@ -871,7 +1070,8 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
         gc()
     }
     message("\n==== Analysis completed ====")
-    return( out )
+    # return
+    out
 }
 
 
@@ -896,17 +1096,19 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
         dim(out) <- c(length(out), 1)
         dimnames(out) <- c(dimnames(dat)[-dims], list(NULL))
     }
-    return(out)
+    # return
+    out
 }
 
 #' Call a user-specified function on whatever dimension of an array
 #'
-#' \code{fnDims} calls a user-specified function on whatever dimension of a 
+#' \code{fnDims} calls a user-specified function on whatever dimension(s) of a 
 #' matrix or array. Function can be a vectorized function in which case fnDims 
 #' is very fast.
 #' @param dat matrix or array on which function should be called
-#' @param target_dim character string or numeric index of the dimension of dat 
-#' on which the function should be performed.
+#' @param target_dim The dimension(s) of dat on which the function should be 
+#' performed. Can be an integer or numeric vector of dimension index(es) or a 
+#' character vector if dat has named dimension names.
 #' @param target_fn function definition
 #' @param arg_list a list of arguments in addition to dat for target_fn 
 #' (default: NULL)
@@ -914,8 +1116,8 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
 #' names of the output of target_fn (see Details)
 #' @param vectorized logical value; should be set to TRUE if target_fn expects 
 #' two-dimensional input (e.g. colSums)
-#' @param columnwise logical value; if vectorized is TRUE, columnwise indicates if target_fn 
-#' operates column-wise (TRUE, default) or row-wise (FALSE)
+#' @param columnwise logical value; if vectorized is TRUE, columnwise indicates 
+#' if target_fn operates column-wise (TRUE, default) or row-wise (FALSE)
 #' @param keep_dimorder logical value; if TRUE, and the returned matrix or array 
 #' is of the same size as dat, the order of dimensions in the returned matrix 
 #' or array will be the same as in dat (default = FALSE)
@@ -925,8 +1127,8 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
 #' @param ncores number of cpus if useparallel is TRUE and clust is NULL
 #' @details This function works by transforming dat to a matrix with a row 
 #' dimension corresponding to target_dim and calling target_fn on each column 
-#' of the matrix repeatedly, or if target_fn is TRUE, by feeding the transformed
-#'  matrix directly to target_fn. After calling target_fn, the results are
+#' of the matrix repeatedly, or if vectorized is TRUE, by feeding the transformed
+#' matrix directly to target_fn. After calling target_fn, the results are
 #' back-transformed to the original array format. If target_fn produces one 
 #' value per input vector, target_dim is dropped from the resulting array. 
 #' If target_fn produces an equal-length vector as the input, and newdims 
@@ -934,17 +1136,26 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
 #' original input. If target_fn outputs a list, no back-transformation is done.
 #' @export
 #' @return see Details
-#' @seealso \code{\link{avgDims}} if target_fn is colMeans, avgDims might be a 
-#' better choice
+#' @seealso \code{\link{avgDims}} if target_fn is one of mean/colMeans/rowMeans,
+#' avgDims might be a better choice
 fnDims <- function(dat, target_dim, target_fn, arg_list = NULL, 
                    newdims = list(), vectorized = FALSE, columnwise = TRUE, 
                    keep_dimorder = FALSE, 
                    useparallel = FALSE, cl = NULL, ncores = NULL) {
     if (is.data.frame(dat)) dat <- as.matrix(dat)
-    out <- aperm(dat, c(target_dim, setdiff(names(dimnames(dat)), target_dim)))
-    dims <- dim(out)
-    dims.n <- dimnames(out)
-    out <- array2mat(out, target_dim)
+    if (is.character(target_dim)) 
+        target_dim <- match(target_dim, names(dimnames(dat)))
+    dimord <- c(target_dim, seq_along(dim(dat))[-target_dim])
+    dims <- dim(dat)[dimord]
+    dims.n <- dimnames(dat)[dimord]
+    out <- 
+        if (length(target_dim) == 1L) {
+            array2mat(dat, target_dim, return_attributes=FALSE, 
+                      keep_dimnames = FALSE)
+        } else {
+            mergeDims(dat, list(target_dim, seq_along(dim(dat))[-target_dim]),
+                      return_attributes=FALSE, keep_dimnames = FALSE)
+        }
     if (vectorized) {
         out <- do.call(target_fn, append(list(out), arg_list))
     } else {
@@ -969,35 +1180,40 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
             } else {
                 tempdim <- c(dim(out[[1]]), length(out))
             }
-            out <- drop(array(unlist(out, use.names = FALSE), tempdim))
+            out <- drop(arrayIP(unlist(out, use.names = FALSE), tempdim))
         }
     }
     if (length(out) == 1 | is.list(out)) {
         return(out)
     } else if (length(dim(out)) <= 1) {
         if (columnwise) {
-            dims <- dims[-1]
-            dims.n[[1]] <- NULL
+            dims <- dims[-seq_along(target_dim)]
+            dims.n[seq_along(target_dim)] <- NULL
         } else {
-            dims <- dims[1]
-            dims.n <- dims.n[1]
+            dims <- dims[seq_along(target_dim)]
+            dims.n <- dims.n[seq_along(target_dim)]
         }
     } else if (length(out) != length(dat) || length(newdims) > 0) {
         if (length(newdims) == 0)
             newdims <- list(function.values = 1:nrow(out))
         if (columnwise) {
-            dims <- c(sapply(newdims, length), dims[-1])
-            dims.n <- append(newdims, dims.n[-1])
+            dims <- c(vapply(newdims, length, 0L), 
+                      dims[-seq_along(target_dim)])
+            dims.n <- append(newdims, 
+                             dims.n[-seq_along(target_dim)])
         } else {
-            dims <- c(sapply(newdims, length), dims[1])
-            dims.n <- append(newdims, dims.n[1])
+            dims <- c(vapply(newdims, length, 0L), 
+                      dims[seq_along(target_dim)])
+            dims.n <- append(newdims, 
+                             dims.n[seq_along(target_dim)])
         }
     } 
-    out <- array(out, dims, dimnames = dims.n)
+    arrayIP(out, dims, dims.n)
     if (length(out) == length(dat) && keep_dimorder) {
         out <- aperm(out, names(dimnames(dat)))
     }
-    return(out)
+    # return
+    out
 }
 
 #' Compute averages of bins on a dimension of an array
@@ -1058,81 +1274,391 @@ avgBin <- function(dat, target_dim, bin_length = NULL, bin_ind = NULL,
         dimnames(out) <- c(newdim, dimnames(out)[-1])
     }
     out <- aperm(out, names(dimnames(dat)))
-    return(out)
-}
-
-#' Generalization of \code{t.test} to arrays
-#' 
-#' \code{arrayTtest} generalizes \code{t.test} to arrays
-#' @param dat1 matrix or array with named dimnames; if dat2 is NULL (default), 
-#' the function computes one-sample t-tests. 
-#' @param dat2 matrix or array with named dimnames; if dat2 is given and
-#' paired is TRUE, dat2 must be of equal size as dat1
-#' @param id_dim the name of dimension with identifies observational units 
-#' (usually participants)
-#' @param paired logical variable, only used if dat2 is provided; if paired is FALSE 
-#' (default), the function computes independent samples t-tests, otherwise 
-#' paired samples t-tests are performed
-#' @param mu a number indicating the true value of the mean (or difference in 
-#' means, if paired tests are performed)
-#' @param var_equal a logical variable whether the variances are equal. If TRUE
-#' (default), the pooled variance is used to estimate the variance otherwise 
-#' the Welch (or Satterthwaite) approximation to the degrees of freedom is used.
-#' @export
-#' @return A named list of two vectors/matrices/arrays containing t- and 
-#' p-values, and the corresponding degrees of freedom. The dimension of the 
-#' t- and p-values corresponds to the dimension of the input data, apart from 
-#' the id_dim dimension, which is dropped.
-arrayTtest <- function(dat1, dat2 = NULL, id_dim = "id", 
-                       paired = FALSE, mu = 0, var_equal = TRUE, verbose = TRUE) {
-    if (paired && !is.null(dat2)) {
-        if (!identical(dimnames(dat1)[[id_dim]],dimnames(dat2)[[id_dim]]))
-            stop("\nCHECK your paired(?) datasets: IDs are not identical!\n")
-        dat1 <- dat1 - dat2
-        dat2 <- NULL
-    }
-    if (is.null(dat2)) {
-        m1 <- fnDims(dat1, id_dim, colMeans, 
-                     arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
-        sd1 <- fnDims(dat1, id_dim, colSds, 
-                      arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
-        n1 <- length(dimnames(dat1)[[id_dim]])
-        t <- (m1 - mu)/(sd1/sqrt(n1))
-        df <- n1 - 1
-    } else {
-        m1 <- fnDims(dat1, id_dim, colMeans, 
-                     arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
-        sd1 <- fnDims(dat1, id_dim, colSds, 
-                      arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
-        n1 <- length(dimnames(dat1)$id)
-        m2 <- fnDims(dat2, id_dim, colMeans, 
-                     arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
-        sd2 <- fnDims(dat2, id_dim, colSds, 
-                      arg_list = list(na.rm = TRUE), vectorized = TRUE, columnwise = TRUE)
-        n2 <- length(dimnames(dat2)[[id_dim]])
-        if (var_equal) {
-            sd12 <- sqrt(
-                ((n1-1)*sd1^2 + (n2-1)*sd2^2)/(n1 + n2 - 2)
-            )
-            t <- (m1 - m2)/(sd12*sqrt(1/n1 + 1/n2))
-            df <- n1 + n2 - 2
-        } else {
-            sd1 <- sd1^2
-            sd2 <- sd2^2
-            sd12 <- sqrt(sd1/n1 + sd2/n2)
-            t <- (m1 - m2)/sd12
-            df <- sd12^4/( (sd1/n1)^2/(n1-1) + (sd2/n2)^2/(n2-1) )
-        }
-    }
-    out <- list(t = TRUE, df = df)
-    if (verbose) {
-        out$p <- 2 * pt(-abs(t), df)
-    }    
-    return( out )
+    # return
+    out
 }
 
 #
-# ANOVA on arrays
+# <<< t-tests on arrays >>>----
+#
+
+#' Workhorse function of arrayTest (for independent samples t-test)
+#' 
+#' \code{indepTtest} computes t-values and additional p-values & degrees of 
+#' freedom if requested.
+isTtest <- function(dat, groups, id_dim = "id", mu = 0, var_equal = TRUE, 
+                    verbose = FALSE, any_NA = NULL) {
+    if (is.null(any_NA)) any_NA <- anyNA(dat)
+    res <- lapply(1:2, function(g) {
+        datx <- subsetArray(dat, listS(.id_dim = groups==g), drop = FALSE)
+        mm <- avgDims(datx, id_dim, na_rm = any_NA)
+        vv <- fnDims(datx, id_dim, colVars, arg_list = list(na.rm = any_NA), 
+                     vectorized = TRUE, columnwise = TRUE)
+        if (any_NA) {
+            nn <- fnDims(!is.na(datx), id_dim, colSums, 
+                         arg_list = list(na.rm = FALSE), 
+                         vectorized = TRUE, columnwise = TRUE)
+            nn[nn < 1] <- NA
+        } else {
+            nn <- sum(groups == g)
+        }
+        list(mm, vv, nn)
+    })
+    m1 <- res[[1]][[1]]; v1 <- res[[1]][[2]]; n1 <- res[[1]][[3]]
+    m2 <- res[[2]][[1]]; v2 <- res[[2]][[2]]; n2 <- res[[2]][[3]]
+    out <- 
+        if (var_equal) {
+            sd12 <- sqrt(
+                ((n1-1)*v1 + (n2-1)*v2)/(n1 + n2 - 2)
+            )
+            (m1 - m2)/(sd12*sqrt(1/n1 + 1/n2))
+        } else {
+            sd12 <- sqrt(v1/n1 + v2/n2)
+            (m1 - m2)/sd12
+        }
+    if (verbose) {
+        df <- 
+            if (var_equal) {
+                n1 + n2 - 2 
+            } else {
+                sd12^4/( (v1/n1)^2/(n1-1) + (v2/n2)^2/(n2-1) )
+            }
+        setattr(out, "Df", df)
+        setattr(out, "pvalues", 2 * pt(-abs(out), df))
+    }
+    out
+}
+
+#' Workhorse function of arrayTest (for one-sample or paired-samples t-test)
+#' 
+#' \code{indepTtest} computes t-values and additional p-values & degrees of 
+#' freedom if requested.
+osTtest <- function(dat, id_dim = "id", mu = 0, verbose = FALSE, any_NA = NULL) {
+    if (is.null(any_NA)) any_NA <- anyNA(dat)
+    m1 <- avgDims(dat, id_dim, na_rm = any_NA)
+    sd1 <- fnDims(dat, id_dim, colSds, 
+                  arg_list = list(na.rm = any_NA), vectorized = TRUE, 
+                  columnwise = TRUE)
+    if (any_NA) {
+        n1 <- fnDims(!is.na(dat), id_dim, colSums, 
+                     arg_list = list(na.rm = FALSE), vectorized = TRUE, 
+                     columnwise = TRUE)
+        n1[n1 < 1] <- NA
+    } else {
+        if (is.character(id_dim)) id_dim <- match(id_dim, names(dimnames(dat)))
+        n1 <- dim(dat)[id_dim]
+    }
+    out <- (m1 - mu)/(sd1/sqrt(n1))
+    if (verbose) {
+        pvalues <- 2 * pt(-abs(out), n1 - 1)
+        setattr(out, "Df", n1 - 1)
+        setattr(out, "pvalues", pvalues)
+    }
+    out
+}
+
+
+#' Point-to-point t-tests (potentially with TFCE correction) on arrays
+#' 
+#' \code{arrayTtest} performs point-to-point t-tests on arrays. 
+#' Permutation-based p-values and Threshold-free Cluster Enhancement (TFCE) 
+#' correction can be requested.
+#' @param arraydat a numeric array with named dimnames containing EEG (or 
+#' other) data. Missing values are not allowed. Must have at least three
+#' dimensions with names "chan", "time", and "id" (see also id_dim)
+#' @param arraydat2 a numeric array with named dimnames containing EEG (or 
+#' other) data. If provided, see the parameter \code{paired} for running 
+#' dependent or independent-samples t-tests
+#' @param paired logical scalar, only used if arraydat2 is provided. If paired 
+#' is FALSE (default), the function computes independent samples t-tests, 
+#' otherwise paired samples t-tests are performed
+#' @param groups provides an alternative (and more efficient) way to perform 
+#' independent samples t-tests; a character, factor, or integer vector which 
+#' defines group membership. Groups is ignored if arraydat2 is not missing. 
+#' NA values code subjects to drop.
+#' @param mu a numeric scalar indicating the true value of the mean (or 
+#' difference between means, if two-sample tests are performed)
+#' @param var_equal a logical scalar whether the variances are equal (only 
+#' relevant for independent-samples t-tests). If TRUE (default), the pooled 
+#' variance is used to estimate the variance, otherwise the Welch (or 
+#' Satterthwaite) approximation to the degrees of freedom is used.
+#' @param id_dim name of the dimension which identifies the subjects 
+#' (default: "id")
+#' @param verbose logical value indicating if p-values should be computed for 
+#' the traditional t-test results
+#' @param nperm integer value giving the number of permutations (default: 999L)
+#' @param useparallel logical value; if TRUE (default), computations are done
+#' in parallel
+#' @param par_method parallelization method; can be set explicitly to "snow" or
+#' "multicore" (ignored on Windows OS), or chosen automatically ("default"). 
+#' Ignored if cl is provided.
+#' @param ncores integer value corresponding to the number of cores; 
+#' if NULL (default), it is set to the maximum number of cores available. 
+#' Ignored if cl is provided.
+#' @param cl a cluster definition; if NULL (default), it is set up automatically
+#' @param usetfce logical value whether TFCE (threshold-free cluster enhancement)
+#' correction should also be computed (default: TRUE)
+#' @param tfce_options a named list containing the channel neighbourhood matrix
+#' (named ChN, no default) and the vector of the E/H parameters (named EH, 
+#' defaults to c(0.66, 2))
+#' @param seed an integer value which specifies a seed (default: NULL)
+#' @details The function assumes that the input array contains at least three 
+#' named dimensions: chan (corresponding to the channels [electrodes]) and time 
+#' (corresponding to time points), and \code{id_dim} (corresponding to subjects). 
+#' All other dimensions are treated in a similar way as chan and time, that is 
+#' separate t-tests are computed for each level of those dimensions.
+#' @export
+#' @return A list object with t-values, TFCE-corrected t-values and
+#' permutation-based p-values (if requested)
+# TODO: compute also effect sizes + make it general for any arrays without chan
+# and time dimensions + clear redundancies in the code for the two types of 
+# t-tests
+arrayTtest <- function(arraydat, arraydat2, paired = FALSE, groups = NULL,
+                       mu = 0, var_equal = TRUE, id_dim = "id", verbose = TRUE, 
+                       nperm = 999L, useparallel = TRUE, 
+                       par_method = c("default", "snow", "multicore"), 
+                       ncores = NULL, cl = NULL, usetfce = TRUE, 
+                       tfce_options = NULL, seed = NULL) {
+    # helper function for back-transform to original
+    backFn <- function(x, origdimnames) {
+        if (is.null(dim(x))) return(x)
+        if ("TEMPX" %in% (dimn <- names(dimnames(x))))
+            x <- subsetArray(x, list(TEMPX=1))
+        out <- aperm(x, origdimnames[origdimnames %in% dimn])
+        attribs <- attributes(x)
+        attribs <- attribs[-match(c("dim", "dimnames"), names(attribs))]
+        for (i in names(attribs)) setattr(out, i, attribs[[i]])
+        # return
+        out
+    }
+    # 
+    if (useparallel) {
+        par_method <- match.arg(par_method)
+        if (newcl <- is.null(cl)) {
+            if (is.null(ncores)) ncores <- detectCores()
+            cl <- 
+                if (.Platform$OS.type=="windows" || par_method == "snow") {
+                    makePSOCKcluster(ncores)
+                } else {
+                    makeForkCluster(ncores)
+                }
+        }
+        registerDoParallel(cl)
+        on.exit(if (newcl) stopCluster(cl))
+    } 
+    else {
+        registerDoSEQ()
+    }
+    if (usetfce) {
+        if (is.null(tfce_options)) stop("Provide at least tfce_options$ChN")
+        ChN <- tfce_options$ChN
+        EH <- if (is.null(tfce_options$EH)) c(0.66, 2) else tfce_options$EH
+    }
+    if (missing(arraydat2)) {
+        if (!is.null(groups)) {
+            if (anyNA(groups)) 
+                arraydat <- subsetArray(arraydat, listS(.id_dim=!is.na(groups)))
+            groups <- as.integer(as.factor(groups))
+            if (max(groups) != 2L) 
+                stop("groups must contain two distinct values (e.g. 1 or 2, 'a' or 'b')")
+        }
+    } 
+    else {
+        if (paired) {
+            if (!identical(dimnames(arraydat), dimnames(arraydat2)) ||
+                    !identical(dim(arraydat), dim(arraydat2))) {
+                stop("Input array dimensions must be identical")
+            }
+            arraydat <- arraydat2 - arraydat
+            groups <- NULL
+        } else {
+            groups <- rep.int(1:2, 
+                              c(length(dimnames(arraydat)[[id_dim]]),
+                                length(dimnames(arraydat2)[[id_dim]])))
+            dimnms <- names(dimnames(arraydat))
+            arraydat <- abind(arraydat, arraydat2, 
+                              along=which(names(dimnames(arraydat))==id_dim))
+            setattr(dimnames(arraydat), "names", dimnms)
+        }
+    }
+    any_NA <- anyNA(arraydat)
+    origdimnames <- names(dimnames(arraydat))
+    if (anyNA(origdimnames) || 
+            !all(c(id_dim, "chan", "time") %in% origdimnames) ||
+            any(duplicated(origdimnames))) {
+        stop("Provide array(s) with named dimensions (at least id_dim, 'chan', 'time')")
+    }
+    arraydat <- aperm(arraydat, c(id_dim, "chan", "time",
+                                  setdiff(names(dimnames(arraydat)),
+                                          c(id_dim, "chan", "time"))))
+    if (length(dim(arraydat)) == 3L) {
+        arrayIP(arraydat, c(dim(arraydat), 1),
+                c(dimnames(arraydat), list(TEMPX="1")))
+    }
+    # two independent samples
+    if (!is.null(groups)) {
+        t_obs <- isTtest(arraydat, groups, id_dim, mu, 
+                         var_equal, verbose, any_NA)
+        if (nperm > 1) {
+            grouplen <- length(groups)
+            group2len <- sum(groups == 2L)
+            maxperm <- choose(grouplen, group2len)
+            if (nperm > maxperm) 
+                stop("nperm is too high for this sample size (not enough unique combinations exist)")
+            if (!is.null(seed)) set.seed(seed)
+            if (nperm > maxperm/3) {
+                randind <- combn(grouplen, group2len)
+                randgroups <- matrix(1L, grouplen, ncol(randind))
+                for (i in 1:ncol(randind)) randgroups[randind[,i], i] <- 2L
+                randgroups <- randgroups[, sample.int(nrow(randgroups), nperm)]
+            } 
+            else {
+                randgroups <- matrix(groups, grouplen, 1)
+                repeat{
+                    nc <- ncol(randgroups) - 1
+                    if (nc >= nperm) {
+                        randgroups <- randgroups[, 2:(nperm + 1)]
+                        break
+                    } 
+                    else {
+                        rg <- matrix(1L, grouplen, (nperm - nc) * 2)
+                        for (i in 1:ncol(rg)) {
+                            rg[sample.int(grouplen, group2len), i] <- 2L
+                        }
+                        randgroups <- cbind(randgroups, rg)
+                        randgroups <- unique(randgroups, MARGIN = 2L)
+                    }
+                }
+            }
+            applydims <- seq(3, length(dim(t_obs)))
+            if (usetfce) {
+                tfce_obs <- arrayIP(0, dim(t_obs), dimnames(t_obs))
+                tfce_obs[] <- apply(t_obs, applydims, tfceFn, 
+                                    chn = ChN, eh = EH)
+                stat_obs <- abs(tfce_obs)
+            } 
+            else {
+                stat_obs <- abs(t_obs)
+            }
+            chunks <- min(10L, ceiling(nperm/max(1L, length(cl))))
+            permres <- 
+                foreach(x = iter(randgroups, by = "column", 
+                                 chunksize = chunks), 
+                        .combine = "+", .inorder=FALSE) %dopar% {
+                            
+                            out <- 
+                                foreach(i = 1:ncol(x), .combine = "+") %do% {
+                                    t_perm <- isTtest(arraydat, x[,i], 
+                                                      id_dim, mu, var_equal, 
+                                                      verbose = FALSE, any_NA)
+                                    if (usetfce) {
+                                        t_perm[] <- 
+                                            apply(t_perm, applydims, 
+                                                  tfceFn, chn = ChN, eh = EH)
+                                    }
+                                    t_perm <- colMaxs(
+                                        mergeDims(abs(t_perm), 
+                                                  list(1:2, seq_along(dim(t_perm))[-(1:2)]), 
+                                                  keep_dimnames = FALSE, 
+                                                  return_attributes = FALSE)
+                                    )
+                                    sweep(stat_obs, applydims, t_perm, "<")
+                                }
+                        }
+            permres <- (permres + 1) / (nperm + 1)
+        }
+    } 
+    # one-sample (can be difference of two paired samples as well)
+    else {
+        t_obs <- osTtest(arraydat, id_dim, mu, verbose, any_NA)
+        if (nperm > 1) {
+            idlen <- length(dimnames(arraydat)[[id_dim]])
+            maxperm <- 2^idlen
+            if (nperm > maxperm) 
+                stop("nperm is too high for this sample size (not enough unique combinations exist)")
+            if (!is.null(seed)) set.seed(seed)
+            if (nperm > maxperm/3) {
+                randi <- matrix(unlist(
+                    expand.grid(rep(list(c(-1L, 1L)), idlen), 
+                                KEEP.OUT.ATTRS = FALSE),
+                    use.names = FALSE), idlen, maxperm, TRUE)
+                randi <- randi[, sample(ncol(randi), nperm)]
+            } 
+            else {
+                randi <- matrix(rep.int(1L, idlen))
+                repeat{
+                    nc <- ncol(randi) - 1
+                    if (nc >= nperm) {
+                        randi <- randi[, 2:(nperm + 1)]
+                        break
+                    } 
+                    else {
+                        ri <- matrixIP(sample(c(-1L, 1L), 
+                                              temp <- idlen * (nperm - nc) * 2,
+                                              TRUE),
+                                       idlen, temp)
+                        randi <- unique(cbind(randi, ri), MARGIN = 2L)
+                    }
+                }
+            }
+            applydims <- seq(3, length(dim(t_obs)))
+            if (usetfce) {
+                tfce_obs <- arrayIP(0, dim(t_obs), dimnames(t_obs))
+                tfce_obs[] <- apply(t_obs, applydims, tfceFn, 
+                                    chn = ChN, eh = EH)
+                stat_obs <- abs(tfce_obs)
+            } 
+            else {
+                stat_obs <- abs(t_obs)
+            }
+            chunks <- min(10L, ceiling(nperm/max(1L, length(cl))))
+            permres <- 
+                foreach(x = iter(randi, by = "column", 
+                                 chunksize = chunks), 
+                        .combine = "+", .inorder=FALSE) %dopar% {
+                            out <- 
+                                foreach(i = 1:ncol(x), .combine = "+") %do% {
+                                    t_perm <- osTtest(arraydat * x[,i], 
+                                                      id_dim, mu, 
+                                                      verbose = FALSE, any_NA)
+                                    if (usetfce) {
+                                        t_perm[] <- 
+                                            apply(t_perm, applydims, 
+                                                  tfceFn, chn = ChN, eh = EH)
+                                    }
+                                    t_perm <- colMaxs(
+                                        mergeDims(abs(t_perm), 
+                                                  list(1:2, seq_along(dim(t_perm))[-(1:2)]), 
+                                                  keep_dimnames=FALSE, 
+                                                  return_attributes=FALSE)
+                                    )
+                                    sweep(stat_obs, applydims, t_perm, "<")
+                                }
+                        }
+            permres <- (permres + 1) / (nperm + 1)
+        }
+    }
+    # back-transform to original shape
+    if (verbose) {
+        setattr(t_obs, "Df", backFn(attr(t_obs, "Df"), origdimnames))
+        setattr(t_obs, "pvalues", backFn(attr(t_obs, "pvalues"), origdimnames))
+    }
+    t_obs <- backFn(t_obs, origdimnames)
+    out <- list(call = match.call(), effect_t_obs = t_obs)
+    if (usetfce) {
+        tfce_obs <- backFn(tfce_obs, origdimnames)
+        out <- c(out, list(effect_tfce_obs = tfce_obs))
+    }
+    if (nperm > 0) {
+        permres <- backFn(permres, origdimnames)
+        out <- c(out, list(perm_pvalues = permres))
+    }
+    # return
+    out
+}
+
+#
+# <<< ANOVA on arrays >>> ----
 #
 
 #' Compute marginal means in an ANOVA design
@@ -1173,16 +1699,20 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
         groups <- factor(interaction(f_dat[,termL[[i]]], drop = TRUE))
         groupfreq <- tabulate(groups)
         names(groupfreq) <- levels(groups)
-        tmeans <- rowsum(a_dat, groups)/groupfreq
-        if (residualmean) a_dat <- a_dat - tmeans[as.numeric(groups),]
-        marg_means[[i]] <- array(tmeans, 
-                                 c(length(groupfreq), sapply(dimn, length)),
-                                 c(list(modelterm = names(groupfreq)), dimn))
-        attr(marg_means[[i]], "freq") <- groupfreq
+        marg_means[[i]] <- arrayIP(rowsum(a_dat, groups)/groupfreq, 
+                                   c(length(groupfreq), vapply(dimn, length, 0L)),
+                                   c(list(modelterm = names(groupfreq)), dimn))
+        setattr(marg_means[[i]], "freq", groupfreq)
+        if (residualmean) {
+            a_dat <- a_dat - c(marg_means[[i]][as.numeric(groups),])
+        }
     }
     names(marg_means) <- labels
-    return(marg_means)
+    # return
+    marg_means
 }
+
+
 
 #' Compute Sum of Squares
 #' @keywords internal
@@ -1198,8 +1728,8 @@ sumsq <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
     } else {
         strsplit(labels[whichterm], ":")
     }
-    ssq <- matrix(0, length(termL), ncol(a_dat))
-    df <- rep(0, length(termL))
+    ssq <- matrixIP(0, length(termL), ncol(a_dat))
+    df <- rep.int(0L, length(termL))
     names(df) <- labels
     if (return_means) {
         marg_means <- vector("list", length(termL))
@@ -1224,21 +1754,22 @@ sumsq <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
         }
         if (return_means) {
             marg_means[[i]] <- array(tmeans, 
-                                     c(length(groupfreq), sapply(dimn, length)),
+                                     c(length(groupfreq), vapply(dimn, length, 0L)),
                                      c(list(modelterm = names(groupfreq)), dimn))
         }
     }
     #
     if (return_array) {
-        ssq <- array(ssq, c(nrow(ssq), sapply(dimn, length)),
-                     c(list(modelterm = labels), dimn))
+        arrayIP(ssq, c(nrow(ssq), vapply(dimn, length, 0L)),
+                c(list(modelterm = labels), dimn))
     } else {
         rownames(ssq) <- labels
         names(dimnames(ssq))[1] <- "modelterm"
     }
-    attr(ssq, "Df") <- df
-    if (return_means) attr(ssq, "term_means") <- marg_means
-    return(ssq)
+    setattr(ssq, "Df", df)
+    if (return_means) setattr(ssq, "term_means", marg_means)
+    # return
+    ssq
 }
 
 #' Parameter checks and data preparation before arrayAnovaSub
@@ -1284,8 +1815,9 @@ preAnova <- function(arraydat, factordef, bwdat,
     colnames(dat) <- modeldims
     dat[,factordef$between] <- bwdat[
         match(dat[,factordef$w_id],bwdat[,factordef$w_id]),factordef$between]
-    return(list(dat = dat, arraydat = arraydat, factordef = factordef, 
-                origdimnames = origdimnames, par_params = params))
+    # return
+    list(dat = dat, arraydat = arraydat, factordef = factordef, 
+         origdimnames = origdimnames, par_params = params)
 }
 
 #' Workhorse function of arrayAnova
@@ -1294,7 +1826,7 @@ preAnova <- function(arraydat, factordef, bwdat,
 #' additional p-values, degrees of freedom, generalized effect sizes if 
 #' requested.
 arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
-    origdims <- sapply(d_names, length)
+    origdims <- vapply(d_names, length, 0L)
     modeldims <- c(f_def$w_id, f_def$within)
     keepdims <- setdiff(names(d_names), modeldims)
     #
@@ -1306,25 +1838,25 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
             as.character(quote(a_dat)), "~", 
             paste(as.character(f_def$between), collapse = "*")))
         results <- summary(aov(aov_formula, data = f_dat))
-        results <- array(unlist(results, use.names = FALSE), 
-                         c(dim(results[[1]]), length(results)),
-                         dimnames = list(
-                             modelterm = gsub(" ", "", rownames(results[[1]])),
-                             measures = colnames(results[[1]]),
-                             columns = gsub("[*Response ]", "", names(results))))
+        results <- arrayIP(
+            unlist(results, use.names = FALSE),
+            c(dim(results[[1]]), length(results)),
+            list(modelterm = gsub(" ", "", rownames(results[[1]])),
+                 measures = colnames(results[[1]]),
+                 columns = gsub("[*Response ]", "", names(results))))
         termrows <- tolower(rownames(results)) != "residuals"
-        Fvals <- array(results[termrows,"F value",], 
-                       c(sum(termrows), origdims[keepdims]),
-                       dimnames = c(list(modelterm = rownames(results)[termrows]), 
-                                  d_names[keepdims]))
+        Fvals <- arrayIP(results[termrows,"F value",], 
+                         c(sum(termrows), origdims[keepdims]),
+                         c(list(modelterm = rownames(results)[termrows]),
+                           d_names[keepdims]))
         if (verbose) {
             Df <- as.numeric(results[termrows, "Df", 1])
             rDf <- results[!termrows, "Df", 1]
             pvalues <- results[termrows,"Pr(>F)",]
             # effect size (Olejnik and Algina, 2003; Bakeman, 2005)
             results <- subsetArray(results, list(measures = "Sum Sq"), drop = FALSE)
-            results <- matrix(results, nrow(results), dim(results)[3], 
-                              dimnames = dimnames(results)[-2])
+            matrixIP(results, nrow(results), dim(results)[3], 
+                     dimnames = dimnames(results)[-2])
             SSr <- results["Residuals", ]
             if (!is.null(f_def$observed)) {
                 ind <- apply(sapply(f_def$observed, 
@@ -1388,9 +1920,8 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
             ges <- model[m_ind, , drop = F] / 
                 sweep(model[m_ind, , drop = F], 2, SSr, "+")
         }
-        Fvals <- array(Fvals, c(nrow(Fvals), origdims[keepdims]),
-                       dimnames = c(list(modelterm = rownames(Fvals)), 
-                                  d_names[keepdims]))
+        arrayIP(Fvals, c(nrow(Fvals), origdims[keepdims]),
+                c(list(modelterm = rownames(Fvals)), d_names[keepdims]))
     } else {   
         aov_formula1 <- as.formula(paste(
             as.character(quote(a_dat)), "~", 
@@ -1437,8 +1968,8 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
               na.omit(match(modnames[i], 
                             dimnames(model1)$modelterm))))
         # compute F values
-        model1_err <- array(0, dim(model1))
-        model1_err_df <- rep(0, length(model1_df))
+        model1_err <- arrayIP(0, dim(model1))
+        model1_err_df <- rep.int(0L, length(model1_df))
         for (i in 1:nrow(sumindices)) {
             errs <- model2[m2indices[i],] - colSums(model1[sumindices[i,], , drop = F])
             model1_err[fillindices[[i]], ] <- 
@@ -1466,27 +1997,26 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
                 ges <- model1 / sweep(model1, 2, SSr, "+")
             }
         }
-        Fvals <- array(Fvals, c(nrow(Fvals), origdims[keepdims]),
-                       dimnames = c(list(modelterm = rownames(Fvals)), 
-                                  d_names[keepdims]))
+        dimnms <- c(list(modelterm = rownames(Fvals)), d_names[keepdims])
+        arrayIP(Fvals, c(nrow(Fvals), origdims[keepdims]), dimnms)
     }
     # rearrange dimensions to be compatible with arrayTtest output
     if (verbose) {
-        tempfn <- function(x) aperm(array(x, dim(Fvals), 
-                                          dimnames = dimnames(Fvals)), 
+        tempfn <- function(x) aperm(array(x, dim(Fvals), dimnames(Fvals)), 
                                     c(keepdims, "modelterm"))
         pvalues <- tempfn(pvalues)
         ges <- tempfn(ges)
     }
     Fvals <- aperm(Fvals, c(keepdims, "modelterm"))
     if (verbose) {
-        attr(Fvals, "Df.term") <- Df
-        attr(Fvals, "Df.resid") <- rDf
-        attr(Fvals, "pvalues") <- pvalues
-        attr(Fvals, "ges") <- ges
-        attr(Fvals, "factor_means") <- factor_means
+        setattr(Fvals, "Df.term", Df)
+        setattr(Fvals, "Df.resid", rDf)
+        setattr(Fvals, "pvalues", pvalues)
+        setattr(Fvals, "ges", ges)
+        setattr(Fvals, "factor_means", factor_means)
     }
-    return(Fvals)
+    # return
+    Fvals
 }
 
 #' Perform ANOVA (potentially with TFCE correction) on arrays
@@ -1498,9 +2028,9 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
 #' @param factordef a named list of factor definitions, containing the following 
 #' elements:
 #' \itemize{
-#' \item{"between"}{"character vector of between-subject factors (default: NULL)"}
-#' \item{"within"}{"character vector of within-subject factors (default: NULL)"}
-#' \item{"w_id"}{"name of the dimension which identifies the subjects 
+#' \item{between:}{character vector of between-subject factors (default: NULL)}
+#' \item{within:}{character vector of within-subject factors (default: NULL)}
+#' \item{w_id:}{name of the dimension which identifies the subjects 
 #' (default: "id")}
 #' }
 #' @param bwdat a data.frame which contains the identification codes 
@@ -1568,26 +2098,26 @@ arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE,
         mergedimnames <- setdiff(names(dimnames(Fvals_obs)), c("chan", "time"))
         tfce_obs <- mergeDims(Fvals_obs, mergedimnames)
         for (i in 1:nrow(tfce_obs)) 
-            tfce_obs[i,,] <- tfce.fnc(tfce_obs[i,,], ChN, EH)
+            tfce_obs[i,,] <- tfceFn(tfce_obs[i,,], ChN, EH)
         tfce_obs <- revMergeDims(tfce_obs)
     }
     if (nperm > 1) {
         #
         permfn_f <- function(i) {
             x <- arrayAnovaSub(arraydat[randind[i,], ], 
-                               factordef, origdimnames, dat, F)
+                               factordef, origdimnames, dat, FALSE)
             x <- mergeDims(x, mergedimnames)
             maxf <- sapply(1:nrow(x), 
                            function(ii) max(x[ii,,])) 
             return(maxf)
         }
         permfn_tfce <- function(i) {
-            verb <- ifelse(i == 1, verbose, F)
+            verb <- ifelse(i == 1, verbose, FALSE)
             x <- arrayAnovaSub(arraydat[randind[i,], ], 
-                               factordef, origdimnames, dat, F)
+                               factordef, origdimnames, dat, FALSE)
             x <- mergeDims(x, mergedimnames)
             maxf <- sapply(1:nrow(x), 
-                           function(ii) max(abs(tfce.fnc(x[ii,,], ChN, EH))))
+                           function(ii) max(abs(tfceFn(x[ii,,], ChN, EH))))
             return(maxf)
         }
         permfn <- if (usetfce) permfn_tfce else permfn_f
@@ -1607,14 +2137,13 @@ arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE,
             clusterExport(cl, 
                           varlist = par_params$varlist2snow,
                           envir = environment())
-            #clusterEvalQ(cl, dyn.load("ept_TFCE3_R.so"))
             maxperm <- parLapply(cl, 1:nperm, permfn)
             stopCluster(cl)
             rm(cl)
         } else if (par_method == "mc") {
             maxperm <- mclapply(1:nperm, permfn, mc.cores = par_params$ncores)
         } 
-        maxperm <- matrix(unlist(maxperm, use.names = FALSE), ncol = nperm)
+        maxperm <- matrixIP(unlist(maxperm, use.names = FALSE), ncol = nperm)
         sig <- if (usetfce) tfce_obs else Fvals_obs
         sig <- mergeDims(sig, mergedimnames)
         for (i in 1:nrow(sig)) {
@@ -1626,7 +2155,8 @@ arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE,
     out$effect_F_obs <- Fvals_obs
     if (usetfce) out$effect_tfce_obs <- tfce_obs
     if (nperm > 1L) out$perm_pvalues <- sig
-    return( out )
+    # return
+    out
 }
 
 #' Extract interaction
@@ -1685,7 +2215,8 @@ extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
     compia <- function(x, modterm_name) {
         modterm <- dimnames(x)$modelterm
         facs <- strsplit(modterm, sep, fixed = sep_fixed)
-        facs <- data.frame(matrix(unlist(facs), ncol = length(facs[[1]]), 
+        facs <- data.frame(matrix(unlist(facs), 
+                                  ncol = length(facs[[1]]), 
                                   byrow = TRUE))
         colnames(facs) <- unlist( strsplit(modterm_name, ":") )
         signs <- iasign(facs)
@@ -1699,8 +2230,9 @@ extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
     }
     # ------
     # run computations
-    out <- mapply(compia, dat, names(dat), SIMPLIFY = F)
-    return( out )
+    out <- mapply(compia, dat, names(dat), SIMPLIFY = FALSE)
+    # return
+    out
 }
 
 
@@ -1747,7 +2279,8 @@ sph2cart <- function(ch_pos, r = 1, deg = TRUE) {
         z = r * cos(theta)
     )
     rownames(out) <- rownames(ch_pos)
-    return(out)
+    # return
+    out
 }
 
 #' @rdname coordinates 
@@ -1768,7 +2301,8 @@ cart2sph <- function(ch_pos, deg = TRUE) {
     out <- data.frame(theta, phi, r)
     if (nrow(out) > 1) rownames(out) <- rownames(ch_pos)
     if (deg) out[, 1:2] <- out[, 1:2] * 180/pi
-    return(out)
+    # return
+    out
 }
 
 #' @rdname coordinates
@@ -1797,7 +2331,8 @@ sph2geo <- function(ch_pos, r = 1, deg = TRUE, long360 = TRUE,
     lat <- 90 - abs(theta)
     out <- data.frame(long = long, lat = lat, r = r)
     rownames(out) <- rownames(ch_pos)
-    return(out)
+    # return
+    out
 }
 
 #' @rdname coordinates
@@ -1911,7 +2446,7 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
     a <- suppressWarnings(ashape3d(as.matrix(ch_pos), 
                                    alpha, pert = TRUE))$edge
     a <- a[,c(1, 2, ncol(a))]
-    out <- matrix(0, nrow(ch_pos), nrow(ch_pos))
+    out <- matrixIP(0, nrow(ch_pos), nrow(ch_pos))
     rownames(out) <- rownames(ch_pos)
     mirror <- out > 0
     for (i in 1:nrow(ch_pos)) {
@@ -1923,7 +2458,8 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
         mirror[nb, i] <- T
     }
     out <- out[, apply(out > 0, 2, any)]
-    return(out)
+    # return
+    out
 }
 
 #' Cosine of the angles between electrodes
@@ -1987,7 +2523,8 @@ cosAngle <- function(x, y = NULL, coords = TRUE, units_in_rows = TRUE,
         rownames(out) <- rownames(x)
         colnames(out) <- rownames(y)
     }
-    return( out )
+    # return
+    out
 }
 
 
@@ -2041,7 +2578,7 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
     }
     # Function to compute C coefficients
     compCmat <- function(x, G, tol) {
-        Gx <- array(1, dim(G) + 1)
+        Gx <- arrayIP(1, dim(G) + 1)
         Gx[-1, -1] <- G
         Gx[1, 1] <- 0
         diag(Gx) <- diag(Gx) + tol
@@ -2069,12 +2606,12 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
         } else {
             missing_patterns <- fastUnique(na_ind, units_in_rows = FALSE)
             message("Done")
-            yy <- array(0, c(nrow(interp_pos), ncol(y)),
-                        list(rownames(interp_pos), colnames(y)))
+            yy <- arrayIP(0, c(nrow(interp_pos), ncol(y)),
+                          list(rownames(interp_pos), colnames(y)))
             names(dimnames(yy)) <- names(dimnames(y))
         }
         if (!is.null(alarm_tolerance)) {
-            dev <- rep(F, ncol(y))
+            dev <- rep(FALSE, ncol(y))
             names(dev) <- colnames(y)
             maxdev <- 0
         }
@@ -2170,8 +2707,8 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
         stop("Provide a numeric vector, matrix, data.frame or array as input!")
     } else if (is.null(interp_pos) && 
                    procstep$nr_of_missings == 0) {
-        attr(dat, "processing_steps") <- c(
-            attr(dat, "processing_steps"), list(procstep))
+        setattr(dat, "processing_steps",
+                c(attr(dat, "processing_steps"), list(procstep)))
         message("...No missing data to interpolate.\nInterpolation finished.")
         return(dat)
     } else if (is.vector(dat)) {
@@ -2198,10 +2735,11 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
                 NAs_left)
     }
     message("Interpolation finished.")
-    attr(out, "processing_steps") <- c(
-        attr(dat, "processing_steps"), list(procstep))
-    return(out)
-    }
+    setattr(out, "processing_steps", 
+            c(attr(dat, "processing_steps"), list(procstep)))
+    # return
+    out
+}
 
 #' Project channel positions onto 2D plane
 #' 
@@ -2274,7 +2812,8 @@ project3dMap <- function(pos, r = 1,
         mapxy <- projfn(pos[, c("long", "lat")], proj4call) 
     }
     rownames(mapxy) <- rownames(pos)
-    return(mapxy)
+    # return
+    mapxy
 }
 
 #
@@ -2326,15 +2865,16 @@ importOptions <- function(eeg_ext = "dat", marker_ext = "vmrk", info_ext = "vhdr
                                              "badchan_stop"),
                           marker_time0 = "Time 0",
                           segment_dpoints = (-100):1023,
-                          marker_regexp = T,
-                          marker_ignorecase = T,  
+                          marker_regexp = TRUE,
+                          marker_ignorecase = TRUE,  
                           marker_header = FALSE, marker_fill = TRUE, 
                           marker_asis = TRUE, marker_sep = ",") {
     #
     if (length(marker_badchan) == 1) {
         marker_badchan <- paste(marker_badchan, c("start", "stop"), sep = "_")
     }
-    return(mget(ls()))
+    # return
+    mget(ls())
 }
 
 #' Import binary file exported from BrainVision
@@ -2359,7 +2899,7 @@ importBVdat <- function(file_name, file_path = getwd(), id = "",
     message(paste("\nImport ", file_name, "...", sep = ""))
     mygrepl <- function(patterns, ...) {
         if (is.null(patterns)) {
-            rep(F, length(list(...)$x))
+            rep(FALSE, length(list(...)$x))
         } else {
             rowSums(sapply(patterns, 
                            grepl, 
@@ -2401,15 +2941,12 @@ importBVdat <- function(file_name, file_path = getwd(), id = "",
         eeg <- readBin(file.path(file_path, paste(file_name, eeg_ext, sep = ".")),
                        what = "integer", n = eeg_length)
         eeg <- eeg / 1000
-        eeg <- 
-            if (eeg_orientation == "vectorized") {
-                matrix(eeg, nrow = nr_chan, ncol = eeg_length/nr_chan, 
-                       byrow = TRUE) 
-            } else {
-                matrix(eeg, nrow = nr_chan, ncol = eeg_length/nr_chan)
-            }
-        rownames(eeg) <- rownames(chan)
-        attr(eeg, "subject_id") <- as.character(id)
+        if (eeg_orientation == "vectorized") {
+            eeg <- t(matrixIP(eeg, eeg_length/nr_chan, nr_chan))
+        } else {
+            matrixIP(eeg, nr_chan, eeg_length/nr_chan)
+        }
+        setattr(eeg, "subject_id", as.character(id))
         procstep <- list(
             what = "import", call = match.call(),
             file_name = file_name, file_path = file_path,
@@ -2525,17 +3062,18 @@ importBVdat <- function(file_name, file_path = getwd(), id = "",
     # format eeg data
     if (!is.null(eeg_ext)) {
         eeg <- eeg[, c(outer(segment_dpoints, markers$dpoint,"+"))]
-        eeg <- array(eeg, 
-                     c(nr_chan, length(segment_dpoints), nrow(markers)),
-                     dimnames = list(chan = rownames(chan),
-                                   time = segment_dpoints * 1000 / eeg_Hz,
-                                   trial = paste(markers$segment, 
-                                               markers$fullcode, 
-                                               sep = "_")))
+        arrayIP(eeg, 
+                c(nr_chan, length(segment_dpoints), nrow(markers)),
+                list(chan = rownames(chan),
+                     time = segment_dpoints * 1000 / eeg_Hz,
+                     trial = paste(markers$segment, 
+                                   markers$fullcode, 
+                                   sep = "_")))
     }
-    # export results
-    attr(eeg, "processing_steps") <- list(procstep)
-    return(list(eeg = eeg, markers = markers, channels = chan))
+    # decorate
+    setattr(eeg, "processing_steps", list(procstep))
+    # return
+    list(eeg = eeg, markers = markers, channels = chan)
 }
 
 #' Split concatenated strings. 
@@ -2576,7 +3114,8 @@ splitMarker <- function(marker, header, type = NULL, splitchar = "_") {
             }
         }
     }
-    return(out)
+    # return
+    out
 }
 
 # base functions =========== 
@@ -2604,20 +3143,22 @@ baselineCorr <- function(dat, basedim = "chan", baseind = NULL) {
         means <- fnDims(subsetArray(dat, list(time = baseind)),
                         names(dimnames(dat))[1], rowMeans, list(na.rm = TRUE), 
                         vectorized = TRUE, columnwise = FALSE)
-        out <- array(sweep(dat, 1, means, "-"),
-                     c(sapply(origattr$dimnames[basedim], length), dim(dat)[-1]),
-                     c(origattr$dimnames[basedim], 
-                       origattr$dimnames[setdiff(names(origattr$dimnames), basedim)]))
+        out <- arrayIP(
+            sweep(dat, 1, means, "-"),
+            c(vapply(origattr$dimnames[basedim], length, 0L), dim(dat)[-1]),
+            c(origattr$dimnames[basedim], 
+              origattr$dimnames[setdiff(names(origattr$dimnames), basedim)]))
         out <- aperm(out, names(origattr$dimnames))
     }
     attributes(out) <- origattr
-    attr(out, "processing_steps") <- c(
-        attr(out, "processing_steps"),
-        list(list(what = "baseline correction", 
-             call = match.call(), base_dimensions = basedim, 
-             base_indices = baseind)))
+    setattr(out, "processing_steps",
+            c(attr(out, "processing_steps"),
+              list(list(what = "baseline correction", 
+                        call = match.call(), base_dimensions = basedim, 
+                        base_indices = baseind))))
     message("Done")
-    return(out)
+    # return
+    out
 }
 
 #' Options for artifact rejection
@@ -2681,7 +3222,8 @@ artrejOptions <- function(
     ind <- grep("mark|interval", names(opt))
     opt[ind] <- lapply(opt[ind], "*", freqmod)
     opt$maxgrad_limit <- opt$maxgrad_limit / freqmod
-    return(opt)
+    # return
+    opt
 }
 
 #' Artifact rejection
@@ -2720,7 +3262,7 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
         dims <- attribs$dim[-row_dim]
         dimn <- attribs$dimnames[-row_dim]
         names(dims) <- names(dimn)
-        out <- matrix(F, ncol(x), length(crits))
+        out <- matrixIP(FALSE, ncol(x), length(crits))
         colnames(out) <- crits
         message("\n****\nStart artifact rejection / Criterion: ...\n")
         if (apply_maxgrad) {
@@ -2743,10 +3285,10 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
                                         colMins(x) < amplrange_limit[1] )
             message(" done\n")
         }
-        out <- array(out, c(dims, ncol(out)), c(dimn, list(crit = crits)))
-        artrej_summary <- matrix(0, dims["chan"]+1, length(crits)+1,
-                                 dimnames = list(chan = c(dimn$chan, "all"),
-                                               crit = c(crits, "all")))
+        arrayIP(out, c(dims, ncol(out)), c(dimn, list(crit = crits)))
+        artrej_summary <- matrixIP(0, dims["chan"]+1, length(crits)+1,
+                                   list(chan = c(dimn$chan, "all"),
+                                        crit = c(crits, "all")))
         dimres <- dim(artrej_summary)
         artrej_summary[-dimres[1], -dimres[2]] <- avgDims(out, "trial")
         artrej_summary[dimres[1], -dimres[2]] <- 
@@ -2756,8 +3298,8 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
         out.details <- out
         out <- apply(out, "trial", any)
         artrej_summary[dimres[1], dimres[2]] <- mean( out )
-        attr(out, "summary") <- artrej_summary
-        if (details) attr(out, "details") <- out.details
+        setattr(out, "summary", artrej_summary)
+        if (details) setattr(out, "details", out.details)
         return( out )
     }
     # input data check
@@ -2786,7 +3328,7 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
         }
     # run artifact rejection
     tempdat <- array2mat(subsetArray(dat, list(chan = keepchan), drop = FALSE),
-                         "time")
+                         "time", keep_dimnames = FALSE)
     badtrials <- aRej(tempdat)
     if (print_result) {
         cat("\n----- Proportion of bad trials -----\n")
@@ -2795,20 +3337,22 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
     }
     if (return_data) {
         dat <- subsetArray(dat, list(trial = which(!badtrials)))
-        attr(dat, "processing_steps") <- c(
-            attr(dat, "processing_steps"),
-            list(list(
-                what = "artifact rejection",
-                call = match.call(), results = badtrials, 
-                options = artrej_options))
-            )
+        setattr(dat, "processing_steps",
+                c(attr(dat, "processing_steps"),
+                  list(list(
+                      what = "artifact rejection",
+                      call = match.call(), results = badtrials, 
+                      options = artrej_options)))
+        )
         markers <- droplevels( markers[!badtrials, ] )
-        return(list(bad_trials = badtrials, eeg = dat, markers = markers))
+        # return
+        list(bad_trials = badtrials, eeg = dat, markers = markers)
     } else {
-        attr(badtrials, "options") <- artrej_options
-        return(list(bad_trials = badtrials, eeg = NULL, markers = NULL))
+        setattr(badtrials, "options", artrej_options)
+        # return
+        list(bad_trials = badtrials, eeg = NULL, markers = NULL)
     }
-    }
+}
 
 #' Compute Global Field Power
 #'
@@ -2839,8 +3383,9 @@ compGfp <- function(dat, keep_channels = FALSE) {
         dims.n <- dimnames(dat)
         dims.n[[1]] <- NULL
     }
-    out <- array(out, dims, dimnames = dims.n)
-    return( out )
+    arrayIP(out, dims, dims.n)
+    # return
+    out
 }
 
 #' Scale channels
@@ -2866,7 +3411,8 @@ scaleChan <- function(dat, keep_dimorder = TRUE) {
     dat <- sweep(dat, 2, sqrt(colSums(dat^2, na.rm = TRUE)/tempn), "/")
     dat <- array(dat, dim.dat, dimnames = dimnames.dat)
     if (keep_dimorder) dat <- aperm(dat, dimnames.orig)
-    return(dat)
+    # return
+    dat
 }
 
 #' Compute centroids
@@ -2903,7 +3449,8 @@ centroid <- function(dat, ch_pos, proj2map = TRUE, proj_unitsphere = FALSE, ...)
         }
         out <- project3dMap(pos, ...)
     }
-    return(out)
+    # return
+    out
 }
 
 #' Average single-trials
@@ -2936,191 +3483,24 @@ avgTrials <- function(dat, markers, which_factors = NULL) {
                   list(g = groups), vectorized = TRUE, 
                   newdims = list(factor_level = levels(groups)))
     tempfac <- strsplit(dimnames(out)$factor_level, "\\|")
-    attr(out, "processing_steps") <- c(
-        attr(out, "processing_steps"),
-        list(list(
-            what = "averaging",
-            call = match.call(),
-            factors = as.data.frame(
-                matrix(unlist(tempfac, use.names = FALSE), 
-                       nrow = length(tempfac), ncol = length(tempfac[[1]]), 
-                       byrow = TRUE,
-                       dimnames = list(1:length(tempfac), colnames(markers))))
+    setattr(out, "processing_steps",
+            c(attr(out, "processing_steps"),
+              list(list(
+                  what = "averaging",
+                  call = match.call(),
+                  factors = as.data.frame(
+                      matrix(unlist(tempfac, use.names = FALSE), 
+                             nrow = length(tempfac), 
+                             ncol = length(tempfac[[1]]), 
+                             byrow = TRUE,
+                             dimnames = list(1:length(tempfac), 
+                                             colnames(markers))))
+                  ))
             )
-        )
     )
     message("Done")
-    return(out)
-}
-
-# tfce functions =========== 
-
-#' Low-level TFCE function which calls C++ code
-#' 
-#' \code{tfce.fnc} performs TFCE correction. This function is not 
-#' intended for direct use.
-#' @param x numeric matrix or array
-#' @param chn channel neighbourhood matrix
-#' @param eh numeric vector of E and H parameters
-#' @param nr_steps number of threshold steps (default: 50L)
-#' @export
-#' @keywords internal
-#' @return numeric matrix or array of the same dimensions as x
-tfce.fnc <- function(x, chn, eh, nr_steps = 50L) {
-    chan_dim = which(names(dimnames(x)) == "chan")
-    out <- array(0, dim(x))
-    ind.neg <- x < 0
-    ind.pos <- x > 0
-    if (any(ind.pos)) {
-        sdat <- x
-        sdat[ind.neg] <- 0
-        out <- tfce(inData = sdat, chan_dim = chan_dim, 
-                    ChN = ChN, EH = eh, numSteps = nr_steps)
-    }
-    if (any(ind.neg)) {
-        sdat <- -x
-        sdat[ind.pos] <- 0
-        out <- out - tfce(inData = sdat, chan_dim = chan_dim, 
-                          ChN = ChN, EH = eh, numSteps = nr_steps)
-    }
+    # return
     out
-}
-
-
-#' T-test with TFCE correction
-#'
-#' \code{tfceTtest} performs t-test with TFCE correction
-#' @param dat numeric array with named dimensions (at least "id", "chan" and
-#' "time")
-#' @param ChN channel neighbourhood matrix
-#' @param EH numeric vector of E and H parameters of the TFCE correction
-#' (default: c(0.66, 2))
-#' @param type character value; "o" for one-sample t-test (default), 
-#' "i" for independent samples t-test and "d" for dependent samples t-test
-#' @param nperm integer value giving the number of permutations (default: 100L)
-#' @param useparallel logical value; if TRUE (default), computations are done
-#' in parallel
-#' @param ncores integer value corresponding to the number of cores; 
-#' if NULL (default), it is set to the maximum number of cores available
-#' @param par_method parallelization method; can be "snow" (default) or "mc"
-#' (multicore)
-#' @param cl a cluster definition for snow-type parallelization; if NULL 
-#' (default), it is set up automatically
-#' @param groups a list of two character vectors corresponding to subject IDs;
-#' used only if independent samples are compared
-#' @param use_subset a list to be passed to \code{\link{subsetArray}}
-#' @param seed an integer value which specifies a seed
-#' @export
-#' @return A list containing traditional t-values, TFCE-corrected t-values and
-#' p-values
-# TODO: no p-values and effect sizes in attributes as in the arrayTtest
-tfceTtest <- function(dat, ChN, EH = c(0.66, 2), 
-                      type = c("o", "i", "d"), nperm = 100L, 
-                      useparallel = TRUE, ncores = NULL, par_method = c("snow", "mc"),
-                      cl = NULL, groups = NULL, use_subset = NULL, seed = NULL,
-                      save.random2matlab = FALSE) {
-    if (useparallel) {
-        stopifnot(require(parallel))
-        if (is.null(ncores)) ncores <- detectCores()
-    }
-    type <- match.arg(type)
-    par_method <- match.arg(par_method)
-    tfce_dat <- aperm(dat, 
-                      c("id","chan","time",
-                        setdiff(names(dimnames(dat)),c("id","chan","time"))))
-    if (is.list(use_subset)) tfce_dat <- subsetArray(tfce_dat, use_subset)
-    # two independent samples
-    if (type == "i") {
-        if (is.null(groups)) stop("\nGroup memberships were not provided!\n")
-        if (!is.list(groups) || length(groups) != 2) 
-            stop("\nGroup argument should be a list of two character vectors!\n")
-        ids <- c(groups[[1]], groups[[2]])
-        tfce_dat <- subsetArray(tfce_dat, list(id = ids))
-        t_obs <- arrayTtest(subsetArray(tfce_dat, list(id = groups[[1]])),
-                            subsetArray(tfce_dat, list(id = groups[[2]])))$t
-        t_obs.dimn <- dimnames(t_obs)
-        t_obs.temp <- array(t_obs, c(dim(t_obs)[1:2],
-                                     length(t_obs)/prod(dim(t_obs)[1:2])))
-        tfce_obs <- array(unlist(lapply(1:dim(t_obs.temp)[3], 
-                                        function(ii) tfce.fnc(t_obs.temp[,,ii], 
-                                                              ChN, EH)), 
-                                 use.names = FALSE),
-                          dim(t_obs), dimnames = t_obs.dimn)
-        if (!is.null(seed)) set.seed(seed)  
-        randval <- rep(c(T, F), sapply(groups, length))
-        randval <- sapply(1:nperm, function(i) sample(randval))
-        randval <- matrix(randval, ncol = nperm)
-        if (save.random2matlab) { # 1 = group1, 2 = group2
-            writeMat("randval_i.mat", randval = 2 - randval) 
-        }
-        tempfn <- function(i) {
-            iind <- randval[,i]
-            igroups <- list(ids[iind],ids[!iind])
-            t.perm <- arrayTtest(
-                subsetArray(tfce_dat, list(id = igroups[[1]])),
-                subsetArray(tfce_dat, list(id = igroups[[2]])))$t
-            t.perm <- array(t.perm, c(dim(t.perm)[1:2],
-                                      length(t.perm)/prod(dim(t.perm)[1:2])))
-            maxtfce <- sapply(1:dim(t.perm)[3], 
-                              function(ii) max(abs(tfce.fnc(t.perm[,,ii], ChN, EH))))
-            return(maxtfce)
-        }
-        # one-sample (can be difference of two paired samples as well)
-    } else if (type == "o" | type == "d") {
-        t_obs <- arrayTtest(tfce_dat)$t
-        t_obs.dimn <- dimnames(t_obs)
-        t_obs.temp <- array(t_obs, c(dim(t_obs)[1:2],
-                                     length(t_obs)/prod(dim(t_obs)[1:2])))
-        tfce_obs <- array(unlist(lapply(1:dim(t_obs.temp)[3], 
-                                        function(ii) tfce.fnc(t_obs.temp[,,ii], 
-                                                              ChN, EH)), 
-                                 use.names = FALSE),
-                          dim(t_obs), dimnames = t_obs.dimn)
-        if (!is.null(seed)) set.seed(seed) 
-        randval <- ifelse(runif(nrow(tfce_dat)*nperm) < 0.5, -1, 1)
-        randval <- matrix(randval, ncol = nperm)
-        if (save.random2matlab) {
-            writeMat("randval_o.mat", randval = randval)
-        }
-        tempfn <- function(i) {
-            signs <- randval[,i]
-            t.perm <- arrayTtest(sweep(tfce_dat, 1, signs, "*"))$t
-            t.perm <- array(t.perm, c(dim(t.perm)[1:2],
-                                      length(t.perm)/prod(dim(t.perm)[1:2])))
-            maxtfce <- sapply(1:dim(t.perm)[3], 
-                              function(ii) max(abs(tfce.fnc(t.perm[,,ii], 
-                                                            ChN, EH))))
-            return(maxtfce)
-        }
-    }
-    if (!useparallel) {
-        maxtfce.perm <- lapply(1:nperm, tempfn)
-    } else if (par_method == "snow") {
-        if (is.null(cl)) cl <- makePSOCKcluster(ncores)
-        clusterExport(cl, 
-                      varlist = c("tfce.fnc", "arrayTtest", "asub", "randval",
-                                "array2mat", "colSds", "ChN", "EH", 
-                                "subsetArray","fnDims"),
-                      envir = environment())
-        #clusterEvalQ(cl, dyn.load("ept_TFCE3_R.so"))
-        maxtfce.perm <- parLapply(cl, 1:nperm, tempfn)
-        stopCluster(cl)
-        rm(cl)
-    } else if (par_method == "multicore") {
-        maxtfce.perm <- mclapply(1:nperm, tempfn, mc.cores = ncores)
-    } 
-    chantime.n <- prod(sapply(t_obs.dimn[1:2], length))
-    maxtfce_obs <- colMaxs(matrix(abs(tfce_obs), nrow = chantime.n))
-    maxtfce.perm <- matrix(unlist(maxtfce.perm, use.names = FALSE), ncol = nperm)
-    maxtfce.perm <- sweep(
-        maxtfce.perm[rep(1:nrow(maxtfce.perm), each = chantime.n),],
-        1, abs(c(tfce_obs)), "-")
-    sig <- array(
-        (rowSums(maxtfce.perm >= 0) + 1)/(nperm + 1),
-        dim(tfce_obs), dimnames = t_obs.dimn)
-    return(list(call = match.call(), 
-                effect_t_obs = t_obs, effect_tfce_obs = tfce_obs, 
-                perm_pvalues = sig))
 }
 
 # TANOVA functions =========== 
@@ -3227,7 +3607,7 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
     )
     )
     # compute marginal means
-    origdims <- sapply(origdimnames, length)
+    origdims <- vapply(origdimnames, length, 0L)
     modeldims <- c(factordef$w_id, factordef$within)
     keepdims <- setdiff(names(origdimnames), modeldims)
     term_means <- marginalMeans(aov_formula, dat, arraydat, 
@@ -3306,7 +3686,9 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
             res <- quantile(res$lengths[res$values > 0], 1 - pcrit)
             return( res )
         })
-        temp <- matrixRle(array2mat(pvalues, "time") < pcrit)
+        temp <- matrixRle(
+            array2mat(pvalues, "time", return_attributes = FALSE,
+                      keep_dimnames = FALSE) < pcrit)
         ind <- ( (temp$lengths < pvalues_maxconsec[temp$matrixcolumn]) &
                      (temp$values == 1) )
         temp$values[ind] <- 0
@@ -3323,7 +3705,8 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
                            perm_pvalues_consec = pvalues_consec,
                            perm_pvalues_global = pvalues_global))
     } 
-    return(out)
+    # return
+    out
 }
 
 # Peak Anova functions =========== 
@@ -3400,15 +3783,15 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
     sumSq <- function(arraydat, f_dat, aov_form, labels = FALSE) {
         out <- summary(aov(as.formula(aov_form), data = f_dat))
         if (!labels) {
-            out <- matrix(unlist(lapply(out, "[", "Mean Sq"), 
-                                 use.names = FALSE),
-                          nrow(out[[1]]), ncol(arraydat))
+            out <- matrixIP(unlist(lapply(out, "[", "Mean Sq"), 
+                                   use.names = FALSE),
+                            nrow(out[[1]]), ncol(arraydat))
         } else {
-            out <- matrix(unlist(lapply(out, "[", "Mean Sq"), 
-                                 use.names = FALSE),
-                          nrow(out[[1]]), ncol(arraydat),
-                          dimnames = list(term = gsub(" ","",rownames(out[[1]])), 
-                                        peak = seq_along(out)))
+            out <- matrixIP(unlist(lapply(out, "[", "Mean Sq"), 
+                                   use.names = FALSE),
+                            nrow(out[[1]]), ncol(arraydat),
+                            list(term = gsub(" ","",rownames(out[[1]])), 
+                                 peak = seq_along(out)))
         }         
         return(out)
     }
@@ -3452,7 +3835,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
     aov_formula <- as.formula(aov_formula_char)
     mean_formula <- as.formula(gsub("\\*", ":", aov_formula_char))
     # compute marginal means
-    origdims <- sapply(origdimnames, length)
+    origdims <- vapply(origdimnames, length, 0L)
     modeldims <- c(factordef$w_id, factordef$within)
     keepdims <- setdiff(names(origdimnames), modeldims)
     # find indices corresponding to time windows
@@ -3467,17 +3850,17 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
         interaction(dat[, strsplit(names(fmeans), ":")[[1]] ]), 
         rownames(fmeans[[1]]) )
     peakind_facs <- strsplit(rownames(fmeans[[1]]), "\\.")
-    peakind_facs <- structure(data.frame(
-        matrix(unlist(peakind_facs), 
-               length(peakind_facs), length(peakind_facs[[1]]), T)),
-        names = strsplit(names(fmeans), ":")[[1]])
+    peakind_facs <- setNames(data.frame(
+        matrix(unlist(peakind_facs, use.names = FALSE),
+               length(peakind_facs), length(peakind_facs[[1]]), TRUE)),
+        strsplit(names(fmeans), ":")[[1]])
     peakind <- sapply(peakdef, function(x) {
         minmax <- if (x[3] < 0) which.min else which.max
         x[1] -1 + apply(fmeans[[1]][,seq(x[1],x[2])], 1, minmax)})
     #
     # peak amplitudes
     arraydat_peaks[] <- sapply(1:ncol(peakind), function(i) {
-        out <- matrix(0, nrow(arraydat), avg_around_peak*2 + 1)
+        out <- matrixIP(0, nrow(arraydat), avg_around_peak*2 + 1)
         avgind <- outer(peakind[,i], c(-avg_around_peak:avg_around_peak), "+")
         out[] <- arraydat[
             cbind(seq_along(datrowind), as.integer(avgind[datrowind,]))]
@@ -3530,7 +3913,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
                                     type = "free"))),
             mc.cores = par_params$ncores)
         randind <- matrix(unlist(randind, use.names = FALSE), 
-                          nperm, nrow(dat), T)
+                          nperm, nrow(dat), TRUE)
         #
         if (!useparallel) {
             lateff_perm <- lapply(1:nperm, permfn)
@@ -3546,16 +3929,17 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
             lateff_perm <- mclapply(1:nperm, permfn, mc.cores = par_params$ncores)
         } 
         lateff_perm <- cbind(c(lateff_obs), 
-                             matrix(unlist(lateff_perm, use.names = FALSE),
-                                    ncol = nperm))
+                             matrixIP(unlist(lateff_perm, use.names = FALSE),
+                                      ncol = nperm))
         lateff_perm <- sweep(lateff_perm[, -1, drop = F], 1, 
                              lateff_perm[, 1], "-")
-        pvalues <- array(
+        pvalues <- arrayIP(
             (rowSums(lateff_perm >= 0) + 1) / (nperm + 1),
-            dim(lateff_obs), dimnames = dimnames(lateff_obs))
+            dim(lateff_obs), dimnames(lateff_obs))
         out <- c(out, list(lat_pvalues = pvalues))
     } 
-    return(out)
+    # return
+    out
 }
 
 #
@@ -3618,7 +4002,7 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
     layoutmat <- cbind(
         c(0, rep(2, grid_dim[1]), 0, 0),
         rbind(rep(1, grid_dim[2]),
-              matrix(1:prod(grid_dim), grid_dim[1], grid_dim[2], T) + 3,
+              matrix(1:prod(grid_dim), grid_dim[1], grid_dim[2], TRUE) + 3,
               rep(0, grid_dim[2]),
               rep(3, grid_dim[2])),
         c(rep(0, grid_dim[1] + 3)))
@@ -3739,7 +4123,7 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
     gridgeo <- project3dMap(gridpos[ind,], projection = "laea", 
                             projref = projref, origo = origo, inverse = TRUE)
     gridcart <- geo2cart(gridgeo)
-    z <- matrix(NA_real_, resol, resol)
+    z <- matrixIP(NA_real_, resol, resol)
     z[ind] <- chanInterp(dat, ch_pos, gridcart)
     par(mar = rep(0, 4))
     image(gridx, gridy, z, useRaster = TRUE, col = bluered(resolcol),
@@ -3752,7 +4136,7 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
     gridpos <- expand.grid(x = gridx, y = gridy)
     ind <- !in.polygon(gridpos$x, gridpos$y, 
                        boundarypos$x*1, boundarypos$y*1)
-    z <- matrix(NA_integer_, 1000, 1000)
+    z <- matrixIP(NA_integer_, 1000, 1000)
     z[ind] <- 1L
     image(gridx, gridy, z, useRaster = TRUE, col = "white", add = TRUE)
     lines(boundarypos, col = "white", lwd = 1)
@@ -3772,8 +4156,8 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
         xpos.bar <- seq(min(boundarypos$x / 3), max(boundarypos$x / 3), 
                         length.out = resolcol)
         image(xpos.bar, ypos.bar,
-              matrix(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
-                     resolcol, 2),
+              matrixIP(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
+                       resolcol, 2),
               zlim = ampl_range, col = bluered(resolcol), add = TRUE)
         text(min(xpos.bar), ypos.bar[1], 
              substitute(paste(k, " ", mu, "V", sep = ""), 
@@ -3808,8 +4192,8 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
             if (require(plotrix)) {
                 cc <- apply(subjdat, 1, centroid, ch_pos, 
                             proj_unitsphere = centroid_unitsphere)
-                temp <- matrix(unlist(lapply(cc, function(x) abs(x-c1))), 
-                               ncol = length(cc))
+                temp <- matrixIP(unlist(lapply(cc, function(x) abs(x-c1))), 
+                                 ncol = length(cc))
                 rads <- apply(temp, 2, quantile, 
                               probs = centroid_circle, na.rm = TRUE)
                 draw.ellipse(x = c1$x, y = c1$y, 
@@ -3860,7 +4244,7 @@ complexplot2dview <- function(dat, ch_pos, timepoint,
         layout_matrix <- rbind(
             matrix(c(
                 0, rep(1, colnum), 
-                0, 2:(colnum + 1)), 2, colnum + 1, T), 
+                0, 2:(colnum + 1)), 2, colnum + 1, TRUE), 
             matrix(c(
                 (colnum + 2):(colnum + rownum + 1), 
                 (colnum + rownum + 1) + 1:datnum), rownum, colnum + 1))
@@ -3905,8 +4289,8 @@ complexplot2dview <- function(dat, ch_pos, timepoint,
         xpos.bar <- seq(0.4, 0.6, length.out = resolcol)
         ypos.bar <- c(0.45, 0.55)
         image(xpos.bar, ypos.bar,
-              matrix(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
-                     resolcol, 2),
+              matrixIP(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
+                       resolcol, 2),
               xlim = c(0, 1), ylim = c(0, 1), zlim = ampl_range, 
               useRaster = TRUE, col = bluered(resolcol), 
               xlab = "", ylab = "", axes = FALSE 
@@ -3944,7 +4328,7 @@ reprPlot <- function(p, e, title = "Reproducibility", plim = c(0.05, 0.01),
                         c(-yy[ind], rep(-0.04, sum(ind))),
                         col = cols[y_cat[ind][1]], border = "grey20")
                 if (plim_shading && y_cat[ind]<(length(plim)-1)) {
-                    acol <- col2rgb(cols[y_cat[ind][1]], T) / 255
+                    acol <- col2rgb(cols[y_cat[ind][1]], TRUE) / 255
                     acol[4] <- 0.2
                     rect(x[min(which(ind))], 0,
                          x[max(which(ind))], 1,
@@ -3964,7 +4348,7 @@ reprPlot <- function(p, e, title = "Reproducibility", plim = c(0.05, 0.01),
                         c(x[ind], rev(x[ind])),
                         col = cols[y_cat[ind][1]], border = "grey20")
                 if (plim_shading && y_cat[ind]<(length(plim)-1)) {
-                    acol <- col2rgb(cols[y_cat[ind][1]], T) / 255
+                    acol <- col2rgb(cols[y_cat[ind][1]], TRUE) / 255
                     acol[4] <- 0.2
                     rect(0, x[min(which(ind))],
                          1, x[max(which(ind))],
@@ -4005,8 +4389,8 @@ reprPlot <- function(p, e, title = "Reproducibility", plim = c(0.05, 0.01),
     p_min <- min(p)
     natnum <- ncol(p)
     nations <- colnames(p)
-    imlayout <- matrix((2 * natnum + 1), natnum, natnum)
-    diagpos <- diag(matrix(1:natnum^2, natnum, natnum))
+    imlayout <- matrixIP((2 * natnum + 1), natnum, natnum)
+    diagpos <- diag(matrixIP(1:natnum^2, natnum, natnum))
     for (i in 1:length(imlayout)) {
         imlayout[i] <- 
             if (i %in% diagpos) 0 
@@ -4086,7 +4470,8 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
     } else if (!is.null(wrap)) {
         pp <- pp + facet_wrap( as.formula(wrap) )
     }
-    return(pp)
+    # return
+    pp
 }
 
 
@@ -4125,7 +4510,8 @@ imageValues <- function(dat, grid = NULL, wrap = NULL) {
     } else if (!is.null(wrap)) {
         pp <- pp + facet_wrap( as.formula(wrap) )
     }
-    return(pp)
+    # return
+    pp
 }
 
 
@@ -4143,7 +4529,7 @@ tfce.plot <- function(arraydat, breaks = c(0, 0.001, 0.01, 0.05),
         min(tpoints) %/% gridlines_step * gridlines_step,
         max(tpoints) %/% gridlines_step * gridlines_step,
         gridlines_step)
-    dims <- sapply(dimnms, length)
+    dims <- vapply(dimnms, length, 0L)
     emptyplot <- function() {
         plot(0, 0, xlim = c(-1, 1), 
              type = "n", axes = FALSE, frame.plot = FALSE, xlab = "", ylab = "")
@@ -4153,7 +4539,7 @@ tfce.plot <- function(arraydat, breaks = c(0, 0.001, 0.01, 0.05),
         c(0, (1:dims[3]) + dims[4] + 1),
         cbind(1:dims[4] + 1,
               matrix((1:prod(dims[3:4])) + sum(dims[3:4]) + 1, 
-                     dims[4], dims[3], T)))
+                     dims[4], dims[3], TRUE)))
     layout(layoutmat, 
            widths = c(0.3, rep(1, dims[3])),
            heights = c(0.5, 0.3, rep(1, dims[4])))
@@ -4468,7 +4854,7 @@ prepare2plot <- function(dat, datid,
             if (!is.list(diffFac)) {
                 diffFac <- matrix(diffFac, 1, 4)
             } else {
-                diffFac <- matrix(unlist(diffFac), length(diffFac), 4, T)
+                diffFac <- matrix(unlist(diffFac), length(diffFac), 4, TRUE)
             }
             for (ii in 1:nrow(diffFac)) {
                 c1 <- parse(text = paste("list(", diffFac[ii,1], "='", 
@@ -4485,8 +4871,7 @@ prepare2plot <- function(dat, datid,
                 temp <- c(temp,tempd)
                 dimn.perm[[diffFac[ii, 1]]] <- dimn.orig[[diffFac[ii, 1]]] <- 
                     c(dimn.orig[[diffFac[ii, 1]]], diffFac[ii, 4])
-                temp <- array(temp, vapply(dimn.perm,length,0), 
-                              dimnames = dimn.perm)
+                array(temp, vapply(dimn.perm, length, 0L), dimn.perm)
                 temp <- aperm(temp, names(dimn.orig))
             }
         }
@@ -4520,13 +4905,52 @@ prepare2plot <- function(dat, datid,
             names(out) <- names.mat
         }
     }
-    return(out)
+    # return
+    out
 }
 
 
 #
 # <<< Rcpp functions >>> -----------
 #
+
+#' Low-level TFCE function which calls C++ code
+#' 
+#' \code{tfceFn} performs TFCE correction. This function is not 
+#' intended for direct use.
+#' @param x numeric matrix or array
+#' @param chn channel neighbourhood matrix
+#' @param eh numeric vector of E and H parameters
+#' @param nr_steps number of threshold steps (default: 50L)
+#' @export
+#' @keywords internal
+#' @return numeric matrix or array of the same dimensions as x
+tfceFn <- function(x, chn, eh, nr_steps = 50L, channel_dim=1L) {
+    chan_dim = which(names(dimnames(x)) == "chan")
+    if (length(chan_dim)==0) {
+        stopifnot(dim(x)[channel_dim] == nrow(chn))
+        chan_dim <- 1L
+    }
+    out <- arrayIP(0, dim(x))
+    ind.neg <- x < 0
+    ind.pos <- x > 0
+    if (any(ind.pos)) {
+        sdat <- x
+        sdat[ind.neg] <- 0
+        out <- tfce(inData = sdat, chan_dim = chan_dim, 
+                    ChN = ChN, EH = eh, numSteps = nr_steps)
+    }
+    if (any(ind.neg)) {
+        sdat <- -x
+        sdat[ind.pos] <- 0
+        out <- out - tfce(inData = sdat, chan_dim = chan_dim, 
+                          ChN = ChN, EH = eh, numSteps = nr_steps)
+    }
+    # return
+    out
+}
+
+# TODO: add documentation
 consectrue <- function(x, col = TRUE) {
     if (is.vector(x)) {
         x <- matrix(x, ncol = 1)
@@ -4535,7 +4959,8 @@ consectrue <- function(x, col = TRUE) {
     if (!col) x <- t(x)
     out <- consectrueRcpp(x)
     names(out) <- colnames(x)
-    return(out)
+    # return
+    out
 }
 
 
@@ -4549,13 +4974,15 @@ matrixRle <- function(x, col = TRUE) {
     }
     out <- if (col) rleRcpp(x) else rleRcpp(t(x))
     if (!col) names(out)[3] <- "matrixrow"
-    return(out)
+    # return
+    out
 }
 # inverse of matrixRle
 inverse.matrixRle <- function(x) {
-    out <- matrix(rep(x$values, x$lengths), ncol = max(x$matrix))
+    out <- matrixIP(rep(x$values, x$lengths), ncol = max(x$matrix))
     if ("matrixrow" %in% names(x)) {
         out <- t(out)
     }
-    return( out )
+    # return
+    out
 }

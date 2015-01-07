@@ -10,8 +10,9 @@ fnDims(dat, target_dim, target_fn, arg_list = NULL, newdims = list(),
 \arguments{
 \item{dat}{matrix or array on which function should be called}
 
-\item{target_dim}{character string or numeric index of the dimension of dat
-on which the function should be performed.}
+\item{target_dim}{The dimension(s) of dat on which the function should be
+performed. Can be an integer or numeric vector of dimension index(es) or a
+character vector if dat has named dimension names.}
 
 \item{target_fn}{function definition}
 
@@ -24,8 +25,8 @@ names of the output of target_fn (see Details)}
 \item{vectorized}{logical value; should be set to TRUE if target_fn expects
 two-dimensional input (e.g. colSums)}
 
-\item{columnwise}{logical value; if vectorized is TRUE, columnwise indicates if target_fn
-operates column-wise (TRUE, default) or row-wise (FALSE)}
+\item{columnwise}{logical value; if vectorized is TRUE, columnwise indicates
+if target_fn operates column-wise (TRUE, default) or row-wise (FALSE)}
 
 \item{keep_dimorder}{logical value; if TRUE, and the returned matrix or array
 is of the same size as dat, the order of dimensions in the returned matrix
@@ -42,15 +43,15 @@ used (default: FALSE)}
 see Details
 }
 \description{
-\code{fnDims} calls a user-specified function on whatever dimension of a
+\code{fnDims} calls a user-specified function on whatever dimension(s) of a
 matrix or array. Function can be a vectorized function in which case fnDims
 is very fast.
 }
 \details{
 This function works by transforming dat to a matrix with a row
 dimension corresponding to target_dim and calling target_fn on each column
-of the matrix repeatedly, or if target_fn is TRUE, by feeding the transformed
- matrix directly to target_fn. After calling target_fn, the results are
+of the matrix repeatedly, or if vectorized is TRUE, by feeding the transformed
+matrix directly to target_fn. After calling target_fn, the results are
 back-transformed to the original array format. If target_fn produces one
 value per input vector, target_dim is dropped from the resulting array.
 If target_fn produces an equal-length vector as the input, and newdims
@@ -58,7 +59,7 @@ parameter is not provided, fnDims assumes that dimensions correspond to the
 original input. If target_fn outputs a list, no back-transformation is done.
 }
 \seealso{
-\code{\link{avgDims}} if target_fn is colMeans, avgDims might be a
-better choice
+\code{\link{avgDims}} if target_fn is one of mean/colMeans/rowMeans,
+avgDims might be a better choice
 }
 

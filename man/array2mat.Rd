@@ -3,7 +3,7 @@
 \alias{array2mat}
 \title{Reshape array to matrix with specified row dimension}
 \usage{
-array2mat(dat, row_dim, return_attributes = TRUE)
+array2mat(dat, row_dim, return_attributes = TRUE, keep_dimnames = TRUE)
 }
 \arguments{
 \item{dat}{an array to reshape}
@@ -12,19 +12,17 @@ array2mat(dat, row_dim, return_attributes = TRUE)
 of the returned matrix}
 
 \item{return_attributes}{logical value; if TRUE (default), the attributes
-of the array is is saved as an additional attribute ("array_atributes") of
+of the array is saved as an additional attribute ("array_atributes") of
 the returned matrix including the row_dim parameter}
+
+\item{keep_dimnames}{logical value; if TRUE (default), the function not
+only reshapes the array but retains the dimension names separated by "|"}
 }
 \value{
 A matrix
 }
 \description{
 \code{array2mat} reshapes an array to a matrix
-}
-\details{
-The function not only reshapes the array but retains the dimension
-names separated by "|". Therefore this function is most useful if the input
-array has dimension names.
 }
 \seealso{
 \code{\link{mat2array}} which is the inverse of array2mat
