@@ -4,7 +4,7 @@
 #
 
 #' @useDynLib eegR 
-#' @import matrixStats permute data.table
+#' @import matrixStats permute data.table parallel doParallel
 #' @importFrom Rcpp evalCpp
 NULL
 
@@ -215,10 +215,9 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
 #' @return matrix without duplicated units
 #' @import Kmisc
 fastUnique <- function(x, units_in_rows = TRUE) {
-    if (!require(Kmisc)) stop("Kmisc package is not installed.")
     if (!is.matrix(x)) stop("Provide a matrix as input!")
     if (units_in_rows) x <- t(x)
-    dupl <- duplicated(str_collapse(lapply(1:ncol(x), function(i) x[,i])))
+    dupl <- duplicated(Kmisc::str_collapse(lapply(1:ncol(x), function(i) x[,i])))
     x <- x[, !dupl, drop = F]
     if (units_in_rows) x <- t(x)
     # return
