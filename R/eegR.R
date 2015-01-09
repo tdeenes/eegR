@@ -2440,8 +2440,8 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
                                                    input$alpha, pert = TRUE))
                     plot(a, walpha = TRUE, transparency = 0.95, 
                          col = c("red", "red2", "red"), shininess = 100)
-                    text3d(ch_pos$x, ch_pos$y, ch_pos$z, cex = 0.6, 
-                           channames, col = "black")
+                    rgl::text3d(ch_pos$x, ch_pos$y, ch_pos$z, cex = 0.6, 
+                                channames, col = "black")
                 })
                 observe({
                     if (input$submit == 0)
