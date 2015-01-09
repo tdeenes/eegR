@@ -4872,7 +4872,7 @@ prepare2plot <- function(dat, datid,
                 temp <- c(temp,tempd)
                 dimn.perm[[diffFac[ii, 1]]] <- dimn.orig[[diffFac[ii, 1]]] <- 
                     c(dimn.orig[[diffFac[ii, 1]]], diffFac[ii, 4])
-                array(temp, vapply(dimn.perm, length, 0L), dimn.perm)
+                arrayIP(temp, vapply(dimn.perm, length, 0L), dimn.perm)
                 temp <- aperm(temp, names(dimn.orig))
             }
         }
