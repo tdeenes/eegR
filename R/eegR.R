@@ -4,7 +4,7 @@
 #
 
 #' @useDynLib eegR 
-#' @import matrixStats permute data.table parallel
+#' @import abind matrixStats permute data.table parallel doParallel foreach iterators
 #' @importFrom Rcpp evalCpp
 NULL
 
@@ -1491,8 +1491,10 @@ arrayTtest <- function(arraydat, arraydat2, paired = FALSE, groups = NULL,
                                   setdiff(names(dimnames(arraydat)),
                                           c(id_dim, "chan", "time"))))
     if (length(dim(arraydat)) == 3L) {
+        temp <- dimnames(arraydat)
         arrayIP(arraydat, c(dim(arraydat), 1),
-                c(dimnames(arraydat), list(TEMPX="1")))
+                c(temp, list(TEMPX="1")))
+        rm(temp)
     }
     # two independent samples
     if (!is.null(groups)) {
