@@ -4,7 +4,7 @@
 #
 
 #' @useDynLib eegR 
-#' @import matrixStats permute data.table parallel doParallel
+#' @import matrixStats permute data.table parallel
 #' @importFrom Rcpp evalCpp
 NULL
 
@@ -330,7 +330,7 @@ decorateDims <- function(dat, names = TRUE,
                          in_place = FALSE) {
     dims <- dim(dat)
     dimn <- dimnames(dat)
-    if (is.null(dimn)) dimn <- vector("list", length(dimn))
+    if (is.null(dimn)) dimn <- vector("list", length(dims))
     if (!is.null(new_dimnames) && !is.list(new_dimnames)) {
         new_dimnames <- list(new_dimnames)
     }
