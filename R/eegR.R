@@ -48,6 +48,17 @@ NULL
 # <<< simple utility functions >>> --------
 #
 
+#' Check for availability of some packages
+#' @keywords internal
+reqFn <- function(packages) {
+    for (i in packages) {
+        if(!requireNamespace(i, quietly = TRUE)) {
+            stop("You have to install package:", i ," before using this function")
+        }
+    }
+}
+
+
 #' Assign the elements of a named list to the enclosing environment
 #' 
 #' \code{assignList} assigns the elements of a named list to the enclosing environment. 
@@ -156,10 +167,10 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
                         sd = sd, mad = mad, quantile = quantile)
         funind <- sapply(funlist, identical, FUN)
         if (any(funind)) {
-            if (require(caTools)) {
+            if (requireNamespace("caTools", quietly = TRUE)) {
                 FUN <- names(funlist)[funind]
-                FUN <- match.fun(paste("run", FUN, sep = ""))
-                if (identical(FUN, runquantile)) {
+                FUN <- getExportedValue("caTools", paste0("run", FUN))
+                if (identical(FUN, caTools::runquantile)) {
                     probs <- list(...)$probs
                     dims <- c(dim(dat), length(probs))
                     attribs$dim <- dims
@@ -185,15 +196,17 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
                     }
                 }
             } else {
-                warning("Install caTools package to speed up computations!")
+                force_rollapply <- TRUE
+                warning("Install package:caTools to speed up computations!")
             }
         } else {
             force_rollapply <- TRUE
         }
     } 
     if (force_rollapply) {
-        if (require(zoo)) {
-            out <- rollapply(dat, width, FUN, partial = TRUE, by.column = TRUE, ...)
+        if (reqFn("zoo")) {
+            out <- zoo::rollapply(dat, width, FUN, partial = TRUE, 
+                                  by.column = TRUE, ...)
         } else {
             stop("Package zoo is not installed but called by rollFun().")
         }
@@ -1163,7 +1176,6 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
             out <- sapply(1:ncol(out), function(i) 
                 do.call(target_fn, append(list(out[, i]), arg_list)))
         } else {
-            stopifnot(require(parallel))
             if (is.null(ncores)) ncores <- detectCores()
             if (is.null(cl)) cl <- makePSOCKcluster(ncores)
             tempfn <- function(i) 
@@ -2080,7 +2092,6 @@ arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE,
         EH <- if (is.null(tfce_options$EH)) c(0.66, 2) else tfce_options$EH
     }
     if (useparallel) {
-        stopifnot(require(parallel))
         if (is.null(ncores)) ncores <- detectCores()
     }
     #
@@ -2388,14 +2399,10 @@ cart2geo <- function(ch_pos, deg = TRUE) {
 #' ignored
 #' @param ... parameters to \code{\link{sph2cart}}
 #' @export
-#' @import rgl
-#' @import alphashape3d
-#' @import shinyRGL
 #' @return An electrode neighbourhood matrix
 chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
     options(rgl.useNULL = TRUE)
-    require(rgl)
-    require(alphashape3d)
+    reqFn("alphashape3d")
     if (!all(c("x", "y", "z") %in% colnames(ch_pos))) {
         if (all(c("theta", "phi") %in% colnames(ch_pos))) {
             ch_pos <- sph2cart(ch_pos, ...)
@@ -2406,8 +2413,8 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
     ch_pos <- ch_pos[, c("x", "y", "z")]
     channames <- paste(1:nrow(ch_pos), rownames(ch_pos), sep = ". ")
     if (is.null(alpha)) {
-        require(shiny)
-        require(shinyRGL)
+        require("shiny")
+        require("shinyRGL")
         alpha <- runApp(list(
             ui = pageWithSidebar(
                 # Application title
@@ -2429,7 +2436,7 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
             server = function(input, output) {
                 output$chanPlot <- renderWebGL({
                     #bg3d("grey40")
-                    a <- suppressWarnings(ashape3d(as.matrix(ch_pos), 
+                    a <- suppressWarnings(alphashape3d::ashape3d(as.matrix(ch_pos), 
                                                    input$alpha, pert = TRUE))
                     plot(a, walpha = TRUE, transparency = 0.95, 
                          col = c("red", "red2", "red"), shininess = 100)
@@ -2444,7 +2451,7 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
             }
         ))
     }
-    a <- suppressWarnings(ashape3d(as.matrix(ch_pos), 
+    a <- suppressWarnings(alphashape3d::ashape3d(as.matrix(ch_pos), 
                                    alpha, pert = TRUE))$edge
     a <- a[,c(1, 2, ncol(a))]
     out <- matrixIP(0, nrow(ch_pos), nrow(ch_pos))
@@ -3567,8 +3574,7 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
         stop("No between-participant data provided")
     }
     if (useparallel) {
-        stopifnot(require(parallel))
-        if (is.null(ncores)) ncores <- detectCores()
+        if (is.null(ncores)) ncores <- parallel::detectCores()
     }
     #
     out <- list(call = match.call())
@@ -3775,8 +3781,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
         stop("No between-participant data provided")
     }
     if (useparallel) {
-        stopifnot(require(parallel))
-        if (is.null(ncores)) ncores <- detectCores()
+        if (is.null(ncores)) ncores <- parallel::detectCores()
     }
     #
     out <- list(call = match.call())
@@ -4190,14 +4195,14 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
     if (plot_centroid) {
         c1 <- centroid(dat, ch_pos, proj_unitsphere = centroid_unitsphere)
         if (!is.na(centroid_circle)) {
-            if (require(plotrix)) {
+            if (reqFn(plotrix)) {
                 cc <- apply(subjdat, 1, centroid, ch_pos, 
                             proj_unitsphere = centroid_unitsphere)
                 temp <- matrixIP(unlist(lapply(cc, function(x) abs(x-c1))), 
                                  ncol = length(cc))
                 rads <- apply(temp, 2, quantile, 
                               probs = centroid_circle, na.rm = TRUE)
-                draw.ellipse(x = c1$x, y = c1$y, 
+                plotrix::draw.ellipse(x = c1$x, y = c1$y, 
                              a = rads[c(1, 3)], b = rads[c(2, 4)], 
                              col = c(rgb(0, 0, 0.5, 0.15), rgb(0.5, 0, 0, 0.15)), 
                              border = NA)
