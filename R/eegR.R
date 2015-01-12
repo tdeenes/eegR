@@ -48,7 +48,7 @@ NULL
 # <<< simple utility functions >>> --------
 #
 
-#' Check for availability of some packages
+#' Check for availability of packages
 #' @keywords internal
 reqFn <- function(packages) {
     for (i in packages) {
@@ -56,6 +56,7 @@ reqFn <- function(packages) {
             stop("You have to install package:", i ," before using this function")
         }
     }
+    TRUE
 }
 
 
@@ -2402,7 +2403,7 @@ cart2geo <- function(ch_pos, deg = TRUE) {
 #' @return An electrode neighbourhood matrix
 chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
     options(rgl.useNULL = TRUE)
-    reqFn("alphashape3d")
+    reqFn(c("alphashape3d", "geometry"))
     if (!all(c("x", "y", "z") %in% colnames(ch_pos))) {
         if (all(c("theta", "phi") %in% colnames(ch_pos))) {
             ch_pos <- sph2cart(ch_pos, ...)
@@ -4195,7 +4196,7 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
     if (plot_centroid) {
         c1 <- centroid(dat, ch_pos, proj_unitsphere = centroid_unitsphere)
         if (!is.na(centroid_circle)) {
-            if (reqFn(plotrix)) {
+            if (reqFn("plotrix")) {
                 cc <- apply(subjdat, 1, centroid, ch_pos, 
                             proj_unitsphere = centroid_unitsphere)
                 temp <- matrixIP(unlist(lapply(cc, function(x) abs(x-c1))), 
