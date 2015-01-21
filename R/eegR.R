@@ -1934,8 +1934,8 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
             ges <- model[m_ind, , drop = F] / 
                 sweep(model[m_ind, , drop = F], 2, SSr, "+")
         }
-        arrayIP(Fvals, c(nrow(Fvals), origdims[keepdims]),
-                c(list(modelterm = rownames(Fvals)), d_names[keepdims]))
+        arrayIP(Fvals, c(sum(m_ind), origdims[keepdims]),
+                c(list(modelterm = modnames[m_ind]), d_names[keepdims]))
     } else {   
         aov_formula1 <- as.formula(paste(
             as.character(quote(a_dat)), "~", 
