@@ -5,7 +5,7 @@
 \usage{
 chanInterp(dat, ch_pos, interp_pos = NULL, maxNA = 0.3, m = 4L, N = 7L,
   lambda = 1e-10, type = c("voltage", "laplacian", "scd"),
-  alarm_tolerance = 0.01)
+  alarm_tolerance = 0.01, error_on_alarm = TRUE)
 }
 \arguments{
 \item{dat}{a numeric vector, matrix, data.frame or array with named dimnames}
@@ -34,7 +34,10 @@ realistic (i.e. non-spherical) electrode arrangements.}
 
 \item{alarm_tolerance}{numeric value (default: 1e-2); if the maximal absolute
 interpolation error at any time sample exceeds this limit, a message is
-shown. If set to NULL, no check is performed.}
+shown or an error is thrown depending on \code{error_on_alarm}. If set to
+NULL, no check is performed.}
+
+\item{error_on_alarm}{defaults to TRUE, see \code{alarm_tolerance}}
 }
 \value{
 An object having the same attributes as dat

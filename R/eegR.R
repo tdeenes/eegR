@@ -2560,7 +2560,9 @@ cosAngle <- function(x, y = NULL, coords = TRUE, units_in_rows = TRUE,
 #' @param type character value, do not use yet
 #' @param alarm_tolerance numeric value (default: 1e-2); if the maximal absolute 
 #' interpolation error at any time sample exceeds this limit, a message is
-#' shown. If set to NULL, no check is performed.
+#' shown or an error is thrown depending on \code{error_on_alarm}. If set to 
+#' NULL, no check is performed.
+#' @param error_on_alarm defaults to TRUE, see \code{alarm_tolerance}
 #' @export
 #' @return An object having the same attributes as dat
 #' @import orthopolynom
@@ -2569,7 +2571,7 @@ cosAngle <- function(x, y = NULL, coords = TRUE, units_in_rows = TRUE,
 chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3, 
                        m = 4L, N = 7L, lambda = 1e-10, 
                        type = c("voltage", "laplacian", "scd"),
-                       alarm_tolerance = 1e-2) {
+                       alarm_tolerance = 1e-2, error_on_alarm = TRUE) {
     require(orthopolynom)
     require(corpcor)
     require(Kmisc)
@@ -2599,9 +2601,13 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
         na_ind <- is.na(y)
         message("...Looking for missing value patterns - ", appendLF = FALSE)
         if (is.null(interp_pos)) {
-            keep_columns <- colMeans(na_ind) <= maxNA & colMeans(na_ind) > 0
-            missing_patterns <- fastUnique(na_ind[, keep_columns, drop = F], 
-                                           units_in_rows = FALSE)
+            temp <- colMeans(na_ind)
+            keep_columns <- temp <= maxNA & temp > 0
+            if (!any(keep_columns)) return(y)
+            yorig <- y
+            y <- y[, keep_columns, drop = FALSE]
+            na_ind <- na_ind[, keep_columns, drop = FALSE]
+            missing_patterns <- fastUnique(na_ind, units_in_rows = FALSE)
             mischan <- which(rowAnys(missing_patterns))
             mischan <- 
                 if (!is.null(rownames(ch_pos))) {
@@ -2625,35 +2631,37 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
             maxdev <- 0
         }
         message("...Perform interpolation - ", appendLF = FALSE) 
+        G0 <- compGmat(cosAngle(ch_pos, check_params = FALSE), m, N)
         for (i in 1:ncol(missing_patterns)) {
             na_vec <- missing_patterns[, i]
-            y_ind <- colSums(abs(sweep(na_ind, 1, na_vec, "-"))) == 0
+            y_ind <- colSums(na_ind==na_vec) == length(na_vec)
             ch_good <- ch_pos[!na_vec, , drop = F]
             ch_interp <- 
                 if (is.null(interp_pos)) ch_pos[na_vec,,drop = F] else interp_pos
             #
-            G <- compGmat(cosAngle(ch_good, check_params = FALSE), m, N)
+            G <- G0[!na_vec, !na_vec]
             Coef <- compCmat(y[!na_vec, y_ind, drop = F], G, lambda)
             interpG <- compGmat(cosAngle(ch_good, ch_interp, check_params = FALSE), 
                                 m, N)
             if (is.null(interp_pos)) {
-                res <- sweep(crossprod(Coef[-1, , drop = F], interpG), 1, 
-                             Coef[1, , drop = F], "+")
-                y[na_vec, y_ind] <- c(t(res))
+                res <- crossprod(Coef[-1, , drop = F], interpG) + Coef[1, ]
+                y[na_vec, y_ind] <- t(res)
             } else {
-                yy[, y_ind] <- c(t(sweep(crossprod(Coef[-1, , drop = F], interpG),
-                                         1, Coef[1, , drop = F], "+")))
+                yy[, y_ind] <- t(crossprod(Coef[-1, , drop = F], interpG) + 
+                                     Coef[1, ])
             }
             if (!is.null(alarm_tolerance)) {
                 ch_interp <- ch_pos
                 interpG <- compGmat(cosAngle(ch_good, 
                                              ch_interp, check_params = FALSE), 
                                     m, N)
-                res <- sweep(crossprod(Coef[-1, , drop = F], interpG), 1, 
-                             Coef[1, , drop = F], "+")
+                res <- crossprod(Coef[-1, , drop = F], interpG) + Coef[1, ]
                 mdevs <- colMaxs(abs(y[, y_ind] - t(res)), na.rm = TRUE)
                 maxdev <- max(c(maxdev, mdevs))
-                dev[y_ind] <- ( maxdev > alarm_tolerance )
+                dev[y_ind] <- temp <- ( maxdev > alarm_tolerance )
+                if (error_on_alarm && temp) 
+                    stop(sprintf("Deviance %f exceeds threshold %f", 
+                                 maxdev, alarm_tolerance))
             }
         }
         if (!is.null(alarm_tolerance)) {
@@ -2670,7 +2678,8 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
         }
         message("Done") 
         if (is.null(interp_pos)) {
-            return(y)
+            yorig[, keep_columns] <- y
+            return(yorig)
         } else {
             return(yy)
         }
@@ -2732,7 +2741,8 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
         target_dim <- if (!is.null(dim_names$chan)) "chan" else 1
         arg_list <- list(m = m, N = N, lambda = lambda, type = type)
         if (length(arg_list) == 0) arg_list <- NULL
-        out <- fnDims(dat, "chan", interpFn, arg_list = arg_list, vectorized = TRUE)
+        out <- fnDims(dat, "chan", interpFn, arg_list = arg_list, 
+                      vectorized = TRUE)
         out <- aperm(out, names(dim_names))
     }
     #
