@@ -789,7 +789,7 @@ dim2multidim <- function(dat, whichdim, datfr) {
     dimnames(dat) <- append(orig_dimnames[-whichdim], add_dimnames, 
                             whichdim - 1)
     # return
-    out
+    dat
 }
 
 #' Splits an array along a given dimension
