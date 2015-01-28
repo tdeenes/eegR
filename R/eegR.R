@@ -820,6 +820,18 @@ splitArray <- function(dat, whichdim) {
     out
 }
 
+#' Join several arrays into one large array
+#' 
+#' \code{mergeArrays} merges arrays into one large array.
+#' @param ... the arrays to merge, as names (unquoted) 
+#' @param list a list of arrays to be merged (if ... is not provided)
+#' @param newdim a named list of a character vector
+#' @param union should unique dimensions and dimension levels included
+#' (default: TRUE)
+#' @export
+#' @return A list of subsets of the original data matrix/array
+
+
 #' Rearrange two-level list
 #' 
 #' \code{rearrangeList} reshapes a special type of one- or two-level lists.
@@ -2741,8 +2753,10 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
         target_dim <- if (!is.null(dim_names$chan)) "chan" else 1
         arg_list <- list(m = m, N = N, lambda = lambda, type = type)
         if (length(arg_list) == 0) arg_list <- NULL
+        newdims <- 
+            if (is.null(interp_pos)) list() else list(chan = rownames(interp_pos))
         out <- fnDims(dat, "chan", interpFn, arg_list = arg_list, 
-                      vectorized = TRUE)
+                      newdims = newdims, vectorized = TRUE)
         out <- aperm(out, names(dim_names))
     }
     #
@@ -4051,7 +4065,8 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
 #' @param dat a numeric vector or matrix. If a matrix is provided, it must 
 #' contain the participants in rows and the channels in columns
 #' @param ch_pos a data.frame with the channel coordinates
-#' @param r a numeric value; the radius of the head
+#' @param r a numeric value; the radius of the head (not used if ch_pos contains
+#' a column \code{r})
 #' @param timepoint an integer value
 #' @param ampl_range numeric vector, the minimum and maximum value of the 
 #' amplitudes (default: c(-5, 5))
@@ -4059,8 +4074,21 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
 #' @param resolcol integer value, the resolution of the colours (default: 1000L)
 #' @param projection character value (default = "laea"). See 
 #' \link{http://www.remotesensing.org/geotiff/proj_list/} for common projections
-#' @param projref projection reference (pole [ = default] or equator)
+#' @param projref projection reference (pole [default] or equator)
+#' @param origo a named character vector of lat and long coordinates of the 
+#' origo
+#' @param plot_centroid should centroids be plotted (default: TRUE)
+#' @param centroid_circle numeric scalar (default=0.5), the ratio of individual
+#' centroid coordinates which fall into the area of a shaded circle 
+#' @param centroid_unitsphere should centroids be projected onto the 2d plane as
+#' if they were located on the surface of a unit sphere (default: false)
+#' @param plot_bar put color bar on the plot (default: TRUE)
+#' @param plot_ch plot channels as dots (default: TRUE)
+#' @param plot_chnames plot channel names (default: TRUE)
+#' @param title title of the plot
 #' @param gfp a numeric vector of the GFP values in the whole time window
+#' @param gfp_max the upper limit if gfp is provided
+#' @param ... arguments to \code{\link{chanInterp}}
 #' @importFrom sgeostat in.polygon
 #' @importFrom gplots colorpanel redgreen greenred bluered redblue
 #' @export
@@ -4105,7 +4133,7 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
                 lat = c(seq(-90, 90, length.out = 90), 
                         seq(90, -90, length.out = 90)))
         }
-    boundarypos <- unique(project3dMap(boundarypos, projection = "laea", 
+    boundarypos <- unique(project3dMap(boundarypos, projection = projection, 
                                        projref = projref, origo = origo))
     #
     xlim <- range(boundarypos$x) * 1.1
@@ -4137,11 +4165,11 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
     gridpos <- expand.grid(x = gridx, y = gridy)
     ind <- in.polygon(gridpos$x, gridpos$y, 
                       boundarypos$x * 1.1, boundarypos$y * 1.1)
-    gridgeo <- project3dMap(gridpos[ind,], projection = "laea", 
+    gridgeo <- project3dMap(gridpos[ind,], projection = projection, 
                             projref = projref, origo = origo, inverse = TRUE)
     gridcart <- geo2cart(gridgeo)
     z <- matrixIP(NA_real_, resol, resol)
-    z[ind] <- chanInterp(dat, ch_pos, gridcart)
+    z[ind] <- chanInterp(dat, ch_pos, gridcart, ...)
     par(mar = rep(0, 4))
     image(gridx, gridy, z, useRaster = TRUE, col = bluered(resolcol),
           xlim = xlim, ylim = ylim,

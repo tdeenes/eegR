@@ -17,7 +17,8 @@ contain the participants in rows and the channels in columns}
 
 \item{ch_pos}{a data.frame with the channel coordinates}
 
-\item{r}{a numeric value; the radius of the head}
+\item{r}{a numeric value; the radius of the head (not used if ch_pos contains
+a column \code{r})}
 
 \item{timepoint}{an integer value}
 
@@ -31,9 +32,32 @@ amplitudes (default: c(-5, 5))}
 \item{projection}{character value (default = "laea"). See
 \link{http://www.remotesensing.org/geotiff/proj_list/} for common projections}
 
-\item{projref}{projection reference (pole [ = default] or equator)}
+\item{projref}{projection reference (pole [default] or equator)}
+
+\item{origo}{a named character vector of lat and long coordinates of the
+origo}
+
+\item{plot_centroid}{should centroids be plotted (default: TRUE)}
+
+\item{centroid_circle}{numeric scalar (default=0.5), the ratio of individual
+centroid coordinates which fall into the area of a shaded circle}
+
+\item{centroid_unitsphere}{should centroids be projected onto the 2d plane as
+if they were located on the surface of a unit sphere (default: false)}
+
+\item{plot_bar}{put color bar on the plot (default: TRUE)}
+
+\item{plot_ch}{plot channels as dots (default: TRUE)}
+
+\item{plot_chnames}{plot channel names (default: TRUE)}
+
+\item{title}{title of the plot}
 
 \item{gfp}{a numeric vector of the GFP values in the whole time window}
+
+\item{gfp_max}{the upper limit if gfp is provided}
+
+\item{...}{arguments to \code{\link{chanInterp}}}
 }
 \description{
 \code{plot2dview} creates 2D topoplots
