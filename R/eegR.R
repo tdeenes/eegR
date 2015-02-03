@@ -2096,6 +2096,7 @@ arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE,
     # some checks
     stopifnot(is.array(arraydat))
     stopifnot(is.list(factordef))
+    nperm <- as.integer(nperm)
     if (!is.null(factordef$between) && is.null(bwdat)) {
         stop("No between-participant data provided")
     } 
@@ -2119,14 +2120,14 @@ arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE,
     #
     Fvals_obs <- arrayAnovaSub(arraydat, factordef, origdimnames, 
                                dat, verbose)
+    mergedimnames <- setdiff(names(dimnames(Fvals_obs)), c("chan", "time"))
     if (usetfce) {
-        mergedimnames <- setdiff(names(dimnames(Fvals_obs)), c("chan", "time"))
         tfce_obs <- mergeDims(Fvals_obs, mergedimnames)
         for (i in 1:nrow(tfce_obs)) 
             tfce_obs[i,,] <- tfceFn(tfce_obs[i,,], ChN, EH)
         tfce_obs <- revMergeDims(tfce_obs)
     }
-    if (nperm > 1) {
+    if (nperm > 1L) {
         #
         permfn_f <- function(i) {
             x <- arrayAnovaSub(arraydat[randind[i,], ], 
