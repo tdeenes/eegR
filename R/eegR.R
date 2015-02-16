@@ -251,8 +251,11 @@ fastUnique <- function(x, units_in_rows = TRUE) {
 #' @export
 #' @return A list with substituted names.
 listS <- function(..., indices_ = NULL) {
+    call_env <- parent.frame()
     subst <- function(x) {
-        vapply(x, function(xx) as.character(eval(parse(text = xx))), 
+        vapply(x, 
+               function(xx) as.character(eval(parse(text = xx), 
+                                              call_env)), 
                character(1))
     }
     #
