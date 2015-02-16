@@ -3,16 +3,30 @@
 \alias{splitArray}
 \title{Splits an array along a given dimension}
 \usage{
-splitArray(dat, whichdim)
+splitArray(dat, whichdim, f = NULL, drop = FALSE)
 }
 \arguments{
 \item{dat}{numeric array (preferably with named dimnames)}
 
 \item{whichdim}{numeric or character vector, the dimension(s) of the array
 to split along}
+
+\item{f}{a list of ‘factors’ in the sense that
+\code{lapply(f, as.factor)} defines the grouping to split along for
+each dimensions in \code{whichdim}. If \code{NULL}, \code{splitArray}
+splits all levels of the \code{whichdim} dimensions. If not \code{NULL},
+the length of \code{f} must match the length of \code{whichdim}. If \code{f}
+is a named list, the names are reflected in the \code{dimnames} attribute of
+the resulting list (see Value section).}
+
+\item{drop}{logical; should singleton dimensions (dimensions with only
+one level) be deleted (TRUE) or not (FALSE, the default)}
 }
 \value{
-A list of subsets of the original data matrix/array
+A list of subsets of the original data matrix/array with \code{dim}
+and \code{dimnames} attributes. The dimensions of the list correspond to the
+length of each element in \code{f} (after replacing NULL values with correct
+vectors).
 }
 \description{
 \code{splitArray} splits an array along given dimension(s) into a list of

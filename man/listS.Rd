@@ -3,16 +3,16 @@
 \alias{listS}
 \title{Create list with substituted names}
 \usage{
-listS(..., indices = NULL)
+listS(..., indices_ = NULL)
 }
 \arguments{
 \item{...}{objects; if not named, listS is equilent to \code{\link{list}}.
 Names which should be substituted should start with a dot (.) or INDICES has
 to be provided.}
 
-\item{indices}{character or numeric vector indicating the position of those
-list elements whose name should be substituted. If provided, relevant names
-in ... should not be dotted.}
+\item{indices_}{character or numeric vector indicating the position of those
+list elements whose name should be substituted. If provided, dotted names
+are treated as original names and not substituted.}
 }
 \value{
 A list with substituted names.

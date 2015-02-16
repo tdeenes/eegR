@@ -245,40 +245,28 @@ fastUnique <- function(x, units_in_rows = TRUE) {
 #' @param ... objects; if not named, listS is equilent to \code{\link{list}}. 
 #' Names which should be substituted should start with a dot (.) or INDICES has 
 #' to be provided. 
-#' @param indices character or numeric vector indicating the position of those 
-#' list elements whose name should be substituted. If provided, relevant names 
-#' in ... should not be dotted.
+#' @param indices_ character or numeric vector indicating the position of those 
+#' list elements whose name should be substituted. If provided, dotted names
+#' are treated as original names and not substituted.
 #' @export
 #' @return A list with substituted names.
-listS <- function(..., indices = NULL) {
+listS <- function(..., indices_ = NULL) {
+    subst <- function(x) {
+        vapply(x, function(xx) as.character(eval(parse(text = xx))), 
+               character(1))
+    }
+    #
     list_def <- list(...)
-    if (is.null(names(list_def))) {
+    if (is.null(onames <- names(list_def))) {
         return( list_def )
     }
-    nam <- names(list_def)
-    if (is.null(indices)) {
-        indices <- grep("^[.]", nam)
-        newnam <- sub("^[.]", "", nam[indices])
+    if (is.null(indices_)) {
+        ind <- grep("^[.]", onames)
+        onames[ind] <- subst(sub("^[.]", "", onames[ind]))
     } else {
-        newnam <- nam[INDICES]
+        onames[indices_] <- subst(onames[indices_])
     }
-    if (length(newnam) == 0) return( list_def )
-    newnam <- structure(
-        lapply(newnam, function(x) {
-            for (n in 1:sys.nframe()) {
-                tempx <- try(get(x, envir = parent.frame(n)), silent = TRUE)
-                if (!inherits(tempx, "try-error")) return( tempx )
-            }
-        }),
-        names = newnam)
-    for (i in 1:length(newnam)) {
-        if (!is.atomic(newnam[[i]]) || length(newnam[[i]]) > 1) {
-            stop(
-                "The object denoted by '", names(newnam)[i], "' is not a character string!"
-            )
-        }
-    }
-    names(list_def)[indices] <- unlist(newnam, use.names = FALSE)
+    names(list_def) <- onames
     # return
     list_def
 }
@@ -795,41 +783,178 @@ dim2multidim <- function(dat, whichdim, datfr) {
 #' Splits an array along a given dimension
 #' 
 #' \code{splitArray} splits an array along given dimension(s) into a list of 
-#' sub-arrays
+#' sub-arrays 
 #' @param dat numeric array (preferably with named dimnames)
 #' @param whichdim numeric or character vector, the dimension(s) of the array 
 #' to split along
+#' @param f a list of ‘factors’ in the sense that 
+#' \code{lapply(f, as.factor)} defines the grouping to split along for 
+#' each dimensions in \code{whichdim}. If \code{NULL}, \code{splitArray} 
+#' splits all levels of the \code{whichdim} dimensions. If not \code{NULL}, 
+#' the length of \code{f} must match the length of \code{whichdim}. If \code{f}
+#' is a named list, the names are reflected in the \code{dimnames} attribute of
+#' the resulting list (see Value section).
+#' @param drop logical; should singleton dimensions (dimensions with only
+#' one level) be deleted (TRUE) or not (FALSE, the default) 
 #' @export
-#' @return A list of subsets of the original data matrix/array
-splitArray <- function(dat, whichdim) {
-    if (length(whichdim) > 1) {
-        out.dimnames <- dimnames(dat)[whichdim]
-        out.dim <- vapply(out.dimnames, length, 0L)
-        dat <- mergeDims(dat, whichdim)
-        whichdim <- paste(whichdim, collapse=".")
-    } else {
-        out.dimnames <- NULL
-        out.dim <- NULL
+#' @return A list of subsets of the original data matrix/array with \code{dim}
+#' and \code{dimnames} attributes. The dimensions of the list correspond to the
+#' length of each element in \code{f} (after replacing NULL values with correct
+#' vectors). 
+splitArray <- function(dat, whichdim, f = NULL, drop = FALSE) {
+    subFn <- function(ind) {
+        abind::asub(dat, lapply(ind, unlist), whichdim_num, drop = drop) 
     }
-    dimlevels <- dimnames(dat)[[whichdim]]
-    out <- lapply(dimlevels, function(i) subsetArray(dat, listS(.whichdim = i)))
-    dim(out) <- out.dim
-    dimnames(out) <- out.dimnames
-    names(out) <- dimlevels
+    if (is.character(whichdim)) {
+        whichdim_num <- match(whichdim, names(dimnames(dat)))
+        if (anyNA(whichdim_num)) 
+            stop("Wrong dimension name(s) provided")
+    } else {
+        whichdim_num <- whichdim
+    }
+    if (!is.list(f)) f <- list(f)
+    if (length(f) != length(whichdim)) {
+        stop("Length of f must match the length of whichdim")
+    }
+    for (i in seq_along(f)) {
+        if (is.null(f[[i]])) {
+            f[[i]] <- seq_len(dim(dat)[whichdim_num[i]])
+        } else if (is.list(f[[i]])) {
+            f[[i]] <- do.call(paste, f[[i]], sep="_")
+        }
+    }
+    f <- lapply(f, function(x) split(seq_along(x), x))
+    out.dimnames <- lapply(f, names)
+    out.dim <- vapply(out.dimnames, length, integer(1))
+    f <- expand.grid(f, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+    out <- lapply(1:nrow(f), function(i) subFn(f[i, ]))
+    setattr(out, "dim", out.dim)
+    setattr(out, "dimnames", out.dimnames)
+    setattr(out, "names", 
+            do.call("paste", c(lapply(f, names), list(sep = "."))))
     # return
     out
 }
 
-#' Join several arrays into one large array
+#' Combine several arrays into one large array
 #' 
-#' \code{mergeArrays} merges arrays into one large array.
-#' @param ... the arrays to merge, as names (unquoted) 
-#' @param list a list of arrays to be merged (if ... is not provided)
-#' @param newdim a named list of a character vector
-#' @param union should unique dimensions and dimension levels included
-#' (default: TRUE)
+#' \code{bindArrays} is just a wrapper around \code{\link{abind::abind}}. 
+#' @details This function calls \code{\link{abind::abind}} and adds the names
+#' of the dimension names of the arrays. If the inputs have named dimension 
+#' names, their dimensions are permuted before feeding to \code{abind}.
+#' @param along_name a character version of \code{along} in  
+#' \code{\link{abind::abind}}. Only considered if input arrays have named 
+#' dimension names, and if conflicts with \code{along}, \code{along_name} 
+#' overrides \code{along}. If \code{along_name} is not among the dimension 
+#' names, it will be the name of the new dimension name.
 #' @export
-#' @return A list of subsets of the original data matrix/array
+#' @seealso \code{\link{abind::abind}}
+bindArrays <- function(..., along = NULL, rev.along = NULL, new.names = NULL, 
+                       force.array = TRUE, make.names = use.anon.names, 
+                       use.anon.names = FALSE, 
+                       use.first.dimnames = FALSE, hier.names = FALSE,
+                       along_name = NULL)  {
+    dat <- list(...)
+    if (length(dat) > 1L && any(vapply(dat, is.list, logical(1L)))) {
+        stop("Only one list is allowed as an argument")
+    }
+    if (is.list(dat[[1L]])) dat <- dat[[1L]]
+    #
+    dimn <- lapply(dat, function(x) names(dimnames(x)))
+    if (length(udimn <- unique(dimn)) > 1L) {
+        ind <- !vapply(dimn, identical, logical(1L), udimn[[1L]])
+        for (i in which(ind)) {
+            dat[[i]] <- aperm(dat[[i]], udimn[[1L]])
+        }
+    }
+    new_ndimn <- udimn[[1L]]
+    if (is.null(along)) 
+        along <- max(1L, vapply(dat, function(x) length(dim(x)), integer(1L)))
+    if (!is.null(rev.along))
+        along <- N + 1L - rev.along
+    if (!is.null(along_name)) {
+        ind <- match(along_name, new_ndimn)
+        if (!is.na(ind)) {
+            along <- ind
+        } else {
+            if (along >= 1L && along <= length(new_ndimn)) 
+                along <- length(new_ndimn) + 1L
+            new_ndimn <- append(new_ndimn, along_name, along)
+        }
+    }
+    out <- abind(dat, along = along, rev.along = NULL, new.names = new.names, 
+                 force.array = force.array, make.names = make.names, 
+                 use.anon.names = use.anon.names, 
+                 use.first.dimnames = use.first.dimnames, 
+                 hier.names = hier.names)
+    names(dimnames(out)) <- new_ndimn
+    # return
+    out
+}
+
+#' Merge arrays having common dimension identifiers
+#' 
+#' \code{mergeArrays} merges multiple arrays or a list of arrays into one large
+#' array. It can be regarded as the inverse of \code{\link{splitArray}}.
+#' @param ... numeric arrays with named dimension names or a list of such
+#' arrays. All arrays must have identically named dimensions, but the order of
+#' dimensions does not need to be identical. Duplicated dimension levels are not
+#' allowed. 
+#' @param base_value while setting up the resulting array, what value should be
+#' given as default (e.g. NA, 0, "", etc.)
+#' @param sort_dims logical. If FALSE (default), the order of dimensions follows
+#' the first array's dimension order; if TRUE, lexical sorting is applied.
+#' @param sort_dimlevels logical; should dimension levels be sorted for each
+#' dimension (default: FALSE)
+#' @export
+#' @return The resulting array has identical dimension identifiers as the input 
+#' arrays, and for each dimension, as many dimension levels as the union of 
+#' the dimension levels of the input arrays.
+mergeArrays <- function(..., base_value = NA, 
+                        sort_dims = FALSE, sort_dimlevels = FALSE) {
+    is_bad <- function(x) {
+        anyNA(x) || is.null(x) || any(x == "") || any(duplicated(x))
+    }
+    dimnCheck <- function(x) {
+        if (is_bad(names(x))) return(FALSE)
+        if (any(vapply(x, is_bad, logical(1L)))) return(FALSE)
+        TRUE
+    }
+    #
+    dat <- list(...)
+    if (length(dat) > 1L && any(vapply(dat, is.list, logical(1L)))) {
+        stop("Only one list is allowed as an argument")
+    }
+    if (is.list(dat[[1L]])) dat <- dat[[1L]]
+    #
+    dimn <- lapply(dat, function(x) dimnames(x))
+    if (any(checks <- !vapply(dimn, dimnCheck, logical(1L)))) {
+        bad <- which(checks)
+        stop(paste0(
+            "Dimension names of the arrays ",
+            paste(bad, collapse = ", "),
+            " are not appropriate (see Arguments in help('mergeArrays')"))
+    }
+    ndimn <- lapply(dimn, names)
+    if (length(unique(lapply(ndimn, sort))) > 1L)
+        stop("There are unique dimension identifiers")
+    all_dimn <- if (sort_dims) dimn[[1L]][order(ndimn[[1L]])] else dimn[[1L]]
+    for (i in names(all_dimn)) {
+        for (j in dimn[-1L]) {
+            all_dimn[[i]] <- union(all_dimn[[i]], j[[i]])
+        }
+        if (sort_dimlevels) all_dimn[[i]] <- sort(all_dimn[[i]])
+    }
+    out <- base_value[1L]
+    storage.mode(out) <- typeof(dat[[1L]])
+    out <- arrayIP(out, vapply(all_dimn, length, integer(1L)),
+                   all_dimn)
+    for (i in dat) {
+        subsetArray(out, dimnames(i)) <- i
+    }
+    # return
+    out
+}
 
 
 #' Rearrange two-level list
@@ -4326,8 +4451,9 @@ complexplot2dview <- function(dat, ch_pos, timepoint,
         gfp <- lapply(dat, compGfp)    
     }
     gfp_max <- if (is.null(gfp)) NULL else max(unlist(gfp, use.names = FALSE))
+    timepoint <- rep_len(timepoint, length(dat))
     for (i in 1:length(dat)) {
-        plot2dview(dat[[i]], ch_pos = ch_pos, timepoint = timepoint, 
+        plot2dview(dat[[i]], ch_pos = ch_pos, timepoint = timepoint[i], 
                    gfp = gfp[[i]], gfp_max = gfp_max,
                    plot_bar = FALSE, ampl_range = ampl_range, title = "", ...)
     }
