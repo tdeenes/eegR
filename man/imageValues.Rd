@@ -3,7 +3,8 @@
 \alias{imageValues}
 \title{Image plot of channel values}
 \usage{
-imageValues(dat, grid = NULL, wrap = NULL)
+imageValues(dat, grid = NULL, wrap = NULL, bar_title = "effect",
+  time_label = "Time (ms)", channel_label = "Channels", raster = TRUE)
 }
 \arguments{
 \item{dat}{numeric matrix or array of values with named dimensions (at least
@@ -13,6 +14,16 @@ chan and time)}
 
 \item{wrap}{character vector or formula defining the dimension which
 separates panels (only considered if grid is NULL)}
+
+\item{bar_title}{character string; the title of the color bar}
+
+\item{time_label}{character string; the label of the x (time) axis
+(default: "Time (ms)")}
+
+\item{channel_label}{character string; the label of the y (channel) axis
+default: "Channels")}
+
+\item{raster}{use raster image (TRUE, default) or not (FALSE)}
 }
 \value{
 A ggplot object
@@ -20,5 +31,9 @@ A ggplot object
 \description{
 \code{imageValues} creates an image plot from a matrix or array of channel x
 time values
+}
+\seealso{
+\code{\link{imagePvalues}} for plotting p-values,
+\code{\link{colorize}} for setting color scale
 }
 

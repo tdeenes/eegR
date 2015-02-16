@@ -3,7 +3,7 @@
 \alias{plot2dview}
 \title{Plot the topography of the signals}
 \usage{
-plot2dview(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 5),
+plot2dview(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = NULL,
   resol = 100L, resolcol = 1000L, projection = "laea",
   projref = c("pole", "equator"), origo = c(lat = ifelse(projref == "pole",
   90, 0), long = ifelse(projref == "pole", 270, 0)), plot_centroid = TRUE,

@@ -4,7 +4,8 @@
 \title{Image plot of p-values}
 \usage{
 imagePvalues(pvalues, pcrit = c(0.001, 0.01, 0.05), grid = NULL,
-  wrap = NULL)
+  wrap = NULL, time_label = "Time (ms)", channel_label = "Channels",
+  raster = TRUE)
 }
 \arguments{
 \item{pvalues}{numeric matrix or array of p-values with named dimensions (at
@@ -17,11 +18,22 @@ least chan and time)}
 
 \item{wrap}{character vector or formula defining the dimension which
 separates panels (only considered if grid is NULL)}
+
+\item{time_label}{character string; the label of the x (time) axis
+(default: "Time (ms)")}
+
+\item{channel_label}{character string; the label of the y (channel) axis
+default: "Channels")}
+
+\item{raster}{use raster image (TRUE, default) or not (FALSE)}
 }
 \value{
 A ggplot object
 }
 \description{
 \code{imagePvalues} creates an image plot from a matrix or array of p-values
+}
+\seealso{
+\code{\link{imageValues}} for plotting effects or raw amplitudes
 }
 

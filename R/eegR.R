@@ -4226,7 +4226,7 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
 #' @importFrom gplots colorpanel redgreen greenred bluered redblue
 #' @export
 plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, 
-                       ampl_range = c(-5, 5), 
+                       ampl_range = NULL, 
                        resol = 100L, resolcol = 1000L,
                        projection = "laea", projref = c("pole", "equator"),
                        origo = c(lat = ifelse(projref == "pole", 90, 0),
@@ -4283,6 +4283,7 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
         ypos.bar[1] <- 0.75 * ypos.bar[2] + 0.25 * ylim[1] * (1 + ylim.cm)    
     }
     if (!is.null(gfp)) {
+        gfp <- drop(gfp)
         ypos.gfp <- c(ylim[2] * (1 + ylim.cp * 1.1), 0)
         ylim.cp <- ylim.cp + 0.3
         ypos.gfp[2] <- 0.1 * ypos.gfp[1] + 0.9 * ylim[2] * (1 + ylim.cp)
@@ -4308,6 +4309,9 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
     gridcart <- geo2cart(gridgeo)
     z <- matrixIP(NA_real_, resol, resol)
     z[ind] <- chanInterp(dat, ch_pos, gridcart, ...)
+    if (is.null(ampl_range)) ampl_range <- range(z, na.rm = TRUE)
+    z[z > ampl_range[2]] <- ampl_range[2]
+    z[z < ampl_range[1]] <- ampl_range[1]
     par(mar = rep(0, 4))
     image(gridx, gridy, z, useRaster = TRUE, col = colors,
           xlim = xlim, ylim = ylim,
@@ -4344,10 +4348,12 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
               zlim = ampl_range, col = colors, add = TRUE)
         text(min(xpos.bar), ypos.bar[1], 
              substitute(paste(k, " ", mu, "V", sep = ""), 
-                        list(k = ampl_range[1])), pos = 2)
+                        list(k = formatC(ampl_range[1], 1, format = "f"))),
+             pos = 2)
         text(max(xpos.bar), ypos.bar[1], 
              substitute(paste(k, " ", mu, "V", sep = ""), 
-                        list(k = ampl_range[2])), pos = 4)
+                        list(k = formatC(ampl_range[2], 1, format = "f"))), 
+             pos = 4)
     }
     if (!is.null(title) | !is.null(timepoint)) {
         if (is.null(title)) {
@@ -4356,12 +4362,22 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
         text(0, ypos.title, title, cex = 1.1)
     }
     if (!is.null(gfp)) {
+        normFn <- function(x, xrange, lims) 
+            (x - xrange[1])/diff(xrange) * diff(lims) + lims[1]
         lgfp <- length(gfp)
-        gfp.x <- seq(xlim[1] * 0.8, xlim[2] * 0.8, length.out = lgfp)
-        rect(min(gfp.x), ypos.gfp[1], max(gfp.x), ypos.gfp[2], 
+        gfp.x <- as.numeric(names(gfp))
+        gfp.xr <- range(gfp.x)
+        gfp.xlims <- xlim * 0.8
+        gfp.xticks <- pretty(gfp.x)
+        gfp.xticks <- gfp.xticks[gfp.xticks >= gfp.xr[1] & 
+                                     gfp.xticks <= gfp.xr[2]]
+        gfp.xticks.normed <- normFn(gfp.xticks, gfp.xr, gfp.xlims)
+        gfp.x <- normFn(gfp.x, gfp.xr, gfp.xlims)
+        gfp.xr <- range(gfp.x)
+        rect(gfp.xr[1], ypos.gfp[1], gfp.xr[2], ypos.gfp[2], 
              border = NA, col = "grey60")
-        axis(1, at = gfp.x[seq(1, lgfp, 25)], 
-             labels = names(gfp)[seq(1, lgfp, 25)], 
+        axis(1, at = gfp.xticks.normed, 
+             labels = gfp.xticks, 
              pos = ypos.gfp[1], cex.axis = 0.7, padj = -1)
         lines(gfp.x, gfp, col = "white")
         smpl <- which(as.numeric(names(gfp)) == timepoint)
@@ -4619,10 +4635,18 @@ reprPlot <- function(p, e, title = "Reproducibility", plim = c(0.05, 0.01),
 #' @param grid character vector or formula defining the layout of panels
 #' @param wrap character vector or formula defining the dimension which 
 #' separates panels (only considered if grid is NULL)
+#' @param time_label character string; the label of the x (time) axis 
+#' (default: "Time (ms)")
+#' @param channel_label character string; the label of the y (channel) axis 
+#' default: "Channels")
+#' @param raster use raster image (TRUE, default) or not (FALSE)
 #' @export
 #' @return A ggplot object
+#' @seealso \code{\link{imageValues}} for plotting effects or raw amplitudes
 imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
-                         grid = NULL, wrap = NULL) {
+                         grid = NULL, wrap = NULL,
+                         time_label = "Time (ms)", channel_label = "Channels",
+                         raster = TRUE) {
     require(ggplot2)
     chans <- dimnames(pvalues)$chan
     timebreaks <- as.numeric( as.character( dimnames(pvalues)$time ) )
@@ -4638,7 +4662,8 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
         }
     }
     pp <- ggplot(pvalues_df, aes(x = time, y = chan)) + 
-        geom_tile(aes(fill = pcrit), size = 0) + 
+        {if (raster) geom_raster(aes(fill = pcrit)) else 
+            geom_tile(aes(fill = pcrit), size = 0)} + 
         scale_fill_gradient(guide = "legend", 
                             high = "white", 
                             low = "#a50f15",
@@ -4647,8 +4672,9 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
                             labels = paste("< ", pcrit, sep = ""),
                             limits = c(0, length(pcrit))) + 
         scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
-                         name = "channels") + 
-        scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1))
+                         name = channel_label) + 
+        scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1),
+                           name = time_label)
     if (!is.null(grid)) {
         pp <- pp + facet_grid( as.formula(grid) )
     } else if (!is.null(wrap)) {
@@ -4668,9 +4694,19 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
 #' @param grid character vector or formula defining the layout of panels
 #' @param wrap character vector or formula defining the dimension which 
 #' separates panels (only considered if grid is NULL)
+#' @param bar_title character string; the title of the color bar
+#' @param time_label character string; the label of the x (time) axis 
+#' (default: "Time (ms)")
+#' @param channel_label character string; the label of the y (channel) axis 
+#' default: "Channels")
+#' @param raster use raster image (TRUE, default) or not (FALSE)
 #' @export
 #' @return A ggplot object
-imageValues <- function(dat, grid = NULL, wrap = NULL) {
+#' @seealso \code{\link{imagePvalues}} for plotting p-values, 
+#' \code{\link{colorize}} for setting color scale
+imageValues <- function(dat, grid = NULL, wrap = NULL, bar_title = "effect",
+                        time_label = "Time (ms)", channel_label = "Channels",
+                        raster = TRUE) {
     require(ggplot2)
     chans <- dimnames(dat)$chan
     timebreaks <- as.numeric( as.character( dimnames(dat)$time ) )
@@ -4685,10 +4721,13 @@ imageValues <- function(dat, grid = NULL, wrap = NULL) {
         }
     }
     pp <- ggplot(dat_df, aes(x = time, y = chan)) + 
-        geom_tile(aes(fill = effect), size = 0) + 
+        {if (raster) geom_raster(aes(fill = effect)) else 
+            geom_tile(aes(fill = effect), size = 0)} + 
+        scale_fill_continuous(name = bar_title) +               
         scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
-                         name = "channels") + 
-        scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1))
+                         name = channel_label) + 
+        scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1),
+                           name = time_label)
     if (!is.null(grid)) {
         pp <- pp + facet_grid( as.formula(grid) )
     } else if (!is.null(wrap)) {
@@ -4696,6 +4735,22 @@ imageValues <- function(dat, grid = NULL, wrap = NULL) {
     }
     # return
     pp
+}
+
+#' Make image plots more colorful (only for ggplot objects)
+#' 
+#' \code{colorize} changes the color scale of \code{\link{imageValues}} plots
+#' @param obj a ggplot object created by \code{\link{imageValues}}
+#' @param low,mid,high colors to produce a low > mid > high color scale
+#' @export
+#' @return a ggplot object
+colorize <- function(obj, low=scales::muted("blue"), mid="white",
+                     high=scales::muted("red"), ...) {
+    if (!inherits(obj, "ggplot")) {
+        stop("The object must be a ggplot")
+    }
+    suppressMessages(
+        obj + scale_fill_gradient2(low = low, mid = mid, high = high, ...))
 }
 
 

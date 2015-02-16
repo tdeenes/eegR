@@ -13,7 +13,7 @@ output:
 -->
 
 ```{r echo = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 8, fig.height = 8)
 ```
 
 The eegR package has been developed to analyze EEG (or MEG) signals. It provides all basic functionalities such as data import, filtering, ICA, channel interpolation, re-referencing, segmenting, time-frequency decomposition, complex visualization and statistical analysis of single-trial and averaged ERPs. However, instead of being a comprehensive tool, it has been developed to serve mainly as a general frame which is highly extendable by other, more specialized analytic methods.
@@ -78,7 +78,7 @@ tempdat <- prepare2plot(erps, id_dat ,
 library(ggplot2)
 ggplot(tempdat, aes(x = time, y = ampl, col = group, lty = pairtype)) + 
     geom_line() + 
-    facet_wrap(~stimclass)
+    facet_grid(stimclass ~ .)
 ```
 
 ### Plot topographies
@@ -138,7 +138,7 @@ higher (preferably 4999). Because the computation is resource intensive, use par
 possible. In the present example, we will compute bin averages (collapse 12 ms long time bins) to
 decrease the computational burden.
 
-```{r}
+```{r, fig.height=14}
 # do bin averaging
 tempdat <- avgBin(erps, "time", bin_length = 6)
 
@@ -154,7 +154,7 @@ results <- arrayAnova(
     tfce_options = list(ChN = ChN))
 
 # plot the results (for now, only the p-values of the TFCE method)
-imagePvalues(results$perm_pvalues, grid = "~modelterm")
+imagePvalues(results$perm_pvalues, grid = "modelterm ~ .")
 ```
 
 
