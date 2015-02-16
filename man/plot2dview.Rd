@@ -9,7 +9,8 @@ plot2dview(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 5),
   90, 0), long = ifelse(projref == "pole", 270, 0)), plot_centroid = TRUE,
   centroid_circle = 0.5, centroid_unitsphere = FALSE, plot_bar = TRUE,
   plot_ch = TRUE, plot_chnames = TRUE, title = NULL, gfp = NULL,
-  gfp_max = NULL, ...)
+  gfp_max = NULL, color_scale = function(n) gplots::colorpanel(n, "blue",
+  "white", "red"), ...)
 }
 \arguments{
 \item{dat}{a numeric vector or matrix. If a matrix is provided, it must
@@ -56,6 +57,11 @@ if they were located on the surface of a unit sphere (default: false)}
 \item{gfp}{a numeric vector of the GFP values in the whole time window}
 
 \item{gfp_max}{the upper limit if gfp is provided}
+
+\item{color_scale}{function which creates a color scale with \code{n} values
+(\code{n} is defined by \code{resolcol}). The default is to use the
+\code{\link{gplots::colorpanel}} function, with blue > white > red
+color scale.}
 
 \item{...}{arguments to \code{\link{chanInterp}}}
 }

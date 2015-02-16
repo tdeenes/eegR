@@ -4214,20 +4214,29 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
 #' @param title title of the plot
 #' @param gfp a numeric vector of the GFP values in the whole time window
 #' @param gfp_max the upper limit if gfp is provided
+#' @param color_scale function which creates a color scale with \code{n} values
+#' (\code{n} is defined by \code{resolcol}). The default is to use the 
+#' \code{\link{gplots::colorpanel}} function, with blue > white > red 
+#' color scale.
 #' @param ... arguments to \code{\link{chanInterp}}
 #' @importFrom sgeostat in.polygon
 #' @importFrom gplots colorpanel redgreen greenred bluered redblue
 #' @export
-plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 5), 
+plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, 
+                       ampl_range = c(-5, 5), 
                        resol = 100L, resolcol = 1000L,
                        projection = "laea", projref = c("pole", "equator"),
                        origo = c(lat = ifelse(projref == "pole", 90, 0),
                                long = ifelse(projref == "pole", 270, 0)),
-                       plot_centroid = TRUE, centroid_circle = 0.5, centroid_unitsphere = FALSE,
+                       plot_centroid = TRUE, centroid_circle = 0.5, 
+                       centroid_unitsphere = FALSE,
                        plot_bar = TRUE, plot_ch = TRUE, plot_chnames = TRUE, 
                        title = NULL,
-                       gfp = NULL, gfp_max = NULL, ...) {
+                       gfp = NULL, gfp_max = NULL, 
+                       color_scale = function(n) gplots::colorpanel(n, "blue", "white", "red"), 
+                       ...) {
     #
+    colors <- do.call(match.fun(color_scale), list(resolcol))
     ch_pos <- as.data.frame(ch_pos)
     if (!all(c("theta", "phi") %in% colnames(ch_pos))) {
         ch_pos <- cart2sph(ch_pos)
@@ -4297,7 +4306,7 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
     z <- matrixIP(NA_real_, resol, resol)
     z[ind] <- chanInterp(dat, ch_pos, gridcart, ...)
     par(mar = rep(0, 4))
-    image(gridx, gridy, z, useRaster = TRUE, col = bluered(resolcol),
+    image(gridx, gridy, z, useRaster = TRUE, col = colors,
           xlim = xlim, ylim = ylim,
           zlim = ampl_range, xlab = "", ylab = "", axes = FALSE)
     gridx <- seq(min(boundarypos$x), max(boundarypos$x), 
@@ -4329,7 +4338,7 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
         image(xpos.bar, ypos.bar,
               matrixIP(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
                        resolcol, 2),
-              zlim = ampl_range, col = bluered(resolcol), add = TRUE)
+              zlim = ampl_range, col = colors, add = TRUE)
         text(min(xpos.bar), ypos.bar[1], 
              substitute(paste(k, " ", mu, "V", sep = ""), 
                         list(k = ampl_range[1])), pos = 2)
@@ -4375,11 +4384,11 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = c(-5, 
         }
         points(c1["neg", "x"], c1["neg", "y"], col = "white", 
                pch = 15, cex = 2.5)
-        points(c1["neg", "x"], c1["neg", "y"], col = "blue", 
+        points(c1["neg", "x"], c1["neg", "y"], col = colors[1], 
                pch = 15, cex = 2)
         points(c1["pos", "x"], c1["pos", "y"], col = "white", 
                pch = 15, cex = 2.5)
-        points(c1["pos", "x"], c1["pos", "y"], col = "red", 
+        points(c1["pos", "x"], c1["pos", "y"], col = colors[length(colors)], 
                pch = 15, cex = 2)
     }
 }
