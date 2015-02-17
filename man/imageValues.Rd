@@ -4,7 +4,8 @@
 \title{Image plot of channel values}
 \usage{
 imageValues(dat, grid = NULL, wrap = NULL, bar_title = "effect",
-  time_label = "Time (ms)", channel_label = "Channels", raster = TRUE)
+  time_label = "Time (ms)", channel_label = "Channels", raster = TRUE,
+  cluster_order = FALSE)
 }
 \arguments{
 \item{dat}{numeric matrix or array of values with named dimensions (at least
@@ -24,6 +25,9 @@ separates panels (only considered if grid is NULL)}
 default: "Channels")}
 
 \item{raster}{use raster image (TRUE, default) or not (FALSE)}
+
+\item{cluster_order}{logical; if TRUE, channels are ordered with hierarchical
+agglomerative clustering (default: FALSE)}
 }
 \value{
 A ggplot object

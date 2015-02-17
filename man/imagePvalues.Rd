@@ -5,7 +5,7 @@
 \usage{
 imagePvalues(pvalues, pcrit = c(0.001, 0.01, 0.05), grid = NULL,
   wrap = NULL, time_label = "Time (ms)", channel_label = "Channels",
-  raster = TRUE)
+  raster = TRUE, cluster_order = FALSE)
 }
 \arguments{
 \item{pvalues}{numeric matrix or array of p-values with named dimensions (at
@@ -26,6 +26,9 @@ separates panels (only considered if grid is NULL)}
 default: "Channels")}
 
 \item{raster}{use raster image (TRUE, default) or not (FALSE)}
+
+\item{cluster_order}{logical; if TRUE, channels are ordered with hierarchical
+agglomerative clustering (default: FALSE)}
 }
 \value{
 A ggplot object

@@ -4640,15 +4640,24 @@ reprPlot <- function(p, e, title = "Reproducibility", plim = c(0.05, 0.01),
 #' @param channel_label character string; the label of the y (channel) axis 
 #' default: "Channels")
 #' @param raster use raster image (TRUE, default) or not (FALSE)
+#' @param cluster_order logical; if TRUE, channels are ordered with hierarchical
+#' agglomerative clustering (default: FALSE)
 #' @export
 #' @return A ggplot object
 #' @seealso \code{\link{imageValues}} for plotting effects or raw amplitudes
 imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
                          grid = NULL, wrap = NULL,
                          time_label = "Time (ms)", channel_label = "Channels",
-                         raster = TRUE) {
+                         raster = TRUE, cluster_order = FALSE) {
     require(ggplot2)
     chans <- dimnames(pvalues)$chan
+    if (cluster_order) {
+        temp <- -log(pvalues)
+        temp <- avgDims(temp, setdiff(names(dimnames(temp)), c("chan", "time")))
+        temp <- stats::hclust(dist(aperm(temp, c("chan", "time"))))
+        chans <- chans[temp$order]
+        pvalues <- subsetArray(pvalues, list(chan = chans))
+    }
     timebreaks <- as.numeric( as.character( dimnames(pvalues)$time ) )
     timebreaks <- range( timebreaks %/% 100)
     timebreaks <- seq(timebreaks[1], timebreaks[2]) * 100
@@ -4700,15 +4709,23 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
 #' @param channel_label character string; the label of the y (channel) axis 
 #' default: "Channels")
 #' @param raster use raster image (TRUE, default) or not (FALSE)
+#' @param cluster_order logical; if TRUE, channels are ordered with hierarchical
+#' agglomerative clustering (default: FALSE)
 #' @export
 #' @return A ggplot object
 #' @seealso \code{\link{imagePvalues}} for plotting p-values, 
 #' \code{\link{colorize}} for setting color scale
 imageValues <- function(dat, grid = NULL, wrap = NULL, bar_title = "effect",
                         time_label = "Time (ms)", channel_label = "Channels",
-                        raster = TRUE) {
+                        raster = TRUE, cluster_order = FALSE) {
     require(ggplot2)
     chans <- dimnames(dat)$chan
+    if (cluster_order) {
+        temp <- avgDims(dat, setdiff(names(dimnames(dat)), c("chan", "time")))
+        temp <- stats::hclust(dist(aperm(temp, c("chan", "time"))))
+        chans <- chans[temp$order]
+        dat <- subsetArray(dat, list(chan = chans))
+    }
     timebreaks <- as.numeric( as.character( dimnames(dat)$time ) )
     timebreaks <- range( timebreaks %/% 100)
     timebreaks <- seq(timebreaks[1], timebreaks[2]) * 100
