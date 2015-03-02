@@ -1858,7 +1858,9 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
                                    c(list(modelterm = names(groupfreq)), dimn))
         setattr(marg_means[[i]], "freq", groupfreq)
         if (residualmean) {
-            a_dat <- a_dat - c(marg_means[[i]][as.numeric(groups),])
+            a_dat <- a_dat - 
+                as.vector(subsetArray(marg_means[[i]], 
+                                      list(modelterm = as.numeric(groups))))
         }
     }
     names(marg_means) <- labels
