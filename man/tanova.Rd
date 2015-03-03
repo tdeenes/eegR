@@ -78,4 +78,7 @@ factors is one, it may have slightly unequal group sizes).
 \references{
 Koenig (2011) RAGU
 }
+\seealso{
+\code{\link{plotTanova}} plots the result of \code{tanova}.
+}
 

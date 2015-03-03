@@ -3717,6 +3717,7 @@ avgTrials <- function(dat, markers, which_factors = NULL) {
 #' @export
 #' @return A list object with effect statistics, uncorrected p-values, and 
 #' two types of corrected p-values: length correction or global correction
+#' @seealso \code{\link{plotTanova}} plots the result of \code{tanova}.
 #' @references Koenig (2011) RAGU
 tanova <- function(arraydat, factordef, bwdat = NULL, 
                    type = c("tanova", "dissimilarity", "gfp"), 
@@ -4679,7 +4680,7 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
                             high = "white", 
                             low = "#a50f15",
                             name = "p-value",
-                            breaks = 0:2,
+                            breaks = seq_along(pcrit) - 1L,
                             labels = paste("< ", pcrit, sep = ""),
                             limits = c(0, length(pcrit))) + 
         scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
@@ -4836,13 +4837,33 @@ tfce.plot <- function(arraydat, breaks = c(0, 0.001, 0.01, 0.05),
 
 ###
 
-plot.tanova <- function(results, plot_title = "", only_p = FALSE) {
+#' Plot TANOVA results
+#' 
+#' \code{plotTanova} plots the result of the \code{\link{tanova}} function
+#' @param results a list; the return value of the \code{\link{tanova}} function
+#' @param grid character vector or formula defining the layout of panels
+#' @param wrap character vector or formula defining the dimension which 
+#' separates panels (only considered if grid is NULL)
+#' @param plot_title character string; the title of the plot
+#' @param time_label character string; the label of the x (time) axis 
+#' (default: "Time (ms)")
+#' @param only_p logical; if TRUE, p-values are plotted instead of combined 
+#' (effect + p-value) plots (default: FALSE). See note.
+#' @note Use only_p = TRUE if you want to check the uncorrected p-values. If 
+#' only_p is set to FALSE (which is the default), \code{plotTanova} highlights
+#' the significant phases of the effect curves based on the corrected p-values.
+#' @export
+#' @return A ggplot object
+plotTanova <- function(results, grid = NULL, wrap = NULL, 
+                        plot_title = "", only_p = FALSE) {
     reshapefn <- function(slot, headername) {
         x <- results[[slot]]
         x <- array2df(x, response_name = headername, 
                       dim_types = list(time = "numeric"))
         return(x)
     }
+    #
+    require(ggplot2)
     #
     pcrit <- as.list(results$call)$pcrit
     if (is.null(pcrit)) pcrit <- formals(tanova)$pcrit
@@ -4864,7 +4885,23 @@ plot.tanova <- function(results, plot_title = "", only_p = FALSE) {
                      aes(x = time, y = effect, col = pcrit, group = NA)) + 
             ylab("Effect")
     }
-    qp <- qp + geom_line() + facet_wrap(~modelterm) +
+    if (!is.null(grid)) {
+        qp <- qp + facet_grid( as.formula(grid) )
+    } else if (!is.null(wrap)) {
+        qp <- qp + facet_wrap( as.formula(wrap) )
+    } else {
+        griddims <- setdiff(names(dimnames(results$effect)), "time")
+        if (length(griddims) > 0) {
+            if (length(griddims) > 1) {
+                grid <- paste(griddims, collapse = "~")  
+                qp <- qp + facet_grid( as.formula(grid) )
+            } else {
+                grid <- paste0("~", griddims)
+                qp <- qp + facet_wrap( as.formula(wrap) )
+            }
+        }
+    }
+    qp <- qp + geom_line() + 
         ggtitle(plot_title) + 
         scale_colour_manual(name = legendtitle,
                             values = c("FALSE"="grey60","TRUE"="red")) + 
@@ -4872,7 +4909,8 @@ plot.tanova <- function(results, plot_title = "", only_p = FALSE) {
               panel.grid.major = element_line(color = "grey95"),
               panel.grid.minor = element_line(color = "grey97"),
               panel.border = element_rect(color = "grey70", fill = NA))
-    print(qp)
+    #
+    qp
 }
 
 
