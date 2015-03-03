@@ -4897,7 +4897,7 @@ plotTanova <- function(results, grid = NULL, wrap = NULL,
                 qp <- qp + facet_grid( as.formula(grid) )
             } else {
                 grid <- paste0("~", griddims)
-                qp <- qp + facet_wrap( as.formula(wrap) )
+                qp <- qp + facet_wrap( as.formula(grid) )
             }
         }
     }
