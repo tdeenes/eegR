@@ -2450,12 +2450,10 @@ cart2sph <- function(ch_pos, deg = TRUE) {
     y <- ch_pos$y
     z <- ch_pos$z
     r <- sqrt(x^2 + y^2 + z^2)
-    theta <- sign(x) * abs(acos(z/r))
-    phi <- abs(atan(y/x))
-    phi[y == x & x == 0] <- 0
-    phi <- phi * sign(x) * sign(y) 
+    theta <- acos(z/r)
+    phi <- atan2(y, x)
     out <- data.frame(theta, phi, r)
-    if (nrow(out) > 1) rownames(out) <- rownames(ch_pos)
+    rownames(out) <- rownames(ch_pos)
     if (deg) out[, 1:2] <- out[, 1:2] * 180/pi
     # return
     out
@@ -2485,7 +2483,7 @@ sph2geo <- function(ch_pos, r = 1, deg = TRUE, long360 = TRUE,
     long[long < 0] <- 360 + long[long < 0]
     if (!long360) long[long > 180] <- long[long > 180] - 360
     lat <- 90 - abs(theta)
-    out <- data.frame(long = long, lat = lat, r = r)
+    out <- data.frame(long, lat, r)
     rownames(out) <- rownames(ch_pos)
     # return
     out
@@ -2521,14 +2519,44 @@ geo2sph <- function(ch_pos, r = 1, deg = TRUE) {
 #' @export
 # Transform geographical to cartesian coordinates
 geo2cart <- function(ch_pos, r = 1, deg = TRUE) {
-    sph2cart( geo2sph(ch_pos, r, deg) )
+    #sph2cart( geo2sph(ch_pos, r, deg) )
+    ch_pos <- as.data.frame(ch_pos)
+    if (!all(c("long", "lat") %in% colnames(ch_pos)))
+        stop("Either longitudes (long) or latitudes (lat) are missing!")
+    if (!is.null(ch_pos$r)) r <- ch_pos$r
+    if (deg) {
+        ch_pos[, c("long", "lat")] <- ch_pos[, c("long", "lat")] * pi/180
+    }
+    long <- ch_pos$long
+    lat <- ch_pos$lat
+    x <- r * cos(long) * cos(lat)
+    y <- r * sin(long) * cos(lat)
+    z <- r * sin(lat)
+    out <- data.frame(x = x, y = y, z = z)
+    rownames(out) <- rownames(ch_pos)
+    # return
+    out
 }
 
 #' @rdname coordinates
 #' @export
 # Transform cartesian to geographical coordinates
 cart2geo <- function(ch_pos, deg = TRUE) {
-    sph2geo( cart2sph(ch_pos, deg) )
+    ch_pos <- as.data.frame(ch_pos)
+    if (!all(c("x", "y", "z") %in% colnames(ch_pos)))
+        stop("Either x, y, or z coordinates are missing!")
+    x <- ch_pos$x
+    y <- ch_pos$y
+    z <- ch_pos$z
+    r <- sqrt(x^2 + y^2 + z^2)
+    long <- atan2(y, x)
+    lat <- asin(z/r)
+    lat[r == 0] <- 0
+    out <- data.frame(long, lat, r)
+    rownames(out) <- rownames(ch_pos)
+    if (deg) out[, 1:2] <- out[, 1:2] * 180/pi
+    # return
+    out
 }
 
 
@@ -4244,10 +4272,21 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
     #
     colors <- do.call(match.fun(color_scale), list(resolcol))
     ch_pos <- as.data.frame(ch_pos)
-    if (!all(c("theta", "phi") %in% colnames(ch_pos))) {
-        ch_pos <- cart2sph(ch_pos)
+    if (all(c("x", "y", "z") %in% colnames(ch_pos))) {
+        ch_pos <- ch_pos[, c("x", "y", "z")]
+        posgeo <- cart2geo(ch_pos)
+    } else if (all(c("theta", "phi") %in% colnames(ch_pos))) {
+        if (!"r" %in% colnames(ch_pos)) ch_pos$r <- r
+        ch_pos <- sph2cart(ch_pos)
+        posgeo <- cart2geo(ch_pos)
+    } else if (all(c("long", "lat") %in% colnames(ch_pos))) {
+        if (!"r" %in% colnames(ch_pos)) ch_pos$r <- r
+        posgeo <- ch_pos[, c("long", "lat", "r")]
+        ch_pos <- geo2cart(ch_pos)
+    } else {
+        stop("Wrong coordinate object")
     }
-    if (!is.null(ch_pos$r)) r <- ch_pos$r
+    r <- posgeo$r
     if (is.matrix(dat)) {
         if (all(c("chan", "id") %in% names(dimnames(dat))))
             dat <- aperm(dat, c("id", "chan"))
@@ -4260,13 +4299,12 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
     }
     #
     projref <- match.arg(projref)
-    posgeo <- sph2geo(ch_pos)
     #
     boundarypos <- 
         if (projref == "pole") {
             data.frame(
                 long = seq(-180, 180, length.out = 180),
-                lat = rep(min(posgeo$lat), 180))
+                lat = rep(max(-45/(1.11), min(posgeo$lat)), 180))
         } else {
             data.frame(
                 long = c(rep(border*max(abs(posgeo$long)), 90),
