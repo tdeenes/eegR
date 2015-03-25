@@ -33,6 +33,9 @@ column of the marker file (default: "Bad Interval")}
 \item{marker_badstim}{character string(s) identifying bad stimuli or
 responses in the 2nd column of the marker file (default: "resp_false")}
 
+\item{marker_keepstim}{character vector identifying which stimuli or responses
+should be kept by checking the 2nd column of the marker file (default: "*")}
+
 \item{marker_badchan}{character vector of length 1 or 2; markers identifying
 bad intervals of channels. If marker_badchan has only one element, "_start"
 and "_stop" are automatically appended to the end of the string.}
@@ -49,10 +52,7 @@ strings be handled as regular expressions (default) or treated as they are}
 \item{marker_ignorecase}{logical value; should the case of marker_segment/
 .../time0 definitions be ignored (default)}
 
-\item{keepstim}{character vector identifying which stimuli or responses
-should be kept by checking the 2nd column of the marker file (default: "*")}
-
-\item{{marker_header,marker_fill,marker_asis,marker_sep}}{parameters
+\item{marker_header,marker_fill,marker_asis,marker_sep}{parameters
 to be passed to \code{\link{read.table}} while importing the marker file}
 }
 \value{

@@ -31,7 +31,7 @@ amplitudes (default: c(-5, 5))}
 \item{resolcol}{integer value, the resolution of the colours (default: 1000L)}
 
 \item{projection}{character value (default = "laea"). See
-\link{http://www.remotesensing.org/geotiff/proj_list/} for common projections}
+\url{http://www.remotesensing.org/geotiff/proj_list/} for common projections}
 
 \item{projref}{projection reference (pole [default] or equator)}
 
@@ -60,12 +60,27 @@ if they were located on the surface of a unit sphere (default: false)}
 
 \item{color_scale}{function which creates a color scale with \code{n} values
 (\code{n} is defined by \code{resolcol}). The default is to use the
-\code{\link{gplots::colorpanel}} function, with blue > white > red
+\code{\link[gplots]{colorpanel}} function, with blue > white > red
 color scale.}
 
 \item{...}{arguments to \code{\link{chanInterp}}}
 }
 \description{
 \code{plot2dview} creates 2D topoplots
+}
+\examples{
+# example data
+data(erps)
+chan_pos <- attr(erps, "chan")   # channel positions
+
+# plot the grand average scalp distribution at 200 ms, for the stimulus
+# class "A" and pairtye "ident" condition; display also the GFP curve of the
+# whole epoch
+plotdat <- transformArray(y ~ chan, erps,
+                          subset = list(stimclass = "A", pairtype = "ident"),
+                          datfr = FALSE)
+gfpdat <- compGfp(plotdat)
+plot2dview(subsetArray(plotdat, list(time = "200")),
+           chan_pos, timepoint = 200, gfp = gfpdat)
 }
 

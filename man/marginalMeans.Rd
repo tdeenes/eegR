@@ -16,7 +16,7 @@ many rows as f_dat.  Usually a_dat is the result of calling array2mat on the
 orginal data array.}
 
 \item{dimn}{the original dimension names for the array corresponding to the
-column names of a_dat #### SHOULD BE SIMILAR TO MAT2ARRAY ###################}
+column names of a_dat}
 
 \item{keep_term_order}{logival variable whether to keep the order of the
 model terms as provided in form (TRUE) or all interaction terms should follow

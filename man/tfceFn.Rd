@@ -13,6 +13,8 @@ tfceFn(x, chn, eh, nr_steps = 50L, channel_dim = 1L)
 \item{eh}{numeric vector of E and H parameters}
 
 \item{nr_steps}{number of threshold steps (default: 50L)}
+
+\item{channel_dim}{the dimension of x which represents channels (default: 1L)}
 }
 \value{
 numeric matrix or array of the same dimensions as x

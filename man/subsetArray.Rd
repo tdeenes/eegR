@@ -17,7 +17,9 @@ indicating which levels of which dimensions to subset (see Details)}
 \item{keep_attr}{a logical variable which determines if the result inherits
 the custom attributes of the input (TRUE, default) or not}
 
-\item{...}{further arguments to be passed to asub}
+\item{...}{further arguments to be passed to \code{\link[abind]{asub}}}
+
+\item{value}{a vector, matrix or array of the new values}
 }
 \value{
 A subset of an array or the array with replaced values
@@ -32,5 +34,8 @@ the input array, and each list element indicates which levels of the given
 dimension will be selected. If a list element is a named empty vector, or
 the name of a dimension does not appear in subsets, all levels of the
 correspondig dimension will be selected.
+}
+\seealso{
+\code{\link[abind]{asub}}
 }
 

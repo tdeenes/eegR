@@ -69,4 +69,81 @@ The function computes type I p-values - this is correct if the design
 is fully balanced and orthogonal (if the number of between-subject
 factors is one, it may have slightly unequal group sizes).
 }
+\examples{
+# example dataset
+data(erps)
+dat_id <- attr(erps, "id") # to get group memberships
+chan_pos <- attr(erps, "chan") # needed for TFCE correction
+
+# average the data in each 12 ms time-bin to decrease the computational
+# burden (not needed in serious analyses)
+tempdat <- avgBin(erps, "time", 6)
+
+# analyze the effect of the reading group (between-subject factor) and the
+# two experimental conditions (stimclass, pairtye; within-subject factors)
+# for each channel and time sample (without requesting TFCE correction); this
+# means we run 1518 repeated measures ANOVAs
+system.time(
+    result_eegr <- arrayAnova(tempdat,
+                              list(between = "group",
+                                   within = c("stimclass", "pairtype"),
+                                   w_id = "id"),
+                              bwdat = dat_id,
+                              nperm = 0L, usetfce = FALSE)
+)
+
+# if package 'ez' is installed, you can compare the results; we take only a
+# subset of the data because ezANOVA is much slower
+if (require(ez)) {
+    sub <- list(chan = "O2", time = "207")
+    tempdat_ez <- transformArray(y ~ ., tempdat, subset = sub)
+    tempdat_ez$group <- factor(dat_id$group[match(tempdat_ez$id, dat_id$id)])
+    result_ez <- ezANOVA(tempdat_ez, y, id, .(stimclass, pairtype),
+                         between = group)
+    # compare results
+    ez_F <- result_ez$ANOVA$F   # F values
+    ez_p <- result_ez$ANOVA$p   # p-values
+    ez_ges <- result_ez$ANOVA$ges   # generalized effect sizes
+    eegr_F <- as.vector(
+        subsetArray(result_eegr$effect_F_obs, sub))
+    eegr_p <- as.vector(
+        subsetArray(attr(result_eegr$effect_F_obs, "pvalues"), sub))
+    eegr_ges <- as.vector(
+        subsetArray(attr(result_eegr$effect_F_obs, "ges"), sub))
+    stopifnot(
+        all.equal(ez_F, eegr_F),
+        all.equal(ez_p, eegr_p),
+        all.equal(ez_ges, eegr_ges)
+    )
+}
+
+# in order to use TFCE correction, the channel neigbourhood matrix is needed
+# (see ?chanNb)
+ChN <- chanNb(chan_pos, alpha = 0.7)
+
+# now analyze the data by collapsing the pairtypes, and apply TFCE correction
+# (note: this will take a couple of seconds); use more randomization
+# runs (nperm should be several thousand) in serious analyses
+tempdat <- avgDims(tempdat, "pairtype")
+result_tfce <- arrayAnova(tempdat,
+                          list(between = "group",
+                               within = "stimclass",
+                               w_id = "id"),
+                          bwdat = dat_id,
+                          nperm = 499L, useparallel = TRUE, ncores = 2,
+                          tfce_options = list(ChN = ChN))
+
+# compare traditional and TFCE p-values
+p_trad <- attr(result_tfce$effect_F_obs, "pvalues")
+p_tfce <- result_tfce$perm_pvalues
+p_all <- bindArrays(trad = p_trad, tfce = p_tfce, along_name = "method")
+
+# plot p-values after -log transformation to increase discriminability;
+# note how the sporadic effects disappear
+p_plot <- imageValues(-log(p_all), grid = "modelterm ~ method")
+colorize(p_plot)
+
+# you can also use the imagePvalues function to plot discretized p-values
+imagePvalues(p_all, pcrit = c(0.01, 0.05, 0.1), grid = "modelterm ~ method")
+}
 

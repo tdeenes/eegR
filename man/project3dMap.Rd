@@ -13,7 +13,7 @@ project3dMap(pos, r = 1, projection = "laea", projref = c("pole",
 \item{r}{radius}
 
 \item{projection}{character string (default = "laea"). See
-\link{http://www.remotesensing.org/geotiff/proj_list/} for common projections}
+\url{http://www.remotesensing.org/geotiff/proj_list/} for common projections}
 
 \item{projref}{projection reference (pole [ = default] or equator)}
 

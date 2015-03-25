@@ -8,21 +8,110 @@ bindArrays(..., along = NULL, rev.along = NULL, new.names = NULL,
   use.first.dimnames = FALSE, hier.names = FALSE, along_name = NULL)
 }
 \arguments{
+\item{...}{Any number of vectors, matrices, arrays, or data frames. If the
+objects have named dimension names, their dimensions are permuted before
+feeding to \code{abind}. Otherwise, the dimensions of all the arrays must
+match, except on one dimension (specified by along=). If these arguments are
+named, the name will be used for the name of the dimension along which the
+arrays are joined. Vectors are treated as having a dim attribute of length
+one.
+Alternatively, there can be one (and only one) list argument supplied, whose
+components are the objects to be bound together. Names of the list components
+are treated in the same way as argument names.}
+
+\item{along}{ (optional) The dimension along which to bind the arrays.
+The default is the last dimension, i.e., the maximum length of the dim
+attribute of the supplied arrays.  \code{along=} can take any
+non-negative value up to the minimum length of the dim attribute of
+supplied arrays plus one.  When \code{along=} has a fractional value, a
+value less than 1, or a value greater than N (N is the maximum of the
+lengths of the dim attribute of the objects to be bound together), a new
+dimension is created in the result.  In these cases, the dimensions of
+all arguments must be identical.  }
+
+\item{rev.along}{ (optional)
+Alternate way to specify the dimension along which to bind the arrays:
+\code{along = N + 1 - rev.along}.  This is provided mainly to allow easy
+specification of \code{along = N + 1} (by supplying
+\code{rev.along=0}).  If both \code{along} and \code{rev.along} are
+supplied, the supplied value of \code{along} is ignored.
+}
+
+\item{new.names}{ (optional)
+If new.names is a list, it is the first choice for the
+dimnames attribute of the result.  It should have the same
+structure as a dimnames attribute.  If the names for a
+particular dimension are \code{NULL}, names for this dimension are
+constructed in other ways.
+
+If \code{new.names} is a character vector, it is used for dimension
+names in the same way as argument names are used.  Zero
+length ("") names are ignored.
+}
+
+\item{force.array}{ (optional) If \code{FALSE}, rbind or cbind are
+called when possible, i.e., when the arguments are all vectors, and
+along is not 1, or when the arguments are vectors or matrices or data
+frames and along is 1 or 2.  If rbind or cbind are used, they will
+preserve the data.frame classes (or any other class that r/cbind
+preserve).  Otherwise, abind will convert objects to class array.  Thus,
+to guarantee that an array object is returned, supply the argument
+\code{force.array=TRUE}.  Note that the use of rbind or cbind introduces
+some subtle changes in the way default dimension names are constructed:
+see the examples below.  }
+
+\item{make.names}{ (optional)
+If \code{TRUE}, the last resort for dimnames for the along
+dimension will be the deparsed versions of anonymous
+arguments.  This can result in cumbersome names when
+arguments are expressions.
+
+    <p>The default is \code{FALSE}.
+}
+
+\item{use.anon.names}{ (optional)
+  \code{use.anon.names}
+is a deprecated synonym for \code{make.names}.
+}
+
+\item{use.first.dimnames}{ (optional)
+    When dimension names are present on more than one
+argument, should dimension names for the result be take from
+the first available (the default is to take them from the
+last available, which is the same behavior as
+\code{rbind} and \code{cbind}.)
+}
+
+\item{hier.names}{ (optional)
+  If \code{TRUE}, dimension names on the concatenated dimension will be
+  composed of the argument name and the dimension names of the objects
+  being bound.  If a single list argument is supplied, then the names of
+  the components serve as the argument names.
+  \code{use.anon.names}
+is a deprecated synonym for \code{make.names}.
+}
+
 \item{along_name}{a character version of \code{along} in
-\code{\link{abind::abind}}. Only considered if input arrays have named
+\code{abind}. Only considered if input arrays have named
 dimension names, and if conflicts with \code{along}, \code{along_name}
 overrides \code{along}. If \code{along_name} is not among the dimension
-names, it will be the name of the new dimension name.}
+names, it will be the name of the new dimension name. In this case the
+position of the new dimension can be controlled by \code{along}.}
 }
 \description{
-\code{bindArrays} is just a wrapper around \code{\link{abind::abind}}.
+\code{bindArrays} is just a wrapper around \code{\link[abind]{abind}}.
 }
 \details{
-This function calls \code{\link{abind::abind}} and adds the names
-of the dimension names of the arrays. If the inputs have named dimension
-names, their dimensions are permuted before feeding to \code{abind}.
+This function calls \code{\link[abind]{abind}} and adds
+the names of the dimension names of the arrays. If the inputs have named
+dimension names, their dimensions are permuted before feeding to \code{abind}.
+\code{bindArrays} has the same arguments as \code{abind} except for
+\code{along_name}, as documented below.
 }
 \seealso{
-\code{\link{abind::abind}}
+\code{\link[abind]{abind}} for the original version in package
+\pkg{abind}; \code{\link{mergeArrays}} if you have a list of arrays created
+by \code{\link{splitArrays}} or you want to bind on multiple dimensions;
+\code{\link{rearrangeList}} if you want to bind arrays in two-level lists
 }
 

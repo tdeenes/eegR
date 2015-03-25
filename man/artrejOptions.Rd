@@ -3,7 +3,7 @@
 \alias{artrejOptions}
 \title{Options for artifact rejection}
 \usage{
-artrejOptions(sampling_freq = 1000, channels = "all", do_reject = TRUE,
+artrejOptions(sampling_freq = 1000, channels = "all",
   apply_maxgrad = TRUE, maxgrad_limit = 50, maxgrad_mark = c(-200, 200),
   apply_diffrange = TRUE, diffrange_limit = c(0.5, 100),
   diffrange_mark = c(-200, 200), diffrange_interval = 200,
@@ -61,11 +61,11 @@ methods.
 The short definitions of the possible artifact rejection criteria
 are as follows:
 \itemize{
-\item{"Maximum gradient:"}{"The absolute difference between the voltages
-measured at successive milliseconds."}
-\item{"Difference range:"}{"The minimum and maximum difference between the
-maximum and minimum voltages in a given sampling interval."}
-\item{"Amplitude range:"}{"The minimum and maximum voltages in the segments."}
+\item{Maximum gradient:}{The absolute difference between the voltages
+measured at successive milliseconds.}
+\item{Difference range:}{The minimum and maximum difference between the
+maximum and minimum voltages in a given sampling interval.}
+\item{Amplitude range:}{The minimum and maximum voltages in the segments.}
 }
 }
 \note{

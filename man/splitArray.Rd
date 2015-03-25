@@ -11,7 +11,7 @@ splitArray(dat, whichdim, f = NULL, drop = FALSE)
 \item{whichdim}{numeric or character vector, the dimension(s) of the array
 to split along}
 
-\item{f}{a list of ‘factors’ in the sense that
+\item{f}{a list of factors in the sense that
 \code{lapply(f, as.factor)} defines the grouping to split along for
 each dimensions in \code{whichdim}. If \code{NULL}, \code{splitArray}
 splits all levels of the \code{whichdim} dimensions. If not \code{NULL},

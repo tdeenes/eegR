@@ -3,30 +3,52 @@
 \alias{array2df}
 \title{Transforms an array to a data.frame}
 \usage{
-array2df(dat, response_name = "values", dim_types = "character",
-  na_omit = FALSE, ...)
+array2df(dat, response_name = "values", response_type = typeof(dat),
+  dim_types = "character", row_names = NULL, na_omit = FALSE, ...)
 }
 \arguments{
-\item{dat}{a matrix or array with named dimnames}
+\item{dat}{a matrix or array}
 
 \item{response_name}{the name of the variable in the data.frame which
 contains the values of the input (default: "values")}
 
+\item{response_type}{a character value which specifies the type of the
+response (default: \code{typeof(dat)}). Possible types are "logical",
+"character", "numeric", "double", "integer", "factor", "raw", "complex".}
+
 \item{dim_types}{a character value or a named list which specifies
 the type of the variable in the data.frame corresponding to the dimension of
 the input array. If one character value is given, all variables are
-transformed to that type (default: "character"). Possible types are
-"logical", "character", "numeric", "double", "integer", "factor".}
+transformed to that type (default: "character").}
+
+\item{row_names}{NULL or a single integer or character string specifying a
+column to be used as row names, or a character or integer vector giving the
+row names for the data frame}
 
 \item{na_omit}{if TRUE, omit all rows from the data.frame which have missing
 values (default: FALSE)}
 
-\item{...}{additional parameters to be passed to \code{\link{as.data.frame.table}}}
+\item{...}{named arguments passed to \code{\link{decorateDims}}}
 }
 \value{
 A data.frame
 }
 \description{
-\code{array2df} transforms an array with dimnames to a data.frame
+\code{array2df} transforms an array to a data.frame
+}
+\examples{
+# example data
+data(erps)
+
+# transform to data.frame, change the default response name to "amplitudes"
+str(array2df(erps, response_name = "amplitudes"))
+
+# treat all dimensions as factors, except for the time dimension, which
+# should be integer
+str(array2df(erps, dim_types = list(stimclass = "factor",
+                                    pairtype = "factor",
+                                    chan = "factor",
+                                    time = "integer",
+                                    id = "factor")))
 }
 

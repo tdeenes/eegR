@@ -11,13 +11,6 @@ prepare2plot(dat, datid, bwFac = NULL, wiFac = NULL, collFac = NULL,
 \item{dat}{an array of ERP data. Must have named dimnames, one of which must
 be id (corresponding to participants' identification codes)}
 
-\item{datid}{data.frame containing information on participants. Must have an
-id column (participants' identification codes)}
-
-\item{bwFac}{named list of between-subject factors (for splitting ERP data)}
-
-\item{wiFac}{named list of within-subject factors (for subsetting ERP data)}
-
 \item{collFac}{character vector of dimension names: average the ERP data
 across these dimensions}
 
@@ -44,13 +37,15 @@ array shall be transformed to a data.frame}
 be combined (ia is the abbreviation of interaction), if datfr is TRUE}
 
 \item{...}{additional parameters to be passed to \code{\link{array2df}}}
+
+\item{splitFac}{named list of between-subject factors (for splitting ERP data)}
+
+\item{subFac}{named list of within-subject factors (for subsetting ERP data)}
 }
 \value{
 A data.frame if datfr is TRUE, and an array if datfr is FALSE
 }
 \description{
-\code{prepare2plot} provides several options to transform the eeg data array
-to a data file which enables direct plotting in lattice or ggplot2 afterwards.
-It can also be used for analyses purposes where compact code is desirable.
+\code{prepare2plot} is deprecated. Use \code{\link{transformArray}} instead.
 }
 

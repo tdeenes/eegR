@@ -3,17 +3,80 @@
 \alias{findExtremes}
 \title{Find local peaks (maxima) and valleys (minima) of a vector}
 \usage{
-findExtremes(x)
+findExtremes(x, n = 1L, has_NA = NULL)
 }
 \arguments{
-\item{x}{a vector}
+\item{x}{an integer or numeric vector or matrix (or any object which can
+be coerced to a matrix)}
+
+\item{n}{the number of neighbouring points (default: 1L) to the left and to
+the right of each data point; a data point is a local minimum/maximum if it
+is below/above all data points in its neighbourhood}
+
+\item{has_NA}{if FALSE, x is not checked for missing values, thereby speeding
+up the computations; if has_NA is NULL (default), a fast check is performed
+and if x has missing values, special corrections are applied (see Details).}
 }
 \value{
-A vector of the same length as x, with values 1 (local maximum),
--1 (local minimum) and 0.
+An integer vector or matrix of the same length as x, with values 1
+(local maximum), -1 (local minimum) and 0 (neither minimum nor maximum), or
+NA (not available).
 }
 \description{
-\code{findExtremes} identifies local peaks and valleys of a vector.
-Endpoints are considered peaks/valleys if they are part of a plateau.
+\code{findExtremes} identifies local peaks and valleys of a vector or
+the columns of a matrix. Endpoints are considered peaks/valleys if they are
+part of a plateau.
+}
+\details{
+There are two special aspects of \code{findExtremes}. First,
+endpoints (the first and last elements of the vector or column) are
+considered as local minima/maxima if they are part of a plateau (i.e. if
+the endpoint is equal to its nearest neighbour). Second, neighbours of a
+missing value are returned as missing values because if a given data window
+has at least one missing value, no minimum or maximum can be computed.
+}
+\examples{
+# create a vector with two local minima and one local maximum
+x <- c(10, 3, 1, 2, -1, 0, 4, 5)
+
+# find local minima/maxima
+(x_extr <- findExtremes(x))
+
+# the same with a more stringent criterion
+(x_extr2 <- findExtremes(x, 2L))
+
+# note that findExtremes always returns an integer vector or matrix
+stopifnot(is.integer(x_extr))
+
+# check results
+stopifnot(identical(x[x_extr < 0L], c(1, -1)))
+stopifnot(identical(x[x_extr > 0L], 2))
+stopifnot(identical(x[x_extr2 != 0L], -1))
+
+# modify the vector to have a plateau at the start, and a missing value at
+# the position 7; consider only the nearest neighbours
+x <- c(10, x)
+x[7] <- NA
+x
+
+# now the first two elements should also be identified as local maxima,
+# but the value -1 is not a local minimum any more because there is a
+# missing value in its neighbourhood
+(x_extr <- findExtremes(x))
+stopifnot(all(x_extr[1:2] == 1L))
+stopifnot(all(is.na(x_extr[6:8])))
+
+# visualize the results (blue = local min., red = local max.)
+plot(x, type = "l", lty = 3)
+points(x, pch = 16, col = c("blue", "grey", "red")[findExtremes(x) + 2L])
+
+# x can be a matrix
+x <- cbind(sin(seq(0, 3*pi, pi/4)), cos(seq(0, 3*pi, pi/4)))
+(x_extr <- findExtremes(x))
+matplot(x, type = "l", lty = 3, col = 1)
+points(x[, 1L], pch = 16,
+       col = c("blue", "grey", "red")[findExtremes(x[, 1L]) + 2L])
+points(x[, 2L], pch = 16,
+       col = c("blue", "grey", "red")[findExtremes(x[, 2L]) + 2L])
 }
 

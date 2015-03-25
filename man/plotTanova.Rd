@@ -4,7 +4,7 @@
 \title{Plot TANOVA results}
 \usage{
 plotTanova(results, grid = NULL, wrap = NULL, plot_title = "",
-  only_p = FALSE)
+  time_label = "Time (ms)", only_p = FALSE)
 }
 \arguments{
 \item{results}{a list; the return value of the \code{\link{tanova}} function}
@@ -16,11 +16,11 @@ separates panels (only considered if grid is NULL)}
 
 \item{plot_title}{character string; the title of the plot}
 
-\item{only_p}{logical; if TRUE, p-values are plotted instead of combined
-(effect + p-value) plots (default: FALSE). See note.}
-
 \item{time_label}{character string; the label of the x (time) axis
 (default: "Time (ms)")}
+
+\item{only_p}{logical; if TRUE, p-values are plotted instead of combined
+(effect + p-value) plots (default: FALSE). See note.}
 }
 \value{
 A ggplot object

@@ -26,7 +26,7 @@ time sample.}
 
 \item{N}{integer value (default: 7); number of terms in the Legendre
 polynomial. You should probably increase it (even up to 100L) for
-realistic (i.e. non-spherical) electrode arrangements.}
+realistic (i.e. non-spherical) or high-density electrode arrangements.}
 
 \item{lambda}{numeric value (default: 1e-10); smoothing factor}
 

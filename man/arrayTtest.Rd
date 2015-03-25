@@ -81,4 +81,56 @@ named dimensions: chan (corresponding to the channels [electrodes]) and time
 All other dimensions are treated in a similar way as chan and time, that is
 separate t-tests are computed for each level of those dimensions.
 }
+\examples{
+# example dataset
+data(erps)
+dat_id <- attr(erps, "id") # to get group memberships
+chan_pos <- attr(erps, "chan") # needed for TFCE correction
+
+# compare controls and dyslexics with traditional indep. samples t-test;
+# comparison is performed for each time sample, channel and experimental
+# condition separately (altogether 81972 tests - note the speed)
+system.time(
+    result_eegr <- arrayTtest(erps, groups = dat_id$group, nperm = 0L,
+                              var_equal = FALSE, usetfce = FALSE)
+)
+
+# the built-in R function (t.test) provides the same result, but running it on
+# the full dataset would take much more time;
+# here we take a subsample of the data
+sub <- list(chan = "F4", time = "200", stimclass = "B", pairtype = "ident")
+result_ttest <- t.test(subsetArray(erps, sub) ~ dat_id$group)
+
+# to check that they are equivalent, we have to remove the attributes
+eegr_t <- as.vector(subsetArray(result_eegr$effect_t_obs, sub))
+eegr_p <- as.vector(subsetArray(attr(result_eegr$effect_t_obs, "pvalues"), sub))
+stopifnot(
+    all.equal(as.vector(result_ttest$statistic), eegr_t),
+    all.equal(as.vector(result_ttest$p.value), eegr_p)
+)
+
+# Now let's use TFCE correction; to do that, one needs a channel neigbourhood
+# matrix and has to use randomization. We will simplify a bit the data to
+# decrease the computational burden.
+# 1) get channel neighbourhoods (type ?chanNb)
+ChN <- chanNb(chan_pos, alpha = 0.7)
+
+# 2) analyze only stimclass "B" and pairtype "ident"
+tempdat <- subsetArray(erps, list(stimclass = "B", pairtype = "ident"))
+
+# 3) run computations (now with only 499 permutations, and using 2 CPU-cores)
+result_tfce <- arrayTtest(tempdat, groups = dat_id$group, var_equal = FALSE,
+                          nperm = 499L, ncores = 2L, usetfce = TRUE,
+                          tfce_options = list(ChN = ChN))
+
+# 4) compare the traditional and TFCE-corrected p-values
+p_trad <- attr(result_tfce$effect_t_obs, "pvalues")
+p_tfce <- result_tfce$perm_pvalues
+p_all <- bindArrays(trad = p_trad, tfce = p_tfce, along_name = "method")
+
+# 5) plot p-values after -log transform for better discriminability
+# note how the sporadic effects disappear after TFCE correction
+p_plot <- imageValues(-log(p), wrap = "~method")
+colorize(p_plot)
+}
 

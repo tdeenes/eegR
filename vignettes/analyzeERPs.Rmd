@@ -65,18 +65,13 @@ control participants, and compare the curves.
 
 ```{r}
 # prepare data
-tempdat <- prepare2plot(erps, id_dat ,
-                        bwFac = list(group = c("dl", "control")),
-                        wiFac = list(),
-                        collFac = "id",
-                        compGFP = TRUE,
-                        response_name = "ampl", 
-                        dim_types = list(time = "numeric")
-                        )
+tempdat <- transformArray(
+    compGfp(amplitude) ~ . + .(id), 
+    erps, list(readgroup = id_dat$group))
 
 # create plot
 library(ggplot2)
-ggplot(tempdat, aes(x = time, y = ampl, col = group, lty = pairtype)) + 
+ggplot(tempdat, aes(x = time, y = amplitude, col = readgroup, lty = pairtype)) + 
     geom_line() + 
     facet_grid(stimclass ~ .)
 ```
@@ -91,24 +86,29 @@ Now we will take the topographies in the identical condition, and compare the
 reading groups and stimulus classes at 300 ms.
 
 ```{r}
-# subset the data
-tempdat <- subsetArray(erps, list(pairtype = "ident"))
+# subset the data (pairtype = "ident") and average across id based on 
+# reading group membership
+tempdat <- transformArray(y ~ . + .(id), erps, 
+                          group = list(readgroup = id_dat$group), 
+                          subset = list(pairtype = "ident"), 
+                          datfr = FALSE)
 
-# split the array to a list of arrays along the "id" and "stimclass" dimensions
-tempdat <- splitArray(tempdat, c("id", "stimclass"), 
-                      list(id = id_dat$group, stimclass = NULL))
+# split the array along the readgroup and stimclass dimensions
+tempdat <- splitArray(tempdat, c("readgroup", "stimclass"))
 
-# compute grand averages (average across subjects)
-tempdat <- lapply(tempdat, avgDims, "id")
+# compute GFP
+gfpdat <- lapply(tempdat, compGfp)
+
+# subset tempdat to include only the time samples at 300 ms
+# use [] to keep the attributes of tempdat
+plotdat <- tempdat
+plotdat[] <- lapply(tempdat, subsetArray, list(time = "300"))
 
 # plot the topographies and the centroids at 300 ms, and add the GFP curves 
-# of the whole segments
+# of the whole segments; do not display the channel positions and labels
 complexplot2dview(
-    lapply(tempdat, subsetArray, list(time = "300")), 
-    chan_pos, "300", 
-    title_row = c("Control", "DL"),
-    title_col = c("A", "B", "C"),
-    gfp = lapply(tempdat, compGfp))
+    plotdat, chan_pos, 300, 
+    gfp = gfpdat, plot_ch = FALSE)
 ```
 
 Note that using this approach, you can easily create an animation for the whole segment:
@@ -136,7 +136,7 @@ ChN <- chanNb(chan_pos, alpha = 0.7)
 Now you can start the analysis. For serious purposes, set the number of permutations to 999 or 
 higher (preferably 4999). Because the computation is resource intensive, use parallelization if
 possible. In the present example, we will compute bin averages (collapse 12 ms long time bins) to
-decrease the computational burden.
+decrease the computational burden, and use only two CPU-cores.
 
 ```{r, fig.height=14}
 # do bin averaging
@@ -150,7 +150,7 @@ results <- arrayAnova(
                      within = c("stimclass", "pairtype")),
     bwdat = id_dat, 
     nperm = 99, 
-    useparallel = TRUE, 
+    useparallel = TRUE, ncores = 2,
     tfce_options = list(ChN = ChN))
 
 # plot the results (for now, only the p-values of the TFCE method)

@@ -5,8 +5,8 @@
 \usage{
 complexplot2dview(dat, ch_pos, timepoint, datgrid = NULL,
   layout_matrix = NULL, heights = NULL, widths = NULL, title_row = NULL,
-  title_col = NULL, title_main = paste("Time:", timepoint, "ms"),
-  plot_bar = TRUE, ampl_range = NULL, resolcol = 1000, gfp = NULL, ...)
+  title_col = NULL, title_main = paste("Time:", paste(timepoint, collapse =
+  ", "), "ms"), plot_bar = TRUE, ampl_range = NULL, gfp = NULL, ...)
 }
 \arguments{
 \item{dat}{a list of numeric vectors or matrices, which can be plotted by
@@ -14,10 +14,54 @@ complexplot2dview(dat, ch_pos, timepoint, datgrid = NULL,
 
 \item{ch_pos}{channel position matrix}
 
-\item{datgrid}{arrangement of the grid}
+\item{timepoint}{integer; the timepoint at which the scalp distributions are
+compared. Can be a vector referring to the timepoints of each topomap.}
+
+\item{datgrid}{arrangement of the grid (number of rows X columns)}
+
+\item{layout_matrix,heights,widths}{arguments to be passed to
+\code{\link{layout}}. If given, it overrides \code{datgrid}.}
+
+\item{title_row,title_col}{character vectors of the titles of rows and
+columns, respectively. If NULL and dat has dimnames attribute,
+\code{rownames(dat)} and \code{colnames(dat)} are used.}
+
+\item{title_main}{character; the title of the plot (default: the timepoint(s))}
+
+\item{plot_bar}{logical; should a colour bar be plotted below the maps
+(default: TRUE)}
+
+\item{ampl_range}{numeric vector of the amplitude range. If not provided,
+the range is computed from the input data.}
+
+\item{gfp}{a list of Global Field Power data along the whole epoch}
+
+\item{...}{additional arguments to be passed to \code{\link{plot2dview}}}
 }
 \description{
-\code{complexplot2dview} calls plot2dview for the given groups/conditions
+\code{complexplot2dview} plots the scalp topographies of different groups or
+conditions by calling \code{\link{plot2dview}} on a list of vectors or
+matrices
+}
+\examples{
+# example dataset
+data(erps)
+chan_pos <- attr(erps, "chan")   # channel positions
+
+# plot the grand average scalp distribution at 180 ms, for each stimulus
+# class and pairtye condition; display also the GFP curves of the
+# whole epochs
+timepoint <- 180
+plotdat <- splitArray(avgDims(erps, "id"),
+                      c("stimclass", "pairtype"),
+                      drop = TRUE)
+gfpdat <- lapply(plotdat, compGfp)
+plotdat[] <- lapply(plotdat, subsetArray,
+                    list(time = as.character(timepoint)))
+complexplot2dview(plotdat,
+                  chan_pos, timepoint,
+                  gfp = gfpdat, plot_ch = FALSE,
+                  resol = 50L, resolcol = 50L)
 }
 \seealso{
 \code{\link{plot2dview}}

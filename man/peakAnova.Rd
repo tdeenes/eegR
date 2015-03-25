@@ -53,9 +53,6 @@ if NULL (default), it is set to the maximum number of cores available}
 follow all main effect terms (default: TRUE)}
 
 \item{seed}{an integer value which specifies a seed (default: NULL)}
-
-\item{type}{a character value of "tanova" (default), "dissimilarity", or
-"gfp"}
 }
 \value{
 A list object with effect statistics, uncorrected p-values, and

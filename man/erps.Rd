@@ -9,9 +9,6 @@ levels) x participant (id, 20 levels). Additionally, the array has an
 attribute "id" which is a data.frame of the group memberships (dyslexic or
 control), and an attribute "chan" which is a data.frame of the electrode
 positions in spherical coordinates.}
-\usage{
-data(erps)
-}
 \description{
 A dataset containing averaged event-related potentials (ERPs) from 20
 participants. The data were collected in a same-different matching task, and

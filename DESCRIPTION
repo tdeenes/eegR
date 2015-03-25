@@ -1,13 +1,47 @@
 Package: eegR
 Type: Package
 Title: A package to analyze EEG signals
-Version: 0.0.1
-Date: 2014-08-24
+Version: 0.0.2
+Date: 2015-03-19
 Author: Denes Toth
 Maintainer: Denes Toth <toth.denes@ttk.mta.hu>
-Description: The eegR package has been developed to process electroencephalography (EEG) signals. Beyond common EEG signal processing functionalities, eegR provides advanced tools to analyze single-trial and averaged event related potentials (ERPs).
+Description: The eegR package has been developed to process
+    electroencephalography (EEG) signals. This is only a pre-alpha version
+    which has basic support for pre-processing EEG signals and provides
+    some more advanced tools to plot and analyze averaged event related
+    potentials (ERPs).
+    The whole API will change in the short term so do not rely on this package
+    in any form (yet).
 License: GPL-3
-Imports: abind, corpcor, data.table, doParallel, foreach, iterators, ggplot2, gplots, Kmisc, matrixStats, orthopolynom, parallel, proj4, permute, RColorBrewer, Rcpp, sgeostat
-Suggests: knitr, alphashape3d, geometry, shinyRGL, plotrix, caTools, zoo
+Imports:
+    abind,
+    corpcor,
+    data.table,
+    doParallel,
+    foreach,
+    iterators,
+    gplots,
+    Kmisc,
+    matrixStats,
+    orthopolynom,
+    parallel,
+    proj4,
+    permute,
+    RColorBrewer,
+    Rcpp,
+    sgeostat,
+    utils
+Suggests:
+    alphashape3d,
+    caTools,
+    geometry,
+    ggplot2,
+    grid,
+    knitr,
+    plotrix,
+    rgl,
+    shiny,
+    shinyRGL,
+    zoo
 LinkingTo: Rcpp
 VignetteBuilder: knitr

@@ -14,11 +14,11 @@ rolling statistics are computed column-wise.}
 \item{FUN}{the function to be applied to compute moving window statistics.
 See details.}
 
-\item{force_rollapply}{logical variable; if yes, zoo:::rollapply is called
-(default = FALSE).}
+\item{force_rollapply}{logical variable; if yes, \code{zoo::rollapply} is
+called (default = FALSE).}
 
-\item{...}{optional arguments to the corresponding function in caTools or
-zoo:::rollapply}
+\item{...}{optional arguments to the corresponding function in \pkg{caTools}
+or \code{zoo::rollapply}}
 }
 \value{
 An object having the same attributes as dat.
@@ -27,9 +27,10 @@ An object having the same attributes as dat.
 \code{rollFun} computes rolling window statistics on vectors or matrices.
 }
 \details{
-If FUN is one of min, max, mean, sd, mad, quantile (OR "min", "max",
-"mean", etc.) rollFun calls the corresponding function from the caTools
-package (e.g. caTools:::runmin). Otherwise, or if force_rollapply is TRUE,
-zoo:::rollapply is called.
+If FUN is one of \code{min}, \code{max}, \code{mean}, \code{sd},
+\code{mad}, \code{quantile} (OR "min", "max", "mean", etc.) \code{rollFun}
+calls the corresponding function from the \pkg{caTools} package (e.g.
+\code{caTools::runmin}). Otherwise, or if \code{force_rollapply} is TRUE,
+\code{zoo::rollapply} is called.
 }
 

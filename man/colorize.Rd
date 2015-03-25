@@ -9,7 +9,9 @@ colorize(obj, low = scales::muted("blue"), mid = "white",
 \arguments{
 \item{obj}{a ggplot object created by \code{\link{imageValues}}}
 
-\item{low,mid,high}{colors to produce a low > mid > high color scale}
+\item{low,mid,high}{colors to produce a low < mid < high color scale}
+
+\item{...}{additional arguments to be passed to \code{link[ggplot2]{scale_fill_gradient2}}}
 }
 \value{
 a ggplot object

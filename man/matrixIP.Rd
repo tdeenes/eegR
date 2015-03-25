@@ -34,7 +34,8 @@ objects which x refers to. If you want to avoid this, call
 \code{x <- copy(x)} before calling \code{matrixIP} or use the standard way as
 described in the Note section of \code{\link{matrix}}. However, for input
 objects created on-the-fly (e.g. a temporary vector), \code{matrixIP} is safe
-and more compact than the latter solution.
+and more compact than the latter solution, and can be many times faster than
+\code{matrix}.
 }
 \seealso{
 \code{\link{arrayIP}} for in-place transformation of x to an array

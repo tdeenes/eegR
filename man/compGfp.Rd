@@ -10,7 +10,7 @@ compGfp(dat, keep_channels = FALSE)
 must be "chan")}
 
 \item{keep_channels}{logical value; if TRUE, the original channels are
-retained, and the GFP values are added with a channel code of "GFP"
+retained, and the GFP values are added with channel code \dQuote{GFP}
 (default = FALSE)}
 }
 \value{

@@ -3,21 +3,43 @@
 \alias{baselineCorr}
 \title{Baseline correction}
 \usage{
-baselineCorr(dat, basedim = "chan", baseind = NULL)
+baselineCorr(dat, along_dims = "chan", by_dims = NULL, base_time = NULL)
 }
 \arguments{
 \item{dat}{numeric array containing the ERPs}
 
-\item{basedim}{character vector identifying the dimensions of dat along which
-separate baseline averaging should occur (default: "chan")}
+\item{along_dims}{numeric or character vector identifying the dimensions of
+dat along which separate baseline averaging should occur (default: "chan")}
 
-\item{baseind}{numeric or character vector identifying time points which
-form the baseline}
+\item{by_dims}{numeric or character vector identifying the dimensions of
+dat across which separate baseline averaging should occur (default: NULL).
+See \code{\link{scaleArray}} for further explanation.}
+
+\item{base_time}{numeric or character vector identifying time points which
+form the baseline. If NULL (default), dat must have named dimension names,
+and \code{base_time} is the vector of levels of the time dimension which
+are below 0.}
 }
 \value{
 A numeric array with the same attributes as dat
 }
 \description{
 \code{baselineCorr} performs baseline correction
+}
+\examples{
+# example dataset
+data(erps)
+
+# remove baseline activity separately for each stimulus class, pairtype and
+# channel in each subject; now we use the by_dims argument because it needs
+# less typing
+bc <- baselineCorr(erps, by_dims = "time")
+
+# remove baseline activity separately for each channel in each subject;
+# now we choose the along_dims argument
+bc <- baselineCorr(erps, along_dims = c("chan", "id"))
+}
+\seealso{
+\code{\link{scaleArray}} for the function behind the scenes
 }
 
