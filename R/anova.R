@@ -839,7 +839,6 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
         #
         # generate random orders (dim(randind) = nperm X nrow(dat))
         if (!is.null(seed)) set.seed(seed)
-        browser()
         randind <- shuffleSet(nrow(dat), nperm, 
                               how(within = Within(type = "free"), 
                                   plots = Plots(strata = dat[,factordef$w_id], 
