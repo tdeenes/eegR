@@ -10,7 +10,7 @@ transformArray(formula, data, group = NULL, subset = NULL, datfr = TRUE,
 \item{formula}{an object of class "formula" (or one that can be coerced to
 that class): a symbolic description of the transformation steps before
 converting the \code{array} to a \code{data.frame}. The details of how to
-specify the transformations are given under ‘Details’.}
+specify the transformations are given under 'Details'.}
 
 \item{data}{a matrix or an array. Must have named dimnames.}
 

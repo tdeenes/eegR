@@ -44,7 +44,7 @@ the traditional t-test results}
 \item{nperm}{integer value giving the number of permutations (default: 999L)}
 
 \item{useparallel}{logical value; if TRUE (default), computations are done
-in parallel}
+in parallel (only if nperm > 1)}
 
 \item{par_method}{parallelization method; can be set explicitly to "snow" or
 "multicore" (ignored on Windows OS), or chosen automatically ("default").
@@ -130,7 +130,7 @@ p_all <- bindArrays(trad = p_trad, tfce = p_tfce, along_name = "method")
 
 # 5) plot p-values after -log transform for better discriminability
 # note how the sporadic effects disappear after TFCE correction
-p_plot <- imageValues(-log(p), wrap = "~method")
-colorize(p_plot)
+p_plot <- imageValues(-log(p_all))  # returns a ggplot object
+p_plot
 }
 

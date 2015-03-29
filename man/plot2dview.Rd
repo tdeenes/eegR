@@ -76,7 +76,7 @@ chan_pos <- attr(erps, "chan")   # channel positions
 # plot the grand average scalp distribution at 200 ms, for the stimulus
 # class "A" and pairtye "ident" condition; display also the GFP curve of the
 # whole epoch
-plotdat <- transformArray(y ~ chan, erps,
+plotdat <- transformArray(y ~ chan + time, erps,
                           subset = list(stimclass = "A", pairtype = "ident"),
                           datfr = FALSE)
 gfpdat <- compGfp(plotdat)

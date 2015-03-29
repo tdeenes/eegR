@@ -12,6 +12,8 @@ Description: The eegR package has been developed to process
     potentials (ERPs).
     The whole API will change in the short term so do not rely on this package
     in any form (yet).
+Depends:
+    R (>= 3.0.0)
 License: GPL-3
 Imports:
     abind,
@@ -20,6 +22,7 @@ Imports:
     doParallel,
     foreach,
     iterators,
+    ggplot2,
     gplots,
     Kmisc,
     matrixStats,
@@ -34,8 +37,8 @@ Imports:
 Suggests:
     alphashape3d,
     caTools,
+    ez,
     geometry,
-    ggplot2,
     grid,
     knitr,
     plotrix,

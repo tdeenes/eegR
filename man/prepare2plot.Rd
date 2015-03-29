@@ -11,6 +11,13 @@ prepare2plot(dat, datid, bwFac = NULL, wiFac = NULL, collFac = NULL,
 \item{dat}{an array of ERP data. Must have named dimnames, one of which must
 be id (corresponding to participants' identification codes)}
 
+\item{datid}{data.frame consisting of identification codes ("id") and
+subject-level factors}
+
+\item{bwFac}{named list of between-subject factors (for splitting ERP data)}
+
+\item{wiFac}{named list of within-subject factors (for subsetting ERP data)}
+
 \item{collFac}{character vector of dimension names: average the ERP data
 across these dimensions}
 
@@ -37,10 +44,6 @@ array shall be transformed to a data.frame}
 be combined (ia is the abbreviation of interaction), if datfr is TRUE}
 
 \item{...}{additional parameters to be passed to \code{\link{array2df}}}
-
-\item{splitFac}{named list of between-subject factors (for splitting ERP data)}
-
-\item{subFac}{named list of within-subject factors (for subsetting ERP data)}
 }
 \value{
 A data.frame if datfr is TRUE, and an array if datfr is FALSE

@@ -506,11 +506,11 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
 #' 
 #' # plot p-values after -log transformation to increase discriminability;
 #' # note how the sporadic effects disappear
-#' p_plot <- imageValues(-log(p_all), grid = "modelterm ~ method")
-#' colorize(p_plot)
+#' p_plot <- imageValues(-log(p_all)) # returns a ggplot object
+#' p_plot
 #' 
 #' # you can also use the imagePvalues function to plot discretized p-values
-#' imagePvalues(p_all, pcrit = c(0.01, 0.05, 0.1), grid = "modelterm ~ method")
+#' imagePvalues(p_all, pcrit = c(0.01, 0.05, 0.1))
 #'
 arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE, 
                        nperm = 999L, useparallel = FALSE, ncores = NULL, 
@@ -751,11 +751,12 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
     # some checks
     stopifnot(is.array(arraydat))
     stopifnot(is.list(factordef))
+    nperm <- as.integer(nperm)
     if (!is.null(factordef$between) && is.null(bwdat)) {
         stop("No between-participant data provided")
     }
     if (useparallel) {
-        if (is.null(ncores)) ncores <- parallel::detectCores()
+        if (is.null(ncores)) ncores <- detectCores()
     }
     #
     out <- list(call = match.call())
@@ -825,7 +826,7 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
         }
         out <- c(out, list(factor_means = factor_means))
     }
-    if (nperm > 1) {
+    if (nperm > 1L) {
         #
         permfn <- function(i) {
             x <- marginalMeans(aov_formula, 
@@ -963,6 +964,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
     stopifnot(is.array(arraydat) | missing(arraydat))
     stopifnot(is.list(factordef) | missing(factordef))
     stopifnot(length(peakdef) != 2 | missing(peakdef))
+    nperm <- as.integer(nperm)
     if (!is.null(factordef$between) && is.null(bwdat)) {
         stop("No between-participant data provided")
     }
@@ -1088,7 +1090,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
     # observed sum of squares
     lateff_obs <- sumSq(peakind, peakind_facs, aov_formula_char, labels = TRUE)
     # permutations
-    if (nperm > 1) {
+    if (nperm > 1L) {
         #
         permfn <- function(i) {
             facmeans <- marginalMeans(mean_formula, dat[randind[i,], ], 

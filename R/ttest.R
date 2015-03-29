@@ -133,7 +133,7 @@ osTtest <- function(dat, id_dim = "id", mu = 0, verbose = FALSE, has_NA = NULL) 
 #' the traditional t-test results
 #' @param nperm integer value giving the number of permutations (default: 999L)
 #' @param useparallel logical value; if TRUE (default), computations are done
-#' in parallel
+#' in parallel (only if nperm > 1)
 #' @param par_method parallelization method; can be set explicitly to "snow" or
 #' "multicore" (ignored on Windows OS), or chosen automatically ("default"). 
 #' Ignored if cl is provided.
@@ -204,8 +204,8 @@ osTtest <- function(dat, id_dim = "id", mu = 0, verbose = FALSE, has_NA = NULL) 
 #' 
 #' # 5) plot p-values after -log transform for better discriminability
 #' # note how the sporadic effects disappear after TFCE correction
-#' p_plot <- imageValues(-log(p), wrap = "~method")
-#' colorize(p_plot)
+#' p_plot <- imageValues(-log(p_all))  # returns a ggplot object
+#' p_plot
 #
 # TODO: compute also effect sizes + make it general for any arrays without chan
 # and time dimensions + clear redundancies in the code for the two types of 
@@ -231,6 +231,8 @@ arrayTtest <- function(arraydat, arraydat2, paired = FALSE, groups = NULL,
         out
     }
     # 
+    if (nperm < 2) useparallel <- FALSE
+    #
     if (useparallel) {
         par_method <- match.arg(par_method)
         if (newcl <- is.null(cl)) {

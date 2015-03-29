@@ -360,8 +360,8 @@ baselineCorr <- function(dat, along_dims = "chan", by_dims = NULL,
     setattr(out, "processing_steps",
             c(attr(out, "processing_steps"),
               list(list(what = "baseline correction", 
-                        call = match.call(), base_dimensions = basedim, 
-                        base_indices = baseind))))
+                        call = match.call(), along_dimensions = along_dims, 
+                        base_time = base_time))))
     message("Done")
     # return
     out

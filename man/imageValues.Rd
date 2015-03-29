@@ -5,7 +5,8 @@
 \usage{
 imageValues(dat, grid = NULL, wrap = NULL, bar_title = "effect",
   time_label = "Time (ms)", channel_label = "Channels", raster = TRUE,
-  cluster_order = FALSE)
+  cluster_order = FALSE, low = scales::muted("blue"), mid = "white",
+  high = scales::muted("red"), midpoint = 0, ...)
 }
 \arguments{
 \item{dat}{numeric matrix or array of values with named dimensions (at least
@@ -16,7 +17,7 @@ chan and time)}
 \item{wrap}{character vector or formula defining the dimension which
 separates panels (only considered if grid is NULL)}
 
-\item{bar_title}{character string; the title of the color bar}
+\item{bar_title}{character string; the title of the colour bar}
 
 \item{time_label}{character string; the label of the x (time) axis
 (default: "Time (ms)")}
@@ -28,6 +29,13 @@ default: "Channels")}
 
 \item{cluster_order}{logical; if TRUE, channels are ordered with hierarchical
 agglomerative clustering (default: FALSE)}
+
+\item{low,mid,high}{colour for low/mid/high end of gradient, respectively}
+
+\item{midpoint}{the midpoint (in data value) of the diverging scale
+(default: 0)}
+
+\item{...}{other arguments passed to \code{\link{scale_fill_gradient2}}}
 }
 \value{
 A ggplot object
@@ -36,8 +44,23 @@ A ggplot object
 \code{imageValues} creates an image plot from a matrix or array of channel x
 time values
 }
+\examples{
+# example dataset
+data(erps)
+
+# plot grand averages
+avgs <- avgDims(erps, "id")
+imageValues(avgs)
+
+# imageValues returns a ggplot object, which can be modified afterwards
+implot <- imageValues(avgs)
+
+# modify faceting and theme
+library(ggplot2)
+implot + facet_grid(pairtype ~ stimclass) + theme_bw()
+}
 \seealso{
-\code{\link{imagePvalues}} for plotting p-values,
-\code{\link{colorize}} for setting color scale
+\code{\link{imagePvalues}} for plotting p-values, and
+\code{\link{plotERParray}} for multiline (butterfly) plots
 }
 

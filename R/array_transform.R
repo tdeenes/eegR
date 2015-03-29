@@ -371,7 +371,12 @@ array2df <- function(dat, response_name = "values",
                                   setdiff(colnames(out), response_name))
         }
         for (i in names(dim_types)) {
-            out[[i]] <- do.call(paste0("as.", dim_types[[i]]), list(out[[i]]))
+            out[[i]] <- 
+                if (dim_types[[i]]  != "factor") {
+                    do.call(paste0("as.", dim_types[[i]]), list(out[[i]]))
+                } else {
+                    factor(out[[i]], levels = dimn[[i]])
+                }
         }
     }
     if (na_omit) out <- na.omit(out)
@@ -606,7 +611,7 @@ splitArray <- function(dat, whichdim, f = NULL, drop = FALSE) {
 #' @export
 #' @seealso \code{\link[abind]{abind}} for the original version in package
 #' \pkg{abind}; \code{\link{mergeArrays}} if you have a list of arrays created
-#' by \code{\link{splitArrays}} or you want to bind on multiple dimensions; 
+#' by \code{\link{splitArray}} or you want to bind on multiple dimensions; 
 #' \code{\link{rearrangeList}} if you want to bind arrays in two-level lists
 bindArrays <- function(..., along = NULL, rev.along = NULL, new.names = NULL, 
                        force.array = TRUE, make.names = use.anon.names, 
@@ -800,8 +805,10 @@ rearrangeList <- function(dat, name_listdim, name_datadim = NULL) {
 #' \code{prepare2plot} is deprecated. Use \code{\link{transformArray}} instead.
 #' @param dat an array of ERP data. Must have named dimnames, one of which must
 #' be id (corresponding to participants' identification codes)
-#' @param splitFac named list of between-subject factors (for splitting ERP data)
-#' @param subFac named list of within-subject factors (for subsetting ERP data)
+#' @param datid data.frame consisting of identification codes ("id") and 
+#' subject-level factors
+#' @param bwFac named list of between-subject factors (for splitting ERP data)
+#' @param wiFac named list of within-subject factors (for subsetting ERP data)
 #' @param collFac character vector of dimension names: average the ERP data 
 #' across these dimensions
 #' @param diffFac a character vector indicating which levels of which dimensions
@@ -971,7 +978,7 @@ prepare2plot <- function(dat, datid,
 #' @param formula an object of class "formula" (or one that can be coerced to 
 #' that class): a symbolic description of the transformation steps before 
 #' converting the \code{array} to a \code{data.frame}. The details of how to
-#' specify the transformations are given under ‘Details’.
+#' specify the transformations are given under 'Details'.
 #' @param data a matrix or an array. Must have named dimnames.
 #' @param group a list of grouping factors in the order of appearance in the 
 #' transformation formula (see 'Details'). If a named list is provided, those 

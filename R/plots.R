@@ -127,7 +127,7 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
 #' # plot the grand average scalp distribution at 200 ms, for the stimulus 
 #' # class "A" and pairtye "ident" condition; display also the GFP curve of the 
 #' # whole epoch
-#' plotdat <- transformArray(y ~ chan, erps,
+#' plotdat <- transformArray(y ~ chan + time, erps,
 #'                           subset = list(stimclass = "A", pairtype = "ident"),
 #'                           datfr = FALSE)
 #' gfpdat <- compGfp(plotdat)
@@ -622,7 +622,9 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
                          grid = NULL, wrap = NULL,
                          time_label = "Time (ms)", channel_label = "Channels",
                          raster = TRUE, cluster_order = FALSE) {
-    require("ggplot2")
+    rp <- range(pvalues, na.rm = TRUE)
+    if (rp[1] < 0 || rp[2] > 1) 
+        stop("Data range should be between 0 and 1")
     chans <- dimnames(pvalues)$chan
     if (cluster_order) {
         temp <- -log(pvalues)
@@ -634,36 +636,40 @@ imagePvalues <- function(pvalues, pcrit = c(0.001, 0.01, 0.05),
     timebreaks <- as.numeric( as.character( dimnames(pvalues)$time ) )
     timebreaks <- range( timebreaks %/% 100)
     timebreaks <- seq(timebreaks[1], timebreaks[2]) * 100
-    pvalues_df <- array2df(pvalues, response_name = "p", 
-                           dim_types = list(time = "numeric"))
+    pvalues_df <- transformArray(p ~ ., pvalues)
     pvalues_df$pcrit <- findInterval(pvalues_df$p, pcrit)
-    for (i in colnames(pvalues_df)) {
-        if (is.character(pvalues_df[[i]])) {
-            pvalues_df[[i]] <- factor(pvalues_df[[i]], 
-                                      levels = dimnames(pvalues)[[i]])
+    pp <- ggplot(pvalues_df, aes_string(x = "time", y = "chan")) + 
+        {if (raster) geom_raster(aes(fill = pcrit)) else 
+            geom_tile(aes(fill = pcrit), size = 0)} + 
+        scale_fill_gradient(guide = "legend", 
+                            high = "white", 
+                            low = "#a50f15",
+                            name = "p-value",
+                            breaks = seq_along(pcrit) - 1L,
+                            labels = paste("< ", pcrit, sep = ""),
+                            limits = c(0, length(pcrit))) + 
+        scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
+                         name = channel_label) + 
+        scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1),
+                           name = time_label)
+    if (!is.null(grid)) {
+        pp <- pp + facet_grid( as.formula(grid) )
+    } else if (!is.null(wrap)) {
+        pp <- pp + facet_wrap( as.formula(wrap) )
+    } else {
+        griddims <- setdiff(names(dimnames(pvalues)), c("chan", "time"))
+        if (length(griddims) > 0) {
+            if (length(griddims) > 1) {
+                grid <- paste(griddims, collapse = "~")  
+                pp <- pp + facet_grid( as.formula(grid) )
+            } else {
+                grid <- paste0("~", griddims)
+                pp <- pp + facet_wrap( as.formula(grid) )
+            }
         }
     }
-    pp <- ggplot(pvalues_df, aes(x = time, y = chan)) + 
-{if (raster) geom_raster(aes(fill = pcrit)) else 
-    geom_tile(aes(fill = pcrit), size = 0)} + 
-    scale_fill_gradient(guide = "legend", 
-                        high = "white", 
-                        low = "#a50f15",
-                        name = "p-value",
-                        breaks = seq_along(pcrit) - 1L,
-                        labels = paste("< ", pcrit, sep = ""),
-                        limits = c(0, length(pcrit))) + 
-    scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
-                     name = channel_label) + 
-    scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1),
-                       name = time_label)
-if (!is.null(grid)) {
-    pp <- pp + facet_grid( as.formula(grid) )
-} else if (!is.null(wrap)) {
-    pp <- pp + facet_wrap( as.formula(wrap) )
-}
-# return
-pp
+    # return
+    pp
 }
 
 
@@ -676,7 +682,7 @@ pp
 #' @param grid character vector or formula defining the layout of panels
 #' @param wrap character vector or formula defining the dimension which 
 #' separates panels (only considered if grid is NULL)
-#' @param bar_title character string; the title of the color bar
+#' @param bar_title character string; the title of the colour bar
 #' @param time_label character string; the label of the x (time) axis 
 #' (default: "Time (ms)")
 #' @param channel_label character string; the label of the y (channel) axis 
@@ -684,14 +690,33 @@ pp
 #' @param raster use raster image (TRUE, default) or not (FALSE)
 #' @param cluster_order logical; if TRUE, channels are ordered with hierarchical
 #' agglomerative clustering (default: FALSE)
+#' @param low,mid,high colour for low/mid/high end of gradient, respectively
+#' @param midpoint the midpoint (in data value) of the diverging scale 
+#' (default: 0)
+#' @param ... other arguments passed to \code{\link{scale_fill_gradient2}}
 #' @export
 #' @return A ggplot object
-#' @seealso \code{\link{imagePvalues}} for plotting p-values, 
-#' \code{\link{colorize}} for setting color scale
+#' @seealso \code{\link{imagePvalues}} for plotting p-values, and 
+#' \code{\link{plotERParray}} for multiline (butterfly) plots
+#' @examples
+#' # example dataset
+#' data(erps)
+#' 
+#' # plot grand averages
+#' avgs <- avgDims(erps, "id")
+#' imageValues(avgs)
+#' 
+#' # imageValues returns a ggplot object, which can be modified afterwards
+#' implot <- imageValues(avgs)
+#' 
+#' # modify faceting and theme
+#' library(ggplot2)
+#' implot + facet_grid(pairtype ~ stimclass) + theme_bw()
 imageValues <- function(dat, grid = NULL, wrap = NULL, bar_title = "effect",
                         time_label = "Time (ms)", channel_label = "Channels",
-                        raster = TRUE, cluster_order = FALSE) {
-    require(ggplot2)
+                        raster = TRUE, cluster_order = FALSE,
+                        low = scales::muted("blue"), mid = "white", 
+                        high = scales::muted("red"), midpoint = 0, ...) {
     chans <- dimnames(dat)$chan
     if (cluster_order) {
         temp <- avgDims(dat, setdiff(names(dimnames(dat)), c("chan", "time")))
@@ -702,29 +727,34 @@ imageValues <- function(dat, grid = NULL, wrap = NULL, bar_title = "effect",
     timebreaks <- as.numeric( as.character( dimnames(dat)$time ) )
     timebreaks <- range( timebreaks %/% 100)
     timebreaks <- seq(timebreaks[1], timebreaks[2]) * 100
-    dat_df <- array2df(dat, response_name = "effect", 
-                       dim_types = list(time = "numeric"))
-    for (i in colnames(dat_df)) {
-        if (is.character(dat_df[[i]])) {
-            dat_df[[i]] <- factor(dat_df[[i]], 
-                                  levels = dimnames(dat)[[i]])
+    dat_df <- transformArray(effect ~ ., dat)
+    pp <- ggplot(dat_df, aes_string(x = "time", y = "chan")) + 
+        {if (raster) geom_raster(aes_string(fill = "effect")) else 
+            geom_tile(aes_string(fill = "effect"), size = 0)} + 
+        scale_fill_gradient2(name = bar_title, 
+                             low = low, mid = mid, high = high, ...) +               
+        scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
+                         name = channel_label) + 
+        scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1),
+                           name = time_label)
+    if (!is.null(grid)) {
+        pp <- pp + facet_grid( as.formula(grid) )
+    } else if (!is.null(wrap)) {
+        pp <- pp + facet_wrap( as.formula(wrap) )
+    } else {
+        griddims <- setdiff(names(dimnames(dat)), c("chan", "time"))
+        if (length(griddims) > 0) {
+            if (length(griddims) > 1) {
+                grid <- paste(griddims, collapse = "~")  
+                pp <- pp + facet_grid( as.formula(grid) )
+            } else {
+                grid <- paste0("~", griddims)
+                pp <- pp + facet_wrap( as.formula(grid) )
+            }
         }
     }
-    pp <- ggplot(dat_df, aes(x = time, y = chan)) + 
-{if (raster) geom_raster(aes(fill = effect)) else 
-    geom_tile(aes(fill = effect), size = 0)} + 
-    scale_fill_continuous(name = bar_title) +               
-    scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
-                     name = channel_label) + 
-    scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1),
-                       name = time_label)
-if (!is.null(grid)) {
-    pp <- pp + facet_grid( as.formula(grid) )
-} else if (!is.null(wrap)) {
-    pp <- pp + facet_wrap( as.formula(wrap) )
-}
-# return
-pp
+    # return
+    pp
 }
 
 #' Make image plots more colorful (only for ggplot objects)
@@ -737,7 +767,6 @@ pp
 #' @return a ggplot object
 colorize <- function(obj, low=scales::muted("blue"), mid="white",
                      high=scales::muted("red"), ...) {
-    require("ggplot2")
     if (!inherits(obj, "ggplot")) {
         stop("The object must be a ggplot")
     }
@@ -836,13 +865,10 @@ plotTanova <- function(results, grid = NULL, wrap = NULL,
         return(x)
     }
     #
-    require(ggplot2)
-    #
     pcrit <- as.list(results$call)$pcrit
     if (is.null(pcrit)) pcrit <- formals(tanova)$pcrit
     #
-    dat <- array2df(results$effect, "effect", 
-                    dim_types = list(time = "numeric"))
+    dat <- transformArray(effect ~ ., results$effect)
     dat$pvalue <- -log(c(results$perm_pvalues))
     dat$pvalue_consec <- -log(c(results$perm_pvalues_consec))
     dat$pcrit <- factor(dat$pvalue_consec > -log(pcrit))
@@ -850,12 +876,14 @@ plotTanova <- function(results, grid = NULL, wrap = NULL,
     #
     if (only_p) {
         qp <- ggplot(dat[order(dat$time),], 
-                     aes(x = time, y = pvalue, col = pcrit, group = NA)) + 
+                     aes_string(x = "time", y = "pvalue", col = "pcrit", 
+                                group = NA)) + 
             geom_hline(yintercept = -log(pcrit), lty = 3) + 
             ylab("-log(P-value)")
     } else {
         qp <- ggplot(dat[order(dat$time),], 
-                     aes(x = time, y = effect, col = pcrit, group = NA)) + 
+                     aes_string(x = "time", y = "effect", col = "pcrit", 
+                                group = NA)) + 
             ylab("Effect")
     }
     if (!is.null(grid)) {
@@ -890,7 +918,6 @@ plotTanova <- function(results, grid = NULL, wrap = NULL,
 # plot neurodys tanova results
 fastplot_tanova <- function(results, plot_title = "", pcrit = 0.05, 
                             only_p = FALSE) {
-    require("ggplot2")
     reshapefn <- function(slot, headername) {
         x <- lapply(results, "[[", slot)
         #x <- rearrangeList(x, "nation")

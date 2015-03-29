@@ -140,10 +140,10 @@ p_all <- bindArrays(trad = p_trad, tfce = p_tfce, along_name = "method")
 
 # plot p-values after -log transformation to increase discriminability;
 # note how the sporadic effects disappear
-p_plot <- imageValues(-log(p_all), grid = "modelterm ~ method")
-colorize(p_plot)
+p_plot <- imageValues(-log(p_all)) # returns a ggplot object
+p_plot
 
 # you can also use the imagePvalues function to plot discretized p-values
-imagePvalues(p_all, pcrit = c(0.01, 0.05, 0.1), grid = "modelterm ~ method")
+imagePvalues(p_all, pcrit = c(0.01, 0.05, 0.1))
 }
 

@@ -111,7 +111,7 @@ dimension names, their dimensions are permuted before feeding to \code{abind}.
 \seealso{
 \code{\link[abind]{abind}} for the original version in package
 \pkg{abind}; \code{\link{mergeArrays}} if you have a list of arrays created
-by \code{\link{splitArrays}} or you want to bind on multiple dimensions;
+by \code{\link{splitArray}} or you want to bind on multiple dimensions;
 \code{\link{rearrangeList}} if you want to bind arrays in two-level lists
 }
 

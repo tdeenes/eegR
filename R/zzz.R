@@ -2,9 +2,21 @@
 # <<< initialize >>> --------
 #
 
+#' A package to analyze EEG signals
+#' 
+#' The package 'eegR' has been developed to process electroencephalography (EEG)
+#' signals. Beyond common EEG signal processing functionalities, eegR provides 
+#' advanced tools to analyze single-trial and averaged event related potentials 
+#' (ERPs).
+#' IMPORTANT NOTE: This is only a pre-alpha version which will be restructured
+#' substantially in short term. Do not rely on any of the functions.
+#' @name eegR-package
+#' @aliases eegR-package eegR
+#' @author Denes Toth <\email{toth.denes@@ttk.mta.hu}>
+#' @docType package
 #' @useDynLib eegR 
-#' @import abind matrixStats permute parallel doParallel foreach iterators
-#' @importFrom data.table setattr
+#' @import abind matrixStats ggplot2 permute parallel doParallel foreach iterators
+#' @importFrom data.table setattr copy
 #' @importFrom Rcpp evalCpp
 #' @importFrom Kmisc str_collapse
 #' @importFrom orthopolynom polynomial.values legendre.polynomials
