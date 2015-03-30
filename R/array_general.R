@@ -273,6 +273,35 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
 #' TRUE (which reuses the original labels). 
 #' @export
 #' @return A matrix or array, depending on the input
+#' @examples
+#' # example dataset
+#' data(erps)
+#' 
+#' # compute averages for each 10ms time bin (the sampling rate was 1000Hz);
+#' # for present purposes, we can ignore the fact that 10ms binning results in 
+#' # data loss at the end of each time series 
+#' erps_bin <- avgBin(erps, "time", 10)
+#' 
+#' # compute rolling averages 
+#' erps_roll <- avgBin(erps, "time", 10, rolling = TRUE)
+#' 
+#' #
+#' # compare some arbitrary time series
+#' #
+#' # create selection for the chosen conditions
+#' sub <- list(stimclass = "A", pairtype = "ident", chan = "Cz", id = "01")
+#' 
+#' # extract time points
+#' timepoints <- as.integer(dimnames(erps)$time)
+#' timepoints_bin <- as.integer(dimnames(erps_bin)$time)
+#' timepoints_roll <- as.integer(dimnames(erps_roll)$time)
+#' stopifnot(identical(timepoints, timepoints_roll))
+#' 
+#' # plot series
+#' plot(timepoints, subsetArray(erps, sub), type = "l")
+#' lines(timepoints_bin, subsetArray(erps_bin, sub), col = 2)
+#' lines(timepoints, subsetArray(erps_roll, sub), col = 3)
+#' legend("topright", legend = c("original", "bin", "roll"), col = 1:3, lty = 1)
 avgBin <- function(dat, target_dim, bin_length = NULL, bin_ind = NULL, 
                    rolling = FALSE, newnames = "avg") {
     if (rolling) {
@@ -299,7 +328,7 @@ avgBin <- function(dat, target_dim, bin_length = NULL, bin_ind = NULL,
             if (rest > 0) {
                 keep <- rep(TRUE, dimlen)
                 keep[(dimlen - rest + 1L):dimlen] <- FALSE
-                dat <- subsetArray(dat, listS(.target.dim = keep))
+                dat <- subsetArray(dat, listS(.target_dim = keep))
                 warning("Target dimension length is not multiple of bin_length")
             }
             multmat <- diag(bins)[, rep(1:bins, each = bin_length)]/bin_length

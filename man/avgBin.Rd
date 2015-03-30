@@ -33,4 +33,34 @@ A matrix or array, depending on the input
 \code{avgBin} computes averages of bins on a dimension of an array. The
 size of bins or directly the bins themselves can be specified by the user.
 }
+\examples{
+# example dataset
+data(erps)
+
+# compute averages for each 10ms time bin (the sampling rate was 1000Hz);
+# for present purposes, we can ignore the fact that 10ms binning results in
+# data loss at the end of each time series
+erps_bin <- avgBin(erps, "time", 10)
+
+# compute rolling averages
+erps_roll <- avgBin(erps, "time", 10, rolling = TRUE)
+
+#
+# compare some arbitrary time series
+#
+# create selection for the chosen conditions
+sub <- list(stimclass = "A", pairtype = "ident", chan = "Cz", id = "01")
+
+# extract time points
+timepoints <- as.integer(dimnames(erps)$time)
+timepoints_bin <- as.integer(dimnames(erps_bin)$time)
+timepoints_roll <- as.integer(dimnames(erps_roll)$time)
+stopifnot(identical(timepoints, timepoints_roll))
+
+# plot series
+plot(timepoints, subsetArray(erps, sub), type = "l")
+lines(timepoints_bin, subsetArray(erps_bin, sub), col = 2)
+lines(timepoints, subsetArray(erps_roll, sub), col = 3)
+legend("topright", legend = c("original", "bin", "roll"), col = 1:3, lty = 1)
+}
 
