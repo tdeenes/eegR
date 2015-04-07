@@ -19,11 +19,27 @@ fastUnique <- function(x, units_in_rows = TRUE) {
     x
 }
 
-# TODO: add documentation
-consectrue <- function(x, col = TRUE) {
-    if (is.vector(x)) {
-        x <- matrix(x, ncol = 1)
-        col <- T
+#' Maximum number of consecutive TRUE values in each column/row of a matrix
+#' 
+#' \code{consectrue} is helper function of \code{\link{tanova}}. It 
+#' computes the longest streak of TRUE values in each column (or row) of a 
+#' two-dimensional input.  
+#' @param x logical vector, matrix or data.frame
+#' @param col logical value if the search shall be performed column-wise (TRUE,
+#' the default). Set to FALSE for row-wise counting.
+#' @export
+#' @keywords internal
+consectrue <- function(x, col = TRUE, any_NA = NULL) {
+    if (is.data.frame(x)) x <- as.matrix(x)
+    if (is.list(x) || length(dim(x)) > 2L) {
+        stop("x must be a vector, matrix or data.frame")    
+    }
+    if (is.null(any_NA)) any_NA <- anyNA(x)
+    if (any_NA) stop("Missing values in x are not allowed")
+    if (!is.logical(x)) stop("x must contain logical values")
+    if (length(dim(x)) < 2L) {
+        x <- matrix(x)
+        col <- TRUE
     }
     if (!col) x <- t(x)
     out <- consectrueRcpp(x)

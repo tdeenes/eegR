@@ -146,4 +146,10 @@ p_plot
 # you can also use the imagePvalues function to plot discretized p-values
 imagePvalues(p_all, pcrit = c(0.01, 0.05, 0.1))
 }
+\references{
+The TFCE correction follows Mensen, A. and Khatami, R. (2013):
+Advanced EEG analysis using threshold-free cluster-enhancement and
+non-parametric statistics. Neuroimage, 67, 111-118.
+doi:10.1016/j.neuroimage.2012.10.027
+}
 

@@ -23,5 +23,10 @@ numeric matrix or array of the same dimensions as x
 \code{tfceFn} performs TFCE correction. This function is not
 intended for direct use.
 }
+\author{
+The original C code was written by Christian Gaser, further modified
+by Pau Coma and adopted to EEG analysis by Armand Mensen. Denes Toth ported
+the C code to C++ (Rcpp) with minor improvements and added the R wrapper.
+}
 \keyword{internal}
 

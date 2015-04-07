@@ -865,14 +865,24 @@ plotTanova <- function(results, grid = NULL, wrap = NULL,
         return(x)
     }
     #
-    pcrit <- as.list(results$call)$pcrit
+    pcrit <- eval(as.list(results$call)$pcrit)
     if (is.null(pcrit)) pcrit <- formals(tanova)$pcrit
+    pcrit <- union(sort(pcrit), 1)
     #
     dat <- transformArray(effect ~ ., results$effect)
-    dat$pvalue <- -log(c(results$perm_pvalues))
-    dat$pvalue_consec <- -log(c(results$perm_pvalues_consec))
-    dat$pcrit <- factor(dat$pvalue_consec > -log(pcrit))
-    legendtitle <- paste("pvalue <", substitute(pcrit), sep = " ")
+    dat$pvalue <- -log(as.vector(results$perm_pvalues))
+    dat$pcrit <- factor(results$perm_pvalues_consec, 
+                        levels = as.character(pcrit), 
+                        labels = c(as.character(pcrit[-length(pcrit)]), 
+                                   "n.s."))
+    final_pcrit <- levels(droplevels(dat)$pcrit)
+    colour_pcrit <- 
+        if (length(final_pcrit) > 2) {
+            c(rev(brewer.pal(length(final_pcrit), "Reds")[-1]), "grey60")
+        } else {
+            c(brewer.pal(3, "Reds")[3], "grey60")
+        }
+    legendtitle <- "p-value"
     #
     if (only_p) {
         qp <- ggplot(dat[order(dat$time),], 
@@ -902,10 +912,10 @@ plotTanova <- function(results, grid = NULL, wrap = NULL,
             }
         }
     }
-    qp <- qp + geom_line() + 
+    qp <- qp + geom_path() + 
         xlab(time_label) + ggtitle(plot_title) + 
         scale_colour_manual(name = legendtitle,
-                            values = c("FALSE"="grey60","TRUE"="red")) + 
+                            values = colour_pcrit) + 
         theme(panel.background = element_rect(fill = "white"),
               panel.grid.major = element_line(color = "grey95"),
               panel.grid.minor = element_line(color = "grey97"),

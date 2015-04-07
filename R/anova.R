@@ -435,6 +435,10 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
 #' @export
 #' @return A list object with F values, TFCE-corrected F-values and
 #' permutation-based p-values (if requested)
+#' @references The TFCE correction follows Mensen, A. and Khatami, R. (2013):
+#' Advanced EEG analysis using threshold-free cluster-enhancement and 
+#' non-parametric statistics. Neuroimage, 67, 111-118. 
+#' doi:10.1016/j.neuroimage.2012.10.027 
 #' @examples
 #' # example dataset
 #' data(erps)
@@ -550,33 +554,28 @@ arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE,
                                dat, verbose)
     mergedimnames <- setdiff(names(dimnames(Fvals_obs)), c("chan", "time"))
     if (usetfce) {
-        tfce_obs <- mergeDims(Fvals_obs, mergedimnames)
-        for (i in 1:nrow(tfce_obs)) 
-            tfce_obs[i,,] <- tfceFn(tfce_obs[i,,], ChN, EH)
-        tfce_obs <- revMergeDims(tfce_obs)
+        nrchan <- length(origdimnames$chan)
+        nrtime <- length(origdimnames$time)
+        tfce_obs <- fnDims(Fvals_obs, c("chan", "time"), 
+               function(x) tfceFn(matrixIP(x, nrchan, nrtime), 
+                                  chn = ChN, eh = EH), 
+               keep_dimorder = TRUE)
     }
     if (nperm > 1L) {
         #
-        permfn_f <- function(i) {
+        permfn <- function(i) {
             x <- arrayAnovaSub(arraydat, 
                                factordef, origdimnames, 
                                dat[randind[i,], ], FALSE)
-            x <- mergeDims(x, mergedimnames)
-            maxf <- sapply(1:nrow(x), 
-                           function(ii) max(x[ii,,])) 
-            return(maxf)
+            if (usetfce) {
+                fnDims(x, c("chan", "time"), 
+                       function(xx) max(tfceFn(matrixIP(xx, nrchan, nrtime), 
+                                              chn = ChN, eh = EH)), 
+                       keep_dimorder = TRUE)
+            } else {
+                fnDims(x, c("chan", "time"), max)
+            }
         }
-        permfn_tfce <- function(i) {
-            verb <- ifelse(i == 1, verbose, FALSE)
-            x <- arrayAnovaSub(arraydat, 
-                               factordef, origdimnames, 
-                               dat[randind[i,], ], FALSE)
-            x <- mergeDims(x, mergedimnames)
-            maxf <- sapply(1:nrow(x), 
-                           function(ii) max(abs(tfceFn(x[ii,,], ChN, EH))))
-            return(maxf)
-        }
-        permfn <- if (usetfce) permfn_tfce else permfn_f
         #
         # generate random orders (dim(randind) = nperm X nrow(dat))
         if (!is.null(seed)) set.seed(seed)
@@ -728,8 +727,8 @@ extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
 #' @param iaterms_last logival variable whether all interaction terms should 
 #' follow all main effect terms (default: TRUE)
 #' @param seed an integer value which specifies a seed (default: NULL)
-#' @param pcrit the significance level for duration and global count p-value 
-#' correction (default: 0.05)
+#' @param pcrit the significance level (or a vector of multiple levels) for the 
+#' consecutive length correction (default: 0.05)
 #' @details The function assumes that the input array contains at least two 
 #' named dimensions: chan (corresponding to the channels [electrodes]) and time 
 #' (corresponding to time points). All dimensions which are not listed as 
@@ -742,7 +741,35 @@ extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
 #' @return A list object with effect statistics, uncorrected p-values, and 
 #' two types of corrected p-values: length correction or global correction
 #' @seealso \code{\link{plotTanova}} plots the result of \code{tanova}.
-#' @references Koenig (2011) RAGU
+#' @references Ported from the MATLAB toolbox by Koenig T, Kottlow M, Stein M, 
+#' Melie García L (2011) Ragu: A free tool for the analysis of EEG and MEG 
+#' event-related scalp field data using global randomization statistics. 
+#' Computational Intelligence and Neuroscience, 2011:938925
+#' @examples
+#' # example dataset
+#' data(erps)
+#' dat_id <- attr(erps, "id") # to get group memberships
+#' 
+#' # average the data in each 12 ms time-bin to decrease the computational 
+#' # burden (not needed in serious analyses)
+#' tempdat <- avgBin(erps, "time", 6)
+#' 
+#' # Analyze the effect of the reading group (between-subject factor) and the
+#' # two experimental conditions (stimclass, pairtye; within-subject factors) 
+#' # for each channel and time sample, taking into account both intensity and 
+#' # distributional differences (the default: type = "tanova")
+#' # Note that the number of permutations should be increased for serious 
+#' # purposes.
+#' result_tanova <- tanova(tempdat, 
+#'                         list(between = "group",
+#'                              within = c("stimclass", "pairtype"),
+#'                              w_id = "id"),
+#'                         bwdat = dat_id,
+#'                         nperm = 499L,
+#'                         useparallel = TRUE, ncores = 2)
+#' 
+#' # plot results (for now, only p-values)
+#' plotTanova(result_tanova, only_p = TRUE)
 tanova <- function(arraydat, factordef, bwdat = NULL, 
                    type = c("tanova", "dissimilarity", "gfp"), 
                    verbose = TRUE, nperm = 999L, useparallel = FALSE, ncores = NULL,
@@ -758,6 +785,8 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
     if (useparallel) {
         if (is.null(ncores)) ncores <- detectCores()
     }
+    pcrit <- pcrit[pcrit > (1 / (nperm + 1))]
+    if (length(pcrit) < 1) stop("The number of permutations is too low for this pcrit")
     #
     out <- list(call = match.call())
     #
@@ -769,6 +798,11 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
         return( out )
     }
     # 
+    consecLimit <- function(sigmat, alpha) {
+        out <- matrixRle(sigmat)
+        quantile(out$lengths[out$values > 0], 1 - alpha)
+    }
+    #
     par_method <- match.arg(par_method)
     #
     type <- match.arg(type)
@@ -831,11 +865,12 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
         permfn <- function(i) {
             x <- marginalMeans(aov_formula, 
                                dat[randind[i, ], ], 
-                               arraydat, 
+                               arraydat,
                                origdimnames[keepdims], 
                                keep_term_order = !iaterms_last, 
                                residualmean = TRUE)
-            return( effSize(x) )
+            # return
+            effSize(x)
         }
         #
         # generate random orders (dim(randind) = nperm X nrow(dat))
@@ -871,39 +906,43 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
         pvalues <- avgDims(subsetArray(pvalues_perm, 
                                        list(perm = 1), drop = FALSE),
                            "perm")
-        pvalues_perm <- (pvalues_perm < pcrit)
         # consecutive sign. criterion
-        pvalues_consec <- fnDims(pvalues, "time", I)
-        pvalues_maxconsec <- mergeDims(pvalues_perm, 
-                                       setdiff(names(dimnames(pvalues_perm)), 
-                                               c("time", "perm")))
-        pvalues_maxconsec <- apply(pvalues_maxconsec, 1, function(x) {
-            res <- fnDims(x, "time", matrixRle, vectorized = TRUE)
-            res <- quantile(res$lengths[res$values > 0], 1 - pcrit)
-            return( res )
-        })
-        temp <- matrixRle(
-            array2mat(pvalues, "time", return_attributes = FALSE,
-                      keep_dimnames = FALSE) < pcrit)
-        ind <- ( (temp$lengths < pvalues_maxconsec[temp$matrixcolumn]) &
-                     (temp$values == 1) )
-        temp$values[ind] <- 0
-        temp <- inverse.matrixRle(temp)
-        pvalues_consec[temp == 0] <- 1
+        pvalues_perm <- aperm(pvalues_perm, 
+                              c("time", "perm", 
+                                setdiff(names(dimnames(pvalues_perm)),
+                                        c("time", "perm"))))
+        temp <- dimnames(pvalues_perm)[-2]
+        pvalues_consec <- arrayIP(1, vapply(temp, length, 0L), temp)
+        apply_dim <- setdiff(names(dimnames(pvalues_perm)), c("time", "perm"))
+        for (alpha in sort(pcrit, TRUE)) {
+            consec_limit <- apply(pvalues_perm < alpha, 
+                                       apply_dim, 
+                                       consecLimit, alpha = alpha)
+            temp <- matrixRle(
+                array2mat(pvalues < alpha, "time", 
+                          return_attributes = FALSE,
+                          keep_dimnames = FALSE))
+            ind <- temp$lengths < consec_limit[temp$matrixcolumn]
+            temp$values[ind] <- 0
+            temp <- inverse.matrixRle(temp)
+            pvalues_consec[temp > 0] <- alpha
+        }
         pvalues_consec <- aperm(pvalues_consec, names(dimnames(pvalues))) 
-        # number of sign. time points criterion
-        pvalues_global <- fnDims(pvalues_perm, "time", colSums, vectorized = TRUE)
-        tempfn <- function(x) colSums(sweep(x, 2, x[1, ], ">="))
-        pvalues_global <- fnDims(pvalues_global, "perm", tempfn, vectorized = TRUE)
-        pvalues_global <- pvalues_global / (nperm + 1)
-        # return
+        ## number of sign. time points criterion (deprecated)
+        # pvalues_global <- fnDims(pvalues_perm < 0.05, "time", colSums, 
+        #                          vectorized = TRUE)
+        # tempfn <- function(x) colSums(sweep(x, 2, x[1, ], ">="))
+        # pvalues_global <- fnDims(pvalues_global, "perm", tempfn, 
+        #                          vectorized = TRUE)
+        # pvalues_global <- pvalues_global / (nperm + 1)
+        ## return
         out <- c(out, list(perm_pvalues = pvalues,
-                           perm_pvalues_consec = pvalues_consec,
-                           perm_pvalues_global = pvalues_global))
+                           perm_pvalues_consec = pvalues_consec))
     } 
     # return
     out
 }
+
 
 # Peak Anova functions =========== 
 

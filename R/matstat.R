@@ -213,6 +213,9 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
 #' @export
 #' @keywords internal
 #' @return numeric matrix or array of the same dimensions as x
+#' @author The original C code was written by Christian Gaser, further modified
+#' by Pau Coma and adopted to EEG analysis by Armand Mensen. Denes Toth ported
+#' the C code to C++ (Rcpp) with minor improvements and added the R wrapper.
 tfceFn <- function(x, chn, eh, nr_steps = 50L, channel_dim = 1L) {
     chan_dim = which(names(dimnames(x)) == "chan")
     if (length(chan_dim)==0) {

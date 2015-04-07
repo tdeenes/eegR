@@ -22,6 +22,7 @@
 #' @importFrom orthopolynom polynomial.values legendre.polynomials
 #' @importFrom sgeostat in.polygon
 #' @importFrom gplots colorpanel redgreen greenred bluered redblue
+#' @importFrom RColorBrewer brewer.pal
 NULL
 
 .onAttach <- function(lib, pkg) {

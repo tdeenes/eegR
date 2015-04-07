@@ -50,8 +50,8 @@ follow all main effect terms (default: TRUE)}
 
 \item{seed}{an integer value which specifies a seed (default: NULL)}
 
-\item{pcrit}{the significance level for duration and global count p-value
-correction (default: 0.05)}
+\item{pcrit}{the significance level (or a vector of multiple levels) for the
+consecutive length correction (default: 0.05)}
 }
 \value{
 A list object with effect statistics, uncorrected p-values, and
@@ -75,8 +75,37 @@ The function computes type I p-values - this is correct if the design
 is fully balanced and orthogonal (if the number of between-subject
 factors is one, it may have slightly unequal group sizes).
 }
+\examples{
+# example dataset
+data(erps)
+dat_id <- attr(erps, "id") # to get group memberships
+
+# average the data in each 12 ms time-bin to decrease the computational
+# burden (not needed in serious analyses)
+tempdat <- avgBin(erps, "time", 6)
+
+# Analyze the effect of the reading group (between-subject factor) and the
+# two experimental conditions (stimclass, pairtye; within-subject factors)
+# for each channel and time sample, taking into account both intensity and
+# distributional differences (the default: type = "tanova")
+# Note that the number of permutations should be increased for serious
+# purposes.
+result_tanova <- tanova(tempdat,
+                        list(between = "group",
+                             within = c("stimclass", "pairtype"),
+                             w_id = "id"),
+                        bwdat = dat_id,
+                        nperm = 499L,
+                        useparallel = TRUE, ncores = 2)
+
+# plot results (for now, only p-values)
+plotTanova(result_tanova, only_p = TRUE)
+}
 \references{
-Koenig (2011) RAGU
+Ported from the MATLAB toolbox by Koenig T, Kottlow M, Stein M,
+Melie García L (2011) Ragu: A free tool for the analysis of EEG and MEG
+event-related scalp field data using global randomization statistics.
+Computational Intelligence and Neuroscience, 2011:938925
 }
 \seealso{
 \code{\link{plotTanova}} plots the result of \code{tanova}.
