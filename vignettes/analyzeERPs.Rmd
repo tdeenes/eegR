@@ -57,8 +57,7 @@ plotERParray(dat03, lty = 1, col = "grey70", grid_dim = c(3, 2))
 ### Plot GFP curves for each group and each condition
 
 You can use lattice or ggplot2 to plot whatever aspect of your data. Before calling the
-graphing functions, you can use `prepare2plot` to arrange your data in appropriate format,
-and perform some preliminary computations.
+graphing functions, you can use `transformArray` to arrange your data in appropriate format, and perform some preliminary computations.
 
 Now we will compute the Global Field Power on the grand averages of dyslexic and
 control participants, and compare the curves. 
