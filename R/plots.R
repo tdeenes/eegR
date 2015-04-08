@@ -876,12 +876,9 @@ plotTanova <- function(results, grid = NULL, wrap = NULL,
                         labels = c(as.character(pcrit[-length(pcrit)]), 
                                    "n.s."))
     final_pcrit <- levels(droplevels(dat)$pcrit)
-    colour_pcrit <- 
-        if (length(final_pcrit) > 2) {
-            c(rev(brewer.pal(length(final_pcrit), "Reds")[-1]), "grey60")
-        } else {
-            c(brewer.pal(3, "Reds")[3], "grey60")
-        }
+    colour_pcrit <- rev(brewer.pal(max(3L, length(final_pcrit)), 
+                                   "Reds"))[seq_along(final_pcrit)]
+    colour_pcrit[final_pcrit == "n.s."] <- "grey60"
     legendtitle <- "p-value"
     #
     if (only_p) {
