@@ -139,7 +139,7 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
     out
 }
 
-#' Call a user-specified function on whatever dimension of an array
+#' Call a user-specified function on whatever dimension(s) of an array
 #'
 #' \code{fnDims} calls a user-specified function on whatever dimension(s) of a 
 #' matrix or array. Function can be a vectorized function in which case fnDims 
@@ -158,8 +158,8 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
 #' @param columnwise logical value; if vectorized is TRUE, columnwise indicates 
 #' if target_fn operates column-wise (TRUE, default) or row-wise (FALSE)
 #' @param keep_dimorder logical value; if TRUE, and the returned matrix or array 
-#' is of the same size as dat, the order of dimensions in the returned matrix 
-#' or array will be the same as in dat (default = FALSE)
+#' has the same dimension identifiers as dat, the order of dimensions in the 
+#' returned object will be the same as in dat (default = FALSE)
 #' @param useparallel logical value; if TRUE, a snow-type parallel backend is 
 #' used (default: FALSE)
 #' @param cl cluster definition if useparallel is TRUE
@@ -175,8 +175,47 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
 #' original input. If target_fn outputs a list, no back-transformation is done.
 #' @export
 #' @return see Details
-#' @seealso \code{\link{avgDims}} if target_fn is one of mean/colMeans/rowMeans,
-#' avgDims might be a better choice
+#' @seealso If target_fn is \code{mean}, \code{colMeans}, or \code{rowMeans},
+#' \code{\link{avgDims}}  might be a better choice
+#' @examples
+#' # example dataset
+#' data(erps)
+#' 
+#' # find the range of amplitudes in each channel X time slice of the array
+#' # (that is, separately for each condition and subject)
+#' newdimn <- list(stat = c("min", "max"))
+#' system.time(max_simple <- fnDims(erps, c("chan", "time"), range, 
+#'                                  newdims = newdimn))
+#' 
+#' # the resulting array has an appropriate shape
+#' str(max_simple)
+#' 
+#' # apply is less handy in such cases
+#' system.time({
+#'     max_apply <- apply(erps,
+#'                        setdiff(names(dimnames(erps)), c("chan", "time")),
+#'                        range)
+#'     dimnames(max_apply)[1] <- newdimn
+#'     names(dimnames(max_apply))[1] <- names(newdimn)
+#' })
+#' 
+#' # the same using parallelization (only faster if the computation time is much
+#' # higher than the overhead of starting the clusters, which is not the case here)
+#' system.time(max_parallel <- fnDims(erps, c("chan", "time"), range,
+#'                                    useparallel = TRUE, ncores = 2L,
+#'                                    newdims = newdimn))
+#' 
+#' # usually it is much faster to use a vectorized function;
+#' # note that matrixStats::colRanges returns an Nx2 matrix, but we need 2xN
+#' system.time(max_vectorized <- fnDims(erps, c("chan", "time"), 
+#'                                      function(x) t(matrixStats::colRanges(x)), 
+#'                                      vectorized = TRUE,
+#'                                      newdims = newdimn))
+#' 
+#' # the results are the same
+#' stopifnot(all.equal(max_simple, max_apply, check.attributes = FALSE))
+#' stopifnot(all.equal(max_simple, max_parallel))
+#' stopifnot(all.equal(max_simple, max_vectorized))
 fnDims <- function(dat, target_dim, target_fn, arg_list = NULL, 
                    newdims = list(), vectorized = FALSE, columnwise = TRUE, 
                    keep_dimorder = FALSE, 
@@ -247,7 +286,9 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
         }
     } 
     arrayIP(out, dims, dims.n)
-    if (length(out) == length(dat) && keep_dimorder) {
+    if (keep_dimorder && 
+        identical(sort(names(dimnames(out))),
+                  sort(names(dimnames(dat))))) {
         out <- aperm(out, names(dimnames(dat)))
     }
     # return
