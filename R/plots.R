@@ -865,8 +865,12 @@ plotTanova <- function(results, grid = NULL, wrap = NULL,
         return(x)
     }
     #
-    pcrit <- eval(as.list(results$call)$pcrit)
-    if (is.null(pcrit)) pcrit <- formals(tanova)$pcrit
+    pcrit <- try(eval(as.list(results$call)$pcrit), silent = TRUE)
+    if (is.null(pcrit)) {
+        pcrit <- formals(tanova)$pcrit
+    } else if (inherits(pcrit, "try-error")) {
+        pcrit <- unique(as.vector(results$perm_pvalues_consec))
+    }
     pcrit <- union(sort(pcrit), 1)
     #
     dat <- transformArray(effect ~ ., results$effect)

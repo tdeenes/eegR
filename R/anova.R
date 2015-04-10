@@ -93,8 +93,6 @@ sumsq <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
         if (length(termL[[i]]) == 1) {
             df[i] <- length(groupfreq)-1
         } else {
-            ind <- which(sapply(termL[1:(i-1)], 
-                                function(x) all(x%in%termL[[i]])))
             df[i] <- prod(df[termL[[i]]])
         }
         if (return_means) {
