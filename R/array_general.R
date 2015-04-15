@@ -357,7 +357,7 @@ avgBin <- function(dat, target_dim, bin_length = NULL, bin_ind = NULL,
         if (is.null(bin_length) & is.null(bin_ind)) {
             stop("Either bin_length or bin_ind has to be provided!")
         } else if (!is.null(bin_ind)) {
-            bin_ind <- as.numeric(factor(bin_ind))
+            bin_ind <- as.numeric(factor_(bin_ind))
             multmat <- diag(max(bin_ind))[, bin_ind]
             multmat <- multmat/colSums(multmat)
             out <- fnDims(dat, target_dim, avgfn, arg_list = list(y = multmat), 

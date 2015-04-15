@@ -132,10 +132,7 @@ provides an interactive function (`chanNb`) for this purpose.
 ChN <- chanNb(chan_pos, alpha = 0.7)
 ```
 
-Now you can start the analysis. For serious purposes, set the number of permutations to 999 or 
-higher (preferably 4999). Because the computation is resource intensive, use parallelization if
-possible. In the present example, we will compute bin averages (collapse 12 ms long time bins) to
-decrease the computational burden, and use only two CPU-cores.
+Now you can start the analysis. For serious purposes, set the number of permutations to 999 or higher (preferably 4999). Because the computation is resource intensive, use parallelization if possible. In the present example, we will compute bin averages (collapse 12 ms long time bins) to decrease the computational burden, and use only two CPU-cores.
 
 ```{r, fig.height=14}
 # do bin averaging
@@ -153,7 +150,10 @@ results <- arrayAnova(
     tfce_options = list(ChN = ChN))
 
 # plot the results (for now, only the p-values of the TFCE method)
-imagePvalues(results$perm_pvalues, grid = "modelterm ~ .")
+imagePvalues(extract(results, "p_corr"), grid = "modelterm ~ .")
+
+# print the summary
+summary(results)
 ```
 
 

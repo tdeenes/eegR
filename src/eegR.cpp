@@ -185,6 +185,36 @@ List rleRcpp(NumericMatrix x) {
     return List::create(_["lengths"] = lengths, _["values"] = values, _["matrixcolumn"] = matcol);
 }
 
+// [[Rcpp::export]]
+CharacterVector charmatCollapse(CharacterMatrix x, int along_dim) {
+    int nrow = x.nrow(), ncol = x.ncol();
+    if (along_dim == 1) {
+        CharacterVector out = no_init(ncol);
+        for( int j = 0; j < ncol; j++ ) {
+            CharacterMatrix::Column tmp = x(_, j);
+            out[j] = collapse( tmp );
+        }
+        return out;
+    } else {
+        CharacterVector out = no_init(nrow);
+        for( int i = 0; i < nrow; i++ ) {
+            CharacterMatrix::Row tmp = x(i, _);
+            out[i] = collapse( tmp );
+        }
+        return out;
+    }
+}
 
-
-
+// [[Rcpp::export]]
+NumericMatrix groupsum(NumericMatrix x, IntegerVector g, int ug) {
+    int nrow = x.nrow(), ncol = x.ncol();
+    int gind;
+    NumericMatrix out(ug, ncol);
+    for (int j = 0; j < ncol; j++) {
+        for (int i = 0; i < nrow; i++) {
+            gind = g[i] - 1;
+            out(gind, j) = out(gind, j) + x(i, j);
+        }
+    }
+    return out;
+}

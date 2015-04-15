@@ -329,7 +329,7 @@ arrayTtest <- function(arraydat, arraydat2, paired = FALSE, groups = NULL,
                             rg[sample.int(grouplen, group2len), i] <- 2L
                         }
                         randgroups <- cbind(randgroups, rg)
-                        randgroups <- unique(randgroups, MARGIN = 2L)
+                        randgroups <- fastUnique(randgroups, margin = 2L)
                     }
                 }
             }
@@ -400,7 +400,7 @@ arrayTtest <- function(arraydat, arraydat2, paired = FALSE, groups = NULL,
                                               temp <- idlen * (nperm - nc) * 2,
                                               TRUE),
                                        idlen, temp)
-                        randi <- unique(cbind(randi, ri), MARGIN = 2L)
+                        randi <- fastUnique(cbind(randi, ri), margin = 2L)
                     }
                 }
             }

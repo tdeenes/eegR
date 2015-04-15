@@ -3,17 +3,49 @@
 \alias{fastUnique}
 \title{Fast version of unique for matrices}
 \usage{
-fastUnique(x, units_in_rows = TRUE)
+fastUnique(x, margin = 1L, freq = FALSE)
 }
 \arguments{
 \item{x}{matrix}
 
-\item{units_in_rows}{units are in rows (TRUE, default) or columns of x}
+\item{margin}{1 (default) or 2, referring to rows and columns of the
+matrix, respectively. Can be a character string which is interpreted
+as the name of the dimension if \code{x} has named dimnames.}
+
+\item{freq}{logical value if the frequency of the given rows or columns
+should also be returned (default: FALSE)}
 }
 \value{
-matrix without duplicated units
+\code{fastUnique} returns a matrix without duplicated units. If
+requested, the matrix has a \code{freq} attribute containing the frequency
+of the given rows or columns.
 }
 \description{
-\code{fastUnique} finds the unique rows or columns of a matrix.
+\code{fastUnique} finds the unique rows or columns of a matrix. It is
+much faster and also more memory-efficient than
+\code{\link{unique.matrix}}, especially if the input matrix is not a
+character matrix.
+}
+\examples{
+# create a matrix of random integer values ranging from 1 to 3
+x <- matrixIP(sample(1:3, 4e5, TRUE), 1e5, 4)
+
+# compare computation times
+system.time(un_x <- unique(x))
+system.time(un_x_fast <- fastUnique(x))
+
+# the same if x has dimension names
+decorateDims(x, in_place = TRUE)
+system.time(un_x <- unique(x))
+system.time(un_x_fast <- fastUnique(x))
+
+# the results are identical
+stopifnot(identical(un_x, un_x_fast))
+
+# fastUnique can also return frequency counts
+system.time(un_x_withfreq <- fastUnique(x, freq = TRUE))
+
+# check that frequencies add up to the number of rows of x
+stopifnot(sum(attr(un_x_withfreq, "freq")) == nrow(x))
 }
 

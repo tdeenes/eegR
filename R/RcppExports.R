@@ -13,3 +13,11 @@ rleRcpp <- function(x) {
     .Call('eegR_rleRcpp', PACKAGE = 'eegR', x)
 }
 
+charmatCollapse <- function(x, along_dim) {
+    .Call('eegR_charmatCollapse', PACKAGE = 'eegR', x, along_dim)
+}
+
+groupsum <- function(x, g, ug) {
+    .Call('eegR_groupsum', PACKAGE = 'eegR', x, g, ug)
+}
+

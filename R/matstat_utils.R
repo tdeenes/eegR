@@ -4,19 +4,93 @@
 
 #' Fast version of unique for matrices
 #'
-#' \code{fastUnique} finds the unique rows or columns of a matrix.
+#' \code{fastUnique} finds the unique rows or columns of a matrix. It is 
+#' much faster and also more memory-efficient than 
+#' \code{\link{unique.matrix}}, especially if the input matrix is not a 
+#' character matrix.
 #' @param x matrix
-#' @param units_in_rows units are in rows (TRUE, default) or columns of x
+#' @param margin 1 (default) or 2, referring to rows and columns of the 
+#' matrix, respectively. Can be a character string which is interpreted
+#' as the name of the dimension if \code{x} has named dimnames. 
+#' @param freq logical value if the frequency of the given rows or columns 
+#' should also be returned (default: FALSE)
 #' @export
-#' @return matrix without duplicated units
-fastUnique <- function(x, units_in_rows = TRUE) {
-    if (!is.matrix(x)) stop("Provide a matrix as input!")
-    if (units_in_rows) x <- t(x)
-    dupl <- duplicated(str_collapse(lapply(1:ncol(x), function(i) x[,i])))
-    x <- x[, !dupl, drop = F]
-    if (units_in_rows) x <- t(x)
+#' @return \code{fastUnique} returns a matrix without duplicated units. If 
+#' requested, the matrix has a \code{freq} attribute containing the frequency
+#' of the given rows or columns.  
+#' @examples
+#' # create a matrix of random integer values ranging from 1 to 3
+#' x <- matrixIP(sample(1:3, 4e5, TRUE), 1e5, 4)
+#' 
+#' # compare computation times
+#' system.time(un_x <- unique(x))
+#' system.time(un_x_fast <- fastUnique(x))
+#' 
+#' # the same if x has dimension names
+#' decorateDims(x, in_place = TRUE)
+#' system.time(un_x <- unique(x))
+#' system.time(un_x_fast <- fastUnique(x))
+#' 
+#' # the results are identical
+#' stopifnot(identical(un_x, un_x_fast))
+#' 
+#' # fastUnique can also return frequency counts
+#' system.time(un_x_withfreq <- fastUnique(x, freq = TRUE))
+#' 
+#' # check that frequencies add up to the number of rows of x
+#' stopifnot(sum(attr(un_x_withfreq, "freq")) == nrow(x))
+fastUnique <- function(x, margin = 1L, freq = FALSE) {
+    x_class <- names(
+        which(vapply(c("data.table", "data.frame", "matrix"), 
+                     function(cl) inherits(x, cl), 
+                     FALSE))[1]
+        )
+    if (is.na(x_class)) 
+        stop("Provide a matrix, data.frame, or data.table as input!")
+    if (is.character(margin) && !is.null(names(dimnames(x)))) {
+        margin <- match(margin, names(dimnames(x)))
+    }
+    margin <- as.integer(margin)
+    if (length(na.omit(margin)) != 1 || margin < 0L || margin > 2L) {
+        stop("Wrong margin argument")
+    }
+    #
+    if ((margin == 1L & nrow(x) == 1L) | (margin == 2L & ncol(x) == 1L))
+        return(x)
+    #
+    dimn <- dimnames(x)
+    if (margin > 1) x <- t(x)
+    x <- as.data.table(x)
+    setkey(x, NULL)
+    #
+    if (freq) {
+        if (is.null(dimn[[margin]])) {
+            out <- x[, list(X_counts_X = .N), by = names(x)]
+            counts <- out[, X_counts_X]
+            out[, X_counts_X := NULL]
+        } else {
+            out <- x[, list(X_counts_X = .N, X_idx_X = min(.I)), by = names(x)]
+            counts <- out[, X_counts_X]
+            idx <- out[, X_idx_X]
+            out[, X_counts_X := NULL]
+            out[, X_idx_X := NULL]
+        }
+    } else {
+        if (is.null(dimn[[margin]])) {
+            out <- unique(x)
+        } else {
+            out <- x[, list(X_idx_X = min(.I)), by = names(x)]
+            idx <- out[, X_idx_X]
+            out[, X_idx_X := NULL]
+        }
+    }
+    if (margin > 1) out <- t(out)
+    out <- do.call(paste0("as.", x_class), list(out))
+    if (!is.null(dimn[[margin]])) dimn[[margin]] <- dimn[[margin]][idx]
+    setattr(out, "dimnames", dimn)
+    if (freq) setattr(out, "freq", counts)
     # return
-    x
+    out
 }
 
 #' Maximum number of consecutive TRUE values in each column/row of a matrix
@@ -48,6 +122,23 @@ consectrue <- function(x, col = TRUE, any_NA = NULL) {
     out
 }
 
+#' Collapse row or column elements of a matrix
+#' 
+#' \code{collapse} is a fast version of 
+#' \code{apply(x, along_dim, paste, collapse = "")}. It also works on vectors.
+#' @param x vector, matrix or data.frame
+#' @param col logical value; if TRUE (default), elements are collapsed 
+#' column-wise.
+#' @export
+#' @return \code{collapse} always returns a character vector.
+collapse <- function(x, col = TRUE) {
+    if (is.data.frame(x)) x <- as.matrix(x)
+    if (is.list(x)) stop("Provide a vector, matrix or data.frame")
+    if (is.null(dim(x))) x <- matrix(x)
+    if (length(dim(x)) > 2L) stop("Provide a vector, matrix or data.frame")
+    if (!is.character(x)) storage.mode(x) <- "character"
+    charmatCollapse(x, as.integer(col))
+}
 
 # rle on the columns or rows of a matrix
 matrixRle <- function(x, col = TRUE) {

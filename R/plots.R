@@ -948,7 +948,7 @@ fastplot_tanova <- function(results, plot_title = "", pcrit = 0.05,
     dat <- reshapefn(dimn[grep("effect_", dimn)], "effect_size")
     dat$pvalue <- -log(reshapefn("perm_pvalues", "pvalue")$pvalue)
     dat$pvalue_consec <- reshapefn("perm_pvalues_consec", "pvalue")$pvalue
-    dat$pcrit <- factor(dat$pvalue_consec<pcrit)
+    dat$pcrit <- factor_(dat$pvalue_consec<pcrit)
     legendtitle <- paste("pvalue <", substitute(pcrit), sep = " ")
     #
     if (only_p) {
@@ -981,7 +981,7 @@ fastplot_peak <- function(results, plot_title = "",
         }
         x <- rearrangeList(x, "nation")
         x <- as.data.frame.table(x, responseName = headername)
-        x$peak <- factor(x$peak, levels = rev(levels(x$peak)))
+        x$peak <- factor_(x$peak, levels = rev(levels(x$peak)))
         return(x)
     }
     dat_ampl <- reshapefn("F_obs", "pvalue", attr_slot = "pvalues")
@@ -994,7 +994,7 @@ fastplot_peak <- function(results, plot_title = "",
     colnames(dat_lat)[3] <- "modelterm"
     dat_lat$measure <- "latency"
     dat <- rbind(dat_ampl, dat_lat)
-    dat$pcrit <- factor(dat$pvalue < pcrit)
+    dat$pcrit <- factor_(dat$pvalue < pcrit)
     legendtitle <- paste("pvalue <", substitute(pcrit), sep = " ")
     qp <- ggplot(dat, aes(x = nation, y = peak, fill = pcrit)) + 
         geom_tile(col = "white") + facet_grid(modelterm ~ measure) + 

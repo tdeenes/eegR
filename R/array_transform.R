@@ -185,6 +185,7 @@ arrayIP <- function(x, dim, dimnames = NULL, force_length = TRUE) {
 #' @export
 # Extract a part of an array
 subsetArray <- function(dat, subsets, keep_attr = TRUE, ...) {
+    if (is.null(dat)) return(NULL)
     dimpos <- match(names(subsets), names(dimnames(dat)))
     out <- asub(dat, subsets, dimpos, ...)
     if (keep_attr) {
@@ -375,7 +376,7 @@ array2df <- function(dat, response_name = "values",
                 if (dim_types[[i]]  != "factor") {
                     do.call(paste0("as.", dim_types[[i]]), list(out[[i]]))
                 } else {
-                    factor(out[[i]], levels = dimn[[i]])
+                    factor_(out[[i]], levels = dimn[[i]])
                 }
         }
     }

@@ -15,10 +15,10 @@
 #' @author Denes Toth <\email{toth.denes@@ttk.mta.hu}>
 #' @docType package
 #' @useDynLib eegR 
-#' @import abind matrixStats ggplot2 permute parallel doParallel foreach iterators
-#' @importFrom data.table setattr copy
+#' @import abind data.table matrixStats ggplot2 permute parallel doParallel foreach iterators
+#' @importFrom checkmate checkVector
 #' @importFrom Rcpp evalCpp
-#' @importFrom Kmisc str_collapse
+#' @importFrom Kmisc factor_ counts
 #' @importFrom orthopolynom polynomial.values legendre.polynomials
 #' @importFrom sgeostat in.polygon
 #' @importFrom gplots colorpanel redgreen greenred bluered redblue

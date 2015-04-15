@@ -54,3 +54,36 @@ BEGIN_RCPP
     return __sexp_result;
 END_RCPP
 }
+// charmatCollapse
+CharacterVector charmatCollapse(CharacterMatrix x, int along_dim);
+RcppExport SEXP eegR_charmatCollapse(SEXP xSEXP, SEXP along_dimSEXP) {
+BEGIN_RCPP
+    SEXP __sexp_result;
+    {
+        Rcpp::RNGScope __rngScope;
+        Rcpp::traits::input_parameter< CharacterMatrix >::type x(xSEXP );
+        Rcpp::traits::input_parameter< int >::type along_dim(along_dimSEXP );
+        CharacterVector __result = charmatCollapse(x, along_dim);
+        PROTECT(__sexp_result = Rcpp::wrap(__result));
+    }
+    UNPROTECT(1);
+    return __sexp_result;
+END_RCPP
+}
+// groupsum
+NumericMatrix groupsum(NumericMatrix x, IntegerVector g, int ug);
+RcppExport SEXP eegR_groupsum(SEXP xSEXP, SEXP gSEXP, SEXP ugSEXP) {
+BEGIN_RCPP
+    SEXP __sexp_result;
+    {
+        Rcpp::RNGScope __rngScope;
+        Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP );
+        Rcpp::traits::input_parameter< IntegerVector >::type g(gSEXP );
+        Rcpp::traits::input_parameter< int >::type ug(ugSEXP );
+        NumericMatrix __result = groupsum(x, g, ug);
+        PROTECT(__sexp_result = Rcpp::wrap(__result));
+    }
+    UNPROTECT(1);
+    return __sexp_result;
+END_RCPP
+}

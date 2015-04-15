@@ -378,7 +378,7 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
             yorig <- y
             y <- y[, keep_columns, drop = FALSE]
             na_ind <- na_ind[, keep_columns, drop = FALSE]
-            missing_patterns <- fastUnique(na_ind, units_in_rows = FALSE)
+            missing_patterns <- fastUnique(na_ind, margin = 2L)
             mischan <- which(rowAnys(missing_patterns))
             mischan <- 
                 if (!is.null(rownames(ch_pos))) {
@@ -390,7 +390,7 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
             message("...There are missing values in the following channels: ",
                     mischan)
         } else {
-            missing_patterns <- fastUnique(na_ind, units_in_rows = FALSE)
+            missing_patterns <- fastUnique(na_ind, margin = 2L)
             message("Done")
             yy <- arrayIP(0, c(nrow(interp_pos), ncol(y)),
                           list(rownames(interp_pos), colnames(y)))

@@ -134,9 +134,9 @@ result_tfce <- arrayAnova(tempdat,
                           tfce_options = list(ChN = ChN))
 
 # compare traditional and TFCE p-values
-p_trad <- attr(result_tfce$effect_F_obs, "pvalues")
-p_tfce <- result_tfce$perm_pvalues
-p_all <- bindArrays(trad = p_trad, tfce = p_tfce, along_name = "method")
+p_all <- extract(result_tfce, c("p", "p_corr"))
+p_all <- bindArrays(trad = p_all$p, tfce = p_all$p_corr,
+                    along_name = "method")
 
 # plot p-values after -log transformation to increase discriminability;
 # note how the sporadic effects disappear

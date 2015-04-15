@@ -39,7 +39,7 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
     marg_means <- vector("list", length(termL))
     if (residualmean && !no_icpt) a_dat <- sweep(a_dat, 2, colMeans(a_dat), "-")
     for (i in 1:length(termL)) {
-        groups <- factor(interaction(f_dat[,termL[[i]]], drop = TRUE))
+        groups <- factor_(interaction(f_dat[,termL[[i]]], drop = TRUE))
         groupfreq <- tabulate(groups)
         names(groupfreq) <- levels(groups)
         marg_means[[i]] <- arrayIP(rowsum(a_dat, groups)/groupfreq, 
@@ -84,7 +84,7 @@ sumsq <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
     if (!no_icpt) a_dat <- sweep(a_dat, 2, colMeans(a_dat), "-")
     #
     for (i in 1:length(termL)) {
-        groups <- factor(interaction(f_dat[,termL[[i]]], drop = TRUE))
+        groups <- factor_(interaction(f_dat[,termL[[i]]], drop = TRUE))
         groupfreq <- tabulate(groups)
         names(groupfreq) <- levels(groups)
         tmeans <- rowsum(a_dat, groups)/groupfreq
@@ -502,9 +502,9 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
 #'                           tfce_options = list(ChN = ChN))
 #' 
 #' # compare traditional and TFCE p-values
-#' p_trad <- attr(result_tfce$effect_F_obs, "pvalues")
-#' p_tfce <- result_tfce$perm_pvalues
-#' p_all <- bindArrays(trad = p_trad, tfce = p_tfce, along_name = "method")
+#' p_all <- extract(result_tfce, c("p", "p_corr"))
+#' p_all <- bindArrays(trad = p_all$p, tfce = p_all$p_corr, 
+#'                     along_name = "method")
 #' 
 #' # plot p-values after -log transformation to increase discriminability;
 #' # note how the sporadic effects disappear
@@ -539,8 +539,6 @@ arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE,
     #
     temp <- preAnova(arraydat, factordef, bwdat, 
                      useparallel, ncores, par_method, usetfce)
-    # assign variables to this environment, and potentially overwrite existing ones
-    #assignList(temp, verbose = FALSE)
     dat <- temp$dat
     arraydat <- temp$arraydat
     factordef <- temp$factordef
@@ -608,6 +606,9 @@ arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE,
     out$effect_F_obs <- Fvals_obs
     if (usetfce) out$effect_tfce_obs <- tfce_obs
     if (nperm > 1L) out$perm_pvalues <- sig
+    type <- if (usetfce) "tfce" else "perm"
+    setattr(out$perm_pvalues, "type", type)
+    setattr(out, "class", "arrayAnova")
     # return
     out
 }
@@ -826,7 +827,7 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
     # formula of anova
     aov_formula <- as.formula(paste(
         as.character(quote(arraydat)), "~", 
-        sub("^\\*", "", paste(
+        sub("^\\*|\\*$", "", paste(
             paste(as.character(factordef$between), collapse = "*"), 
             paste(as.character(factordef$within), collapse = "*"),
             sep = "*"))
@@ -1113,7 +1114,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
         factor_means <- data.frame(
             group = peakind_facs[rep(1:nrow(peakind_facs), 
                                      length(peakdef)), , drop = F],
-            peak = factor(rep(seq_along(peakdef), each = nrow(fmeans[[1]]))),
+            peak = factor_(rep(seq_along(peakdef), each = nrow(fmeans[[1]]))),
             ampl = c(marginalMeans(mean_formula, dat, arraydat_peaks, 
                                    origdimnames_peaks["peak"], 
                                    keep_term_order = !iaterms_last, 

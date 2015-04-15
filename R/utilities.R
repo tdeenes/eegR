@@ -13,6 +13,72 @@ reqFn <- function(packages) {
     TRUE
 }
 
+#' Replace elements of a vector
+#' 
+#' \code{Replace} replaces the values in \code{x} which are equal to 
+#' \code{from} to the values given in \code{to}. The values in \code{to} are
+#' recycled to match the length of \code{from}.
+#' @param x a raw, integer, character or numeric (double) vector
+#' @param from vector of elements to replace
+#' @param to the elements
+#' @param digits integer indicating the number of decimal places to be used in
+#' the comparison of double values (ignored if \code{is.double(x)} is FALSE)
+#' @return a vector with replaced values
+#' @export
+#' @examples
+#' x <- c(NA, c("a", "a", "z", "e", "q"))
+#' 
+#' # note that 'from' might contain values which are not present in 'x'
+#' xr <- Replace(x, from = c("w", "a", "e"), to = c("ww", "aa", "ee"))
+#' 
+#' # only 'a' and 'e' were replaced
+#' xr
+#' stopifnot(identical(length(x), length(xr)))
+#' stopifnot(identical(xr[c(2, 3, 5)], c("aa", "aa", "ee")))
+#' 
+#' # the missing value is not affected
+#' stopifnot(is.na(xr[1]))
+Replace <- function(x, from, to, digits = 10L) {
+    if (!identical(typeof(x), typeof(from)) || 
+        !identical(typeof(x), typeof(to)))
+        stop("The type of 'x', 'from', and 'to' must be identical")
+    checkVector(x, strict = TRUE)
+    checkVector(from, strict = TRUE, any.missing = FALSE)
+    checkVector(to, strict = TRUE, any.missing = FALSE)
+    if (is.double(x)) {
+        back <- TRUE
+        x <- format(x, digits = digits)
+        from <- format(from, digits = digits)
+        to <- format(to, digits = digits)
+    } else {
+        back <- FALSE
+    }
+    un <- if (uniqueN(x) == length(x)) TRUE else FALSE
+    from <- unique(from)
+    to <- rep_len(to, length(from))
+    if (un) {
+        ind <- match(from, x)
+        discard <- is.na(ind)
+        x[ind[!discard]] <- to[!discard]
+        if (back) x <- as.double(x)
+        # return
+        x
+    } else {
+        dt <- data.table(ind = seq_along(x), x = x)
+        dt2 <- data.table(x = from, to = to)
+        dt <- merge(dt, dt2, by = "x", all.x = TRUE)
+        setkey(dt, to)
+        dt[is.na(to), to := x]
+        setkey(dt, ind)
+        out <- dt$to
+        if (back) out <- as.double(out)
+        setattr(out, "names", names(x))
+        # return
+        out
+    }
+}
+
+
 
 #' Assign the elements of a named list to the enclosing environment
 #' 
