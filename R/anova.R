@@ -602,12 +602,12 @@ arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE,
                 (nperm + 1)
         }
         sig <- revMergeDims(sig)
+        type <- if (usetfce) "tfce" else "perm"
+        setattr(sig, "type", type)
     } 
     out$effect_F_obs <- Fvals_obs
     if (usetfce) out$effect_tfce_obs <- tfce_obs
     if (nperm > 1L) out$perm_pvalues <- sig
-    type <- if (usetfce) "tfce" else "perm"
-    setattr(out$perm_pvalues, "type", type)
     setattr(out, "class", "arrayAnova")
     # return
     out
