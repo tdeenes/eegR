@@ -20,14 +20,14 @@
 #' of the given rows or columns.  
 #' @examples
 #' # create a matrix of random integer values ranging from 1 to 3
-#' x <- matrixIP(sample(1:3, 4e5, TRUE), 1e5, 4)
+#' x <- matrix_(sample(1:3, 4e5, TRUE), 1e5, 4)
 #' 
 #' # compare computation times
 #' system.time(un_x <- unique(x))
 #' system.time(un_x_fast <- fastUnique(x))
 #' 
 #' # the same if x has dimension names
-#' decorateDims(x, in_place = TRUE)
+#' decorateDims_(x)
 #' system.time(un_x <- unique(x))
 #' system.time(un_x_fast <- fastUnique(x))
 #' 
@@ -140,6 +140,98 @@ collapse <- function(x, col = TRUE) {
     charmatCollapse(x, as.integer(col))
 }
 
+#' Fast replacement for \code{sweep}
+#' 
+#' \code{sweepMatrix} is a faster and less memory-hungry version of 
+#' \code{sweep(x, MARGIN, STATS, FUN = c("-", "+", "*", "/", "<", ...))}.
+#' @param x numeric matrix
+#' @param MARGIN an integer index of the dimension to sweep over (1 for rows,
+#' 2 for columns). Can be a character value if the input matrix has named 
+#' dimension names.
+#' @param STATS a numeric vector; the summary statistic which is to be swept 
+#' out. It is recycled to match the size of \code{MARGIN}.
+#' @param FUN character value, one of "+", "-", "*", "/", "^", "==", "!=", "<", 
+#' "<=", ">=", ">"
+#' @param has_NA logical value indicating if there is any missing value in 
+#' \code{x}. If NULL (default), it is explicitly checked by calling 
+#' \code{\link{anyNA}} on \code{x}.
+#' @export
+#' @return \code{sweepMatrix} returns a matrix of the same type as
+#' \code{FUN(x[1, 1], y[1])}
+#' @examples
+#' # create a matrix and choose its first row as a statistic
+#' mat <- matrix(1:20, 4, 5)
+#' stat <- mat[1,]
+#' 
+#' # suppose we have missing values in the matrix and the statistic
+#' mat[2, 3] <- NA
+#' stat[1] <- NA
+#' 
+#' # compute and print the result
+#' ( result <- sweepMatrix(mat, 2, stat, "-") )
+#' 
+#' # check
+#' stopifnot(all.equal(result, 
+#'                     sweep(mat, 2, stat, "-")))
+#' stopifnot(identical(result[1, ], c(NA, rep(0L, ncol(mat) - 1))))
+sweepMatrix <- function(x, MARGIN, STATS, 
+                        FUN = c("-", "+", "*", "/", "^", 
+                                "==", "!=", "<", "<=", ">", ">="),
+                        has_NA = NULL) {
+    assertMatrix(x, mode = "numeric")
+    if (is.character(MARGIN)) MARGIN <- match(MARGIN, names(dimnames(x)))
+    MARGIN <- as.integer(MARGIN[[1]])
+    if (length(MARGIN) < 1L || !MARGIN %in% 1:2) stop("Wrong MARGIN provided")
+    assertNumeric(STATS)
+    STATS <- rep_len(STATS, dim(x)[MARGIN])
+    FUN <- FUN[[1]]
+    Rfun <- match.fun(FUN)
+    if (MARGIN == 1L) {
+        out <- Rfun(x, STATS)
+    } else {
+        if (is.double(x) && !is.double(STATS)) {
+            storage.mode(STATS) <- "double"
+        } else if (is.double(STATS) && !is.double(x)) {
+            storage.mode(x) <- "double"
+        }
+        if (is.null(has_NA) || has_NA) {
+            has_NA_x <- anyNA(x)
+            has_NA_stats <- anyNA(STATS)
+            has_NA <- if (has_NA_x || has_NA_stats) TRUE else FALSE
+        } else {
+            has_NA_x <- has_NA_stats <- FALSE 
+        }
+        if (has_NA_stats) {
+            indNA <- rep(is.na(STATS), each = nrow(x))
+            if (has_NA_x) {
+                indNA <- indNA | is.na(x)
+            }
+        } else if (has_NA_x) {
+            indNA <- is.na(x)
+        } 
+        cppFn <- 
+            if (FUN %in% c("+", "-", "*")) {
+                "eegR_sweepcol_multitype_cpp"
+            } else if (FUN %in% c("/", "^")) {
+                "eegR_sweepcol_double_cpp"
+            } else if (FUN %in% c("==", "!=", "<", "<=", ">", ">=")) {
+                "eegR_sweepcol_logical_cpp"
+            } else {
+                warning("FUN not implemented - fallback to sweep()")
+                return(sweep(x, MARGIN, STATS, Rfun))
+            }
+        out <- .Call(cppFn, PACKAGE = 'eegR', x, STATS, FUN)
+        out_mode <- storage.mode(Rfun(x[1,1], STATS[1]))
+        if (storage.mode(out) != out_mode) {
+            warning("conversion was needed - check results")
+            storage.mode(out) <- out_mode
+        }
+        if (has_NA) out[indNA] <- NA
+    }
+    # return
+    out
+}
+
 # rle on the columns or rows of a matrix
 matrixRle <- function(x, col = TRUE) {
     if (length(dim(x)) > 2 || (!is.atomic(x) && !is.data.frame(x)) )
@@ -156,7 +248,7 @@ matrixRle <- function(x, col = TRUE) {
 
 # inverse of matrixRle
 inverse.matrixRle <- function(x) {
-    out <- matrixIP(rep(x$values, x$lengths), ncol = max(x$matrix))
+    out <- matrix_(rep(x$values, x$lengths), ncol = max(x$matrix))
     if ("matrixrow" %in% names(x)) {
         out <- t(out)
     }

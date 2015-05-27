@@ -80,7 +80,7 @@ findExtremes <- function(x, n = 1L, has_NA = NULL) {
     orignames <- names(x)
     x <- as.matrix(x)
     # main computations
-    out <- matrixIP(0L, nrow(x), ncol(x))
+    out <- matrix_(0L, nrow(x), ncol(x))
     out[x == rollFun(x, 2*n + 1L, max)] <- 1L
     out[x == rollFun(x, 2*n + 1L, min)] <- -1L
     # external elements
@@ -164,7 +164,7 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
                 if (length(width) == 1) {
                     out <- FUN(dat, width, ...)
                 } else {
-                    out <- arrayIP(0, dims)
+                    out <- array_(0, dims)
                     if (identical(FUN, caTools::runquantile)) {
                         for (i in unique(width)) {
                             ind <- width == i
@@ -210,33 +210,24 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
 #' @param eh numeric vector of E and H parameters
 #' @param nr_steps number of threshold steps (default: 50L)
 #' @param channel_dim the dimension of x which represents channels (default: 1L)
+#' @param has_neg logical value if there are (or can be) negative values in x 
+#' (default: TRUE)
+#' @param has_pos logical value if there are (or can be) positive values in x
+#' (default: TRUE)
 #' @export
 #' @keywords internal
 #' @return numeric matrix or array of the same dimensions as x
 #' @author The original C code was written by Christian Gaser, further modified
 #' by Pau Coma and adopted to EEG analysis by Armand Mensen. Denes Toth ported
 #' the C code to C++ (Rcpp) with minor improvements and added the R wrapper.
-tfceFn <- function(x, chn, eh, nr_steps = 50L, channel_dim = 1L) {
-    chan_dim = which(names(dimnames(x)) == "chan")
-    if (length(chan_dim)==0) {
+tfceFn <- function(x, chn, eh, nr_steps = 50L, channel_dim = 1L, 
+                   has_neg = TRUE, has_pos = TRUE) {
+    chan_dim <- which(names(dimnames(x)) == "chan")
+    if (length(chan_dim) == 0) {
         stopifnot(dim(x)[channel_dim] == nrow(chn))
-        chan_dim <- 1L
-    }
-    out <- arrayIP(0, dim(x))
-    ind.neg <- x < 0
-    ind.pos <- x > 0
-    if (any(ind.pos)) {
-        sdat <- x
-        sdat[ind.neg] <- 0
-        out <- tfce(inData = sdat, chan_dim = chan_dim, 
-                    ChN = chn, EH = eh, numSteps = nr_steps)
-    }
-    if (any(ind.neg)) {
-        sdat <- -x
-        sdat[ind.pos] <- 0
-        out <- out - tfce(inData = sdat, chan_dim = chan_dim, 
-                          ChN = chn, EH = eh, numSteps = nr_steps)
+        chan_dim <- channel_dim
     }
     # return
-    out
+    .Call('eegR_tfce', PACKAGE = 'eegR', 
+          x, chan_dim, chn, eh, nr_steps, has_neg, has_pos)
 }

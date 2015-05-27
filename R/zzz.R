@@ -14,9 +14,13 @@
 #' @aliases eegR-package eegR
 #' @author Denes Toth <\email{toth.denes@@ttk.mta.hu}>
 #' @docType package
-#' @useDynLib eegR 
-#' @import abind data.table matrixStats ggplot2 permute parallel doParallel foreach iterators
-#' @importFrom checkmate checkVector
+#' @useDynLib eegR
+#' @import abind data.table matrixStats ggplot2 permute proj4
+#' @import parallel doParallel foreach iterators
+#' @importFrom checkmate assertAtomic assertVector assertMatrix assertArray
+#' @importFrom checkmate assertDataFrame assertList assertClass
+#' @importFrom checkmate assertLogical assertCharacter assertNumeric assertIntegerish checkIntegerish
+#' @importFrom checkmate assertString assertNumber
 #' @importFrom Rcpp evalCpp
 #' @importFrom Kmisc factor_ counts
 #' @importFrom orthopolynom polynomial.values legendre.polynomials

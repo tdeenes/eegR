@@ -2,16 +2,116 @@
 # <<< ANOVA on arrays >>> ----
 #
 
+#' TFCE-correction of the test statistic
+#' 
+#' \code{anovaTfce} is called internally by \code{arrayAnova} and 
+#' \code{arrayTtest} and performs TFCE-correction of the given test statistic
+#' @param x numeric matrix or array of test statistic 
+#' (chan_time X other_dimensions or chan X time X other_dimenions)
+#' @param target_dim the dimension(s) which hold chan and time values (usually 
+#' 1L if x is a matrix and 1:2L if x is an array)
+#' @param has_neg logical scalar whether x might have negative values (TRUE for
+#' a t-statistic and FALSE for an F-statistic)
+#' @param nr_chan number of channels
+#' @param nr_time number of time points
+#' @param tfce a list of TFCE parameters
+#' @keywords internal
+anovaTfce <- function(x, target_dim, has_neg, nr_chan, nr_time, tfce) {
+    fnDims(x, target_dim, 
+           function(y) tfceFn(
+               matrix_(y, nr_chan, nr_time, arg_check = FALSE), 
+               chn = tfce$ChN, eh = tfce$EH,
+               nr_steps = tfce$steps, has_neg = has_neg),
+           arg_check = FALSE, parallel = FALSE)
+}
+
+#' Permutation of the test statistic
+#' 
+#' \code{permPvalues} is called internally by \code{arrayAnova} and 
+#' \code{arrayTtest} and performs permutation analysis.
+#' @param obj a list returned by \code{arrayAnova} or \code{arrayTtest}
+#' @param nperm an integer value indicating the number of permutations
+#' @param seed an integer value which specifies a seed (default: NULL), or a 
+#' list of arguments passed to \code{\link{set.seed}}
+#' @param stat_obs a numeric array of the observed test statistic
+#' @param tfce NULL (default) or a list of the TFCE parameters 
+#' @return \code{\link{permPvalues}} returns a logical array whose elements 
+#' indicate whether the absolute observed test statistic in the given chanXtime 
+#' cell is smaller than the absolute randomized test statistic
+#' @keywords internal
+permPvalues <- function(obj, nperm, seed, stat_obs, tfce = NULL) {
+    # helper function
+    permfn <- function(obj, perm_vec, tfce, 
+                       stat_fun, abs_stat_obs, has_neg) {
+        stat_perm <- stat_fun(obj, perm_vec)
+        setattr(stat_perm, "dim", 
+                c(obj$nr_chanXtime, obj$otherdims$size))
+        if (!is.null(tfce)) 
+            stat_perm <- anovaTfce(stat_perm, 1L, has_neg, 
+                                   obj$nr_chan, obj$nr_time, tfce)
+        if (has_neg) stat_perm <- abs(stat_perm)
+        stat_perm <- colMaxs(stat_perm)
+        # return
+        if (length(stat_perm) > 1L) {
+            sweep(stat_obs, obj$otherdims$index, stat_perm, "<")
+        } else {
+            stat_obs < stat_perm
+        }
+    }
+    # TFCE yes / no
+    use_tfce <- if (is.null(tfce)) FALSE else TRUE
+    # type: ANOVA / t-test
+    if (grepl("between|within|mixed", obj$type)) {
+        rand_sample <- anovaRandomIndices(obj, nperm, seed)
+        stat_fun <- compF
+        has_neg <- FALSE
+    } else if (grepl("independent", obj$type)) {
+        rand_sample <- isTtestRandomGroups(obj, nperm, seed)
+        stat_fun <- isTtest
+        has_neg <- TRUE
+    } else if (grepl("one|paired", obj$type)) {
+        rand_sample <- osTtestRandomSigns(obj, nperm, seed)
+        stat_fun <- osTtest
+        has_neg <- TRUE
+    } else {
+        stop("Wrong 'type' node in 'obj'")
+    }
+    # take the absolute of stat_obs if it might have negative values
+    if (has_neg) stat_obs <- abs(stat_obs)
+    # create larger chunks
+    chunks <- min(10L, ceiling(nperm/max(1L, getDoParWorkers())))
+    # avoid code-style warning
+    xi <- NULL; rm(xi)
+    # compute sig
+    sig <- 
+        foreach(x = iter(rand_sample, by = "col", chunksize = chunks), 
+                .combine = "+", .inorder = FALSE) %dopar% 
+            {
+                foreach(xi = iter(x, by = "col", chunksize = 1L), 
+                        .combine = "+", .inorder = FALSE) %do% 
+                    permfn(obj, xi, tfce, stat_fun, stat_obs, has_neg)
+            }
+    sig <- (sig + 1) / (nperm + 1)
+    # set type
+    attr_type <- 
+        if (use_tfce) {
+            "Permuted P-value (with TFCE correction)"
+        } else {
+            "Permuted P-value (with max(Channel X Time) correction)"
+        }
+    setattr(sig, "type", attr_type)
+}
+
 #' Compute marginal means in an ANOVA design
 #' 
 #' \code{marginalMeans} computes marginal means in ANOVA designs
 #' @param form formula of the model
 #' @param f_dat data.frame of factors
 #' @param a_dat matrix which contains the dependent variables. It must have as
-#' many rows as f_dat.  Usually a_dat is the result of calling array2mat on the
-#' orginal data array.
+#' many rows as f_dat. Usually a_dat is the result of calling 
+#' \code{\link{array2mat}} on the orginal data array.
 #' @param dimn the original dimension names for the array corresponding to the
-#' column names of a_dat
+#' column names of \code{a_dat}
 #' @param keep_term_order logival variable whether to keep the order of the 
 #' model terms as provided in form (TRUE) or all interaction terms should follow
 #' all main effect terms (FALSE, default)
@@ -22,8 +122,9 @@
 #' @param no_icpt logical value; if TRUE, global mean is subtracted before 
 #' computing the marginal means (default: FALSE)
 #' @export
-#' @return A named list containing the marginal means for each model terms
-# TODO: examples
+#' @keywords internal
+#' @return A named list containing the marginal means for each model term
+# TODO: examples, argument checking, handle numeric variable
 marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE, 
                           residualmean = FALSE, whichterm = NULL, 
                           no_icpt = FALSE) {
@@ -42,9 +143,9 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
         groups <- factor_(interaction(f_dat[,termL[[i]]], drop = TRUE))
         groupfreq <- tabulate(groups)
         names(groupfreq) <- levels(groups)
-        marg_means[[i]] <- arrayIP(rowsum(a_dat, groups)/groupfreq, 
-                                   c(length(groupfreq), vapply(dimn, length, 0L)),
-                                   c(list(modelterm = names(groupfreq)), dimn))
+        marg_means[[i]] <- array_(rowsum(a_dat, groups)/groupfreq, 
+                                  c(length(groupfreq), vapply(dimn, length, 0L)),
+                                  c(list(modelterm = names(groupfreq)), dimn))
         setattr(marg_means[[i]], "freq", groupfreq)
         if (residualmean) {
             a_dat <- a_dat - 
@@ -57,386 +158,577 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
     marg_means
 }
 
-
-
-#' Compute Sum of Squares
+#' Prepare sum-of-squares computations
+#' 
+#' \code{preSumSq} prepares the objects which are needed by 
+#' \code{\link{compSumSq}}. Thus, it returns the model.matrix (X), the X'X 
+#' matrix, and all unique rows of Xs.
+#' @param form model formula (or character string to \code{as.formula})
+#' @param form_data a data.frame containing all variables of the formula
+#' @param keep_term_order a logical value indicating whether the terms should 
+#' keep their positions. If FALSE the terms are reordered so that main effects 
+#' come first, followed by the interactions, all second-order, all third-order 
+#' and so on. Effects of a given order are kept in the order specified.
+#' @param scaled a logical value indicating if numeric variables in
+#' 'form_data' are already scaled (TRUE) or not (FALSE, the default).
+#' @return A list with the following components: model_matrix, 
+#' model_matrix_labels, xpx, unique_contrasts
 #' @keywords internal
-sumsq <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE, 
-                  whichterm = NULL, no_icpt = FALSE, return_means = FALSE,
-                  return_array = TRUE) {
-    labels <- attr(terms(as.formula(form), keep.order = keep_term_order), 
-                   "term.labels")
-    termL <- if (is.null(whichterm) || is.na(whichterm)) {
-        strsplit(labels, ":")
-    } else if (is.character(whichterm)) {    
-        strsplit(whichterm[whichterm %in% labels], ":")
-    } else {
-        strsplit(labels[whichterm], ":")
+preSumSq <- function(form, form_data, 
+                     keep_term_order = FALSE,
+                     scaled = FALSE) {
+    term_object <- terms(as.formula(form), keep.order = keep_term_order)
+    term_labels <- attr(term_object, "term.labels")
+    term_factors <- attr(term_object, "factors")
+    vars <- rownames(term_factors)
+    if (!scaled) {
+        form_data[vars] <- lapply(form_data[vars], function(x)
+            if (is.numeric(x)) scale(x) else x)
     }
-    ssq <- matrixIP(0, length(termL), ncol(a_dat))
-    df <- rep.int(0L, length(termL))
-    names(df) <- labels
-    if (return_means) {
-        marg_means <- vector("list", length(termL))
-        names(marg_means) <- labels
-    }
-    #
-    if (!no_icpt) a_dat <- sweep(a_dat, 2, colMeans(a_dat), "-")
-    #
-    for (i in 1:length(termL)) {
-        groups <- factor_(interaction(f_dat[,termL[[i]]], drop = TRUE))
-        groupfreq <- tabulate(groups)
-        names(groupfreq) <- levels(groups)
-        tmeans <- rowsum(a_dat, groups)/groupfreq
-        a_dat <- a_dat - tmeans[as.numeric(groups),]
-        ssq[i, ] <- colSums(groupfreq*tmeans^2)
-        if (length(termL[[i]]) == 1) {
-            df[i] <- length(groupfreq)-1
-        } else {
-            df[i] <- prod(df[termL[[i]]])
-        }
-        if (return_means) {
-            marg_means[[i]] <- array(tmeans, 
-                                     c(length(groupfreq), vapply(dimn, length, 0L)),
-                                     c(list(modelterm = names(groupfreq)), dimn))
-        }
+    mm <- model.matrix(term_object, data = form_data)
+    # check orthogonality
+    if (ncol(mm) > 2L) {
+        orth <- cor(mm[, -1])
+        orth <- orth[lower.tri(orth)]
+        if (max(abs(orth)) > .Machine$double.eps) {
+            if (length(between) > 1L)
+                warning("The design is unbalanced, and this function calculates 
+                        sequential (type-I) tests. Consider re-running the test
+                        with reordered between-subject factors (see ?arrayAnova).")
+            mm[,2] <- mm[,2] - mean(mm[,2])
+            for (i in 3:ncol(mm)) {
+                mmi <- mm[,1:(i-1)]
+                coeff <- solve(crossprod(mmi), crossprod(mmi, mm[, i, drop=FALSE]))
+                mm[,i] <- mm[,i]- mmi %*% coeff
+            }    
+        }    
     }
     #
-    if (return_array) {
-        arrayIP(ssq, c(nrow(ssq), vapply(dimn, length, 0L)),
-                c(list(modelterm = labels), dimn))
-    } else {
-        rownames(ssq) <- labels
-        names(dimnames(ssq))[1] <- "modelterm"
+    xpx <- crossprod(mm)
+    mm_labels <- c("(Intercept)", term_labels[attr(mm, "assign")])
+    unique_contrasts <- 
+        lapply(term_labels, function(term) {
+            ind <- which(mm_labels == term)
+            fastUnique(mm[, ind, drop = FALSE],
+                       freq = TRUE)
+        })
+    setattr(unique_contrasts, "names", term_labels)
+    mm_labels <- colnames(mm)
+    setattr(mm, "dimnames", NULL)
+    setattr(mm, "assign", NULL)
+    setattr(mm, "contrasts", NULL)
+    # return
+    list(model_matrix = mm, model_matrix_labels = mm_labels, xpx = xpx, 
+         unique_contrasts = unique_contrasts)
+    }
+
+#' Compute sum of squares
+#' 
+#' \code{compSumSq} computes sum of squares which are needed by 
+#' \code{\link{compF}}. 
+#' @param obj a list object as returned by \code{\link{preSumSq}}
+#' @param y a numeric matrix of response data, usually returned by 
+#' \code{\link{preAnova}}
+#' @param new_indices if not NULL (default), it must be a vector of numeric
+#' indices to be passed to the model matrix. This parameter is used for 
+#' permutation-based analyses.
+#' @return a numeric matrix of the sum-of-squares with an extra attribute for 
+#' the degrees of freedom ('Df')
+#' @keywords internal
+compSumSq <- function(obj, y, new_indices = NULL) {
+    mm <- obj$model_matrix
+    if (!is.null(new_indices)) {
+        mm <- mm[new_indices, ]
+    }
+    mm_labels <- obj$model_matrix_labels
+    xpx <- obj$xpx
+    unc <- obj$unique_contrasts
+    ssq <- matrix_(0, ncol(y), length(unc),
+                   dimnames = list(NULL, modelterm = names(unc)))
+    df <- rep.int(0L, length(unc))
+    setattr(df, "names", names(unc))
+    coeff <- solve(xpx, crossprod(mm, y))
+    setattr(coeff, "dimnames", list(mm_labels, NULL)) 
+    for (i in seq_along(unc)) {
+        freq <- attr(unc[[i]], "freq")
+        fmeans <- unc[[i]] %*% coeff[colnames(unc[[i]]), , drop = FALSE]   
+        ssq[, i] <- colSums(fmeans^2 * freq)
+        df[i] <- ncol(unc[[i]])
     }
     setattr(ssq, "Df", df)
-    if (return_means) setattr(ssq, "term_means", marg_means)
-    # return
+    #
     ssq
 }
 
-#' Parameter checks and data preparation in \code{arrayAnova}
+#' Random permutations for \code{\link{arrayAnova}} and \code{\link{tanova}}
 #' 
-#' \code{preAnova} performs parameter checking, creates a data.frame for 
-#' the ANOVA design and reshapes arraydat accordingly, and prepares parallel
-#' computations.
-#' @param arraydat numeric array
-#' @param factordef a list of between-subject factors (\code{between}), 
-#' within-subject factors (\code{within}) and subject identifier (\code{w_id})
-#' @param useparallel logical; do computations in parallel or not
-#' @param ncores integer; number of cores for parallel computations
-#' @param par_method character; parallelization method
-#' @param usetfce logical; use TFCE correction or not (FALSE, default) 
+#' \code{anovaRandomIndices} creates a matrix of \code{nperm} random
+#' permutations 
+#' @param input a list returned by \code{\link{preAnova}}
+#' @param nperm integer value; the number of permutations
+#' @param seed an integer value which specifies a seed (default: NULL), or a 
+#' list of arguments passed to \code{\link{set.seed}}
+#' @return A matrix with as many rows as the design matrix and 'nperm' columns
+#' @seealso \code{\link{arrayAnova}} and \code{\link{tanova}}
 #' @keywords internal
-preAnova <- function(arraydat, factordef, bwdat, 
-                     useparallel, ncores, par_method, usetfce = FALSE) {
-    params <- list()
-    # fast check of arguments
-    if (is.null(factordef$w_id)) factordef$w_id <- "id"
-    if (is.data.frame(arraydat)) arraydat <- as.matrix(arraydat)
-    if (!is.array(arraydat) & !is.matrix(arraydat)) {
-        stop("Improper input data class (should be data.frame, matrix or array))")
-    }
-    if (!is.null(factordef$between)) {
-        if (!all(factordef$between %in% colnames(bwdat))) {
-            stop("Between-subject factors and 'bwdat' dataset do not match.")
-        }
-        bwdat[,factordef$between] <- lapply(
-            data.frame(bwdat[,factordef$between]), factor)
-    }
-    if (useparallel) {
-        params$ncores <- ncores
-        if (par_method == "snow") {
-            fns <- ls(envir = parent.env(environment()))
-            fns <- fns[sapply(fns, function(x) is.function(get(x)))]
-            params$varlist2snow <-  
-                if (usetfce) {
-                    c(fns, "randind", "ChN","EH") 
-                } else {
-                    c(fns, "randind")
-                }
-        } 
-    }
-    #
-    op <- options(contrasts = c("contr.sum", "contr.poly"))
-    origdimnames <- dimnames(arraydat)
-    modeldims <- c(factordef$w_id, factordef$within)
-    keepdims <- setdiff(names(origdimnames), modeldims)
-    arraydat <- mergeDims(arraydat, list(modeldims, keepdims))
-    dat <- data.frame(matrix(unlist(strsplit(rownames(arraydat), "[.]"), 
-                                    use.names = FALSE), 
-                             nrow = nrow(arraydat), byrow = TRUE))
-    colnames(dat) <- modeldims
-    dat[,factordef$between] <- bwdat[
-        match(dat[,factordef$w_id],bwdat[,factordef$w_id]),factordef$between]
+anovaRandomIndices <- function(input, nperm, seed) {
+    setSeed(seed)
+    out <- shuffleSet(
+        nrow(input$dat), nperm, 
+        how(within = Within(type = "free"), 
+            plots = Plots(strata = input$dat[[input$factordef$w_id]], 
+                          type = "free")))
     # return
-    list(dat = dat, arraydat = arraydat, factordef = factordef, 
-         origdimnames = origdimnames, par_params = params)
+    t(out)
 }
 
-#' Workhorse function of arrayAnova
+#' Compute F-values
 #' 
-#' \code{arrayAnovaSub} computes F-values in ANOVA designs, and provides 
-#' additional p-values, degrees of freedom, generalized effect sizes if 
-#' requested.
-#' @param a_dat a numeric matrix of responses
-#' @param f_def a named list of factor definitions, containing the following 
-#' elements:
-#' \itemize{
-#' \item{between:}{character vector of between-subject factors (default: NULL)}
-#' \item{within:}{character vector of within-subject factors (default: NULL)}
-#' \item{w_id:}{name of the dimension which identifies the subjects 
-#' (default: "id")}
-#' }
-#' @param d_names (list of) dimension names of the original array in 
-#' \code{arrayAnova}
-#' @param f_dat a data.frame which contains the identification codes 
-#' (f_def$w_id) and the between- and/or within-subject factors
-#' @param verbose logical value indicating if p-values and effect sizes should 
-#' be computed for the traditional ANOVA results
+#' \code{compF} computes F-values. This is an internal function called by
+#' the high-level function \code{\link{arrayAnova}}.
+#' @param obj a list object as returned by \code{\link{preAnova}}
+#' @param new_indices if not NULL (default), it must be a vector of numeric
+#' indices to be passed to the model matrix. This parameter is used for 
+#' permutation-based analyses.
+#' @param attribs a logical value if dimension and verbose attributes should
+#' be attached to the resulting array (default: FALSE)
+#' @param verbose a logical value if p-values, effect sizes, and degrees of
+#' freedom should be added to the returned array (as 'p_value', 'effect_size',
+#' and 'Df' attributes)
+#' @return This function returns a numeric matrix of F-values if 'attribs' is 
+#' FALSE, and an array of F-values if 'attribs' is TRUE. If the verbose variant 
+#' was requested, the array has the following extra attributes: 'p_value' and 
+#' 'effect_size', having the same dimension as the array of F-values, and
+#' an integer matrix named 'Df' with term- and residual degrees of freedom for
+#' each model term.
 #' @keywords internal
-arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
-    origdims <- vapply(d_names, length, 0L)
-    modeldims <- c(f_def$w_id, f_def$within)
-    keepdims <- setdiff(names(d_names), modeldims)
-    #
-    # distinct algorithms for between-subject, within-subject, and mixed models
-    if (is.null(f_def$within)) {
-        # SHOULD BE IMPROVED - use it with one between-subject factor and a 
-        # balanced design
-        aov_formula <- as.formula(paste(
-            as.character(quote(a_dat)), "~", 
-            paste(as.character(f_def$between), collapse = "*")))
-        results <- summary(aov(aov_formula, data = f_dat))
-        results <- arrayIP(
-            unlist(results, use.names = FALSE),
-            c(dim(results[[1]]), length(results)),
-            list(modelterm = gsub(" ", "", rownames(results[[1]])),
-                 measures = colnames(results[[1]]),
-                 columns = gsub("[*Response ]", "", names(results))))
-        termrows <- tolower(rownames(results)) != "residuals"
-        Fvals <- arrayIP(results[termrows,"F value",], 
-                         c(sum(termrows), origdims[keepdims]),
-                         c(list(modelterm = rownames(results)[termrows]),
-                           d_names[keepdims]))
+compF <- function(obj, new_indices = NULL, attribs = FALSE, verbose = FALSE) {
+    if (!attribs) verbose <- FALSE
+    type <- obj$type
+    f_def <- obj$factordef
+    ssq <- lapply(obj$pre_sumsq, compSumSq,
+                  y = obj$.arraydat, new_indices = new_indices)
+    Df <- lapply(ssq, attr, "Df")
+    model_ssq <- ssq[[1]]
+    model_df <- Df[[1]]
+    if (type == "between") {
+        resid_ssq <- obj$pre_sumsq[[1]]$ssq_total - rowSums(model_ssq)
+        resid_df <- attr(resid_ssq, "Df") - sum(model_df)
+        Fvals <- sweepMatrix(model_ssq, 2, model_df/resid_df, "/", 
+                             has_NA = FALSE)
+        Fvals <- Fvals/resid_ssq
         if (verbose) {
-            Df <- as.numeric(results[termrows, "Df", 1])
-            rDf <- results[!termrows, "Df", 1]
-            pvalues <- results[termrows,"Pr(>F)",]
-            # effect size (Olejnik and Algina, 2003; Bakeman, 2005)
-            results <- subsetArray(results, list(measures = "Sum Sq"), drop = FALSE)
-            matrixIP(results, nrow(results), dim(results)[3], 
-                     dimnames = dimnames(results)[-2])
-            SSr <- results["Residuals", ]
+            pvalues <- t(pf(t(Fvals), model_df, resid_df, lower.tail = FALSE))
             if (!is.null(f_def$observed)) {
-                ind <- apply(sapply(f_def$observed, 
-                                    function(x) 
-                                        grepl(x, rownames(results))),
-                             1, any)
-                SS1 <- colSums(results[ind, , drop = F])
-                SS2 <- sweep(results, 1, ind, "*")
-                ges <- results / sweep(sweep(results - SS2, 2, SSr, "+"), 2,
-                                       SS1, "+")
+                ind <- grepl(paste(f_def$observed, collapse = "|"), 
+                             colnames(model_ssq))
+                SS1 <- rowSums(model_ssq[, ind, drop = FALSE])
+                SS2 <- model_ssq; SS2[, !ind] <- 0
+                ges <- model_ssq / (model_ssq - SS2 + resid_ssq + SS1)
             } else {
-                ges <- results / sweep(results, 2, SSr, "+")
+                ges <- model_ssq / (model_ssq + resid_ssq)
             }
-            ges <- ges[-nrow(ges), ]
-            factor_means <- marginalMeans(aov_formula, f_dat, a_dat, 
-                                          d_names[keepdims], residualmean = FALSE)
         }
-    } else if (is.null(f_def$between)) {
-        # compute marginal means
-        if (verbose) {
-            aov_formula <- as.formula(paste(
-                as.character(quote(a_dat)), "~", 
-                paste(as.character(f_def$within), collapse = "*")
-            )
-            )
-            factor_means <- marginalMeans(aov_formula, f_dat, a_dat, 
-                                          d_names[keepdims], residualmean = FALSE)
-        }
-        # model formula
-        aov_formula <- as.formula(paste(
-            as.character(quote(a_dat)), "~", 
-            paste(
-                f_def$w_id, 
-                paste(as.character(f_def$within), collapse = "*"),
-                sep = "*")
-        )
-        )
-        #
-        # run model
-        #
-        a_datsc <- sweep(a_dat, 2, colMeans(a_dat), "-")
-        model <- sumsq(aov_formula, f_dat, a_datsc, d_names[keepdims], 
-                       no_icpt = TRUE, return_array = FALSE)
-        model_df <- attr(model, "Df")
-        # compute indices to handle error terms
-        modnames <- dimnames(model)$modelterm
+    } else if (type == "within") {
+        modnames <- dimnames(model_ssq)$modelterm
         m_ind <- !grepl(f_def$w_id, modnames)
         err_ind <- match(
             paste(f_def$w_id, ":", modnames[m_ind], sep = ""),
             modnames)
-        Df <- model_df[m_ind]
-        rDf <- model_df[err_ind]
-        Fvals <- (model[m_ind, , drop = F] / Df) / 
-            (model[err_ind, , drop = F] / rDf)
+        resid_ssq <- model_ssq[, err_ind, drop = FALSE]
+        resid_df <- model_df[err_ind]
+        model_ssq <- model_ssq[, m_ind, drop = FALSE]
+        model_df <- model_df[m_ind]
+        Fvals <- (model_ssq/resid_ssq) * (resid_df/model_df)
         if (verbose) {
-            pvalues <- mapply(pf, Fvals, Df, rDf, MoreArgs = list(lower.tail = FALSE))
-            dim(pvalues) <- dim(Fvals)
-            # effect size (Olejnik and Algina, 2003; Bakeman, 2005)
-            SSr <- colSums(model[grep(f_def$w_id, 
-                                      rownames(model)), ])
-            ges <- model[m_ind, , drop = F] / 
-                sweep(model[m_ind, , drop = F], 2, SSr, "+")
+            pvalues <- t(pf(t(Fvals), model_df, resid_df, lower.tail = FALSE))
+            SSr <- rowSums(model_ssq)
+            ges <- model_ssq / (model_ssq + SSr)
         }
-        arrayIP(Fvals, c(sum(m_ind), origdims[keepdims]),
-                c(list(modelterm = modnames[m_ind]), d_names[keepdims]))
-    } else {   
-        aov_formula1 <- as.formula(paste(
-            as.character(quote(a_dat)), "~", 
-            paste(
-                paste(as.character(f_def$between), collapse = "*"), 
-                paste(as.character(f_def$within), collapse = "*"),
-                sep = "*")
-        )
-        )
-        aov_formula2 <- as.formula(paste(
-            as.character(quote(a_dat)), "~", 
-            paste(
-                f_def$w_id, 
-                paste(as.character(f_def$within), collapse = "*"),
-                sep = "*")
-        )
-        )
-        # compute marginal means
-        if (verbose) 
-            factor_means <- marginalMeans(aov_formula1, f_dat, a_dat, 
-                                          d_names[keepdims], residualmean = FALSE)
-        #
-        # run model
-        #
-        a_datsc <- sweep(a_dat, 2, colMeans(a_dat), "-")
-        model1 <- sumsq(aov_formula1, f_dat, a_datsc, d_names[keepdims], 
-                        no_icpt = TRUE, return_array = FALSE)
-        model1_df <- attr(model1, "Df")
-        model2 <- sumsq(aov_formula2, f_dat, a_datsc, d_names[keepdims], 
-                        no_icpt = TRUE, return_array = FALSE)
-        model2_df <- attr(model2, "Df")
-        # compute indices to handle error terms
-        modnames <- dimnames(model2)$modelterm
-        m2indices <- grep(f_def$w_id, modnames)
-        modnames <- modnames[m2indices]
-        bwnames <- unlist(lapply(seq_along(f_def$between), 
-                                 function(i) apply(combn(f_def$between, i), 2, 
-                                                   paste, collapse = ":")))
-        sumindices <- sapply(bwnames, function(i) 
-            match(sub(f_def$w_id, i, modnames), dimnames(model1)$modelterm))
-        modnames <- sub(paste(f_def$w_id,"\\:?", sep = ""), "", modnames)
-        fillindices <- lapply(1:nrow(sumindices), function(i)
-            c(sumindices[i,], 
-              na.omit(match(modnames[i], 
-                            dimnames(model1)$modelterm))))
-        # compute F values
-        model1_err <- arrayIP(0, dim(model1))
-        model1_err_df <- rep.int(0L, length(model1_df))
-        for (i in 1:nrow(sumindices)) {
-            errs <- model2[m2indices[i],] - colSums(model1[sumindices[i,], , drop = F])
-            model1_err[fillindices[[i]], ] <- 
-                rep(c(errs), each = length(fillindices[[i]])) 
-            model1_err_df[fillindices[[i]]] <- model2_df[m2indices[i]] - 
-                sum(model1_df[sumindices[i, ]])
+    } else if (type == "mixed") {
+        bwind <- grepl(paste(f_def$between, collapse = "|"),
+                       colnames(model_ssq))
+        residnames <- paste(f_def$w_id, 
+                            gsub("^:|:$", "",
+                                 gsub(paste(f_def$between, collapse = "|"), 
+                                      "", colnames(model_ssq))), 
+                            sep = ":")
+        residnames <- gsub(":+", ":", gsub("^:|:$", "", residnames))
+        resid_ssq <- ssq[[2]][, unique(residnames), drop = FALSE]
+        resid_df <- Df[[2]][colnames(resid_ssq)]
+        for (i in colnames(resid_ssq)) {
+            ind <- which(residnames == i & bwind)
+            resid_ssq[, i] <- resid_ssq[, i] - 
+                rowSums(model_ssq[, ind, drop = FALSE])
+            resid_df[i] <- resid_df[i] - sum(model_df[ind])
         }
-        Fvals <- model1/model1_df*model1_err_df/model1_err
+        resid_ssq <- resid_ssq[, residnames, drop = FALSE]
+        resid_df <- resid_df[residnames]
+        Fvals <- model_ssq / resid_ssq
+        Fvals <- sweepMatrix(Fvals, 2, resid_df/model_df, "*", has_NA = FALSE)
         if (verbose) {
-            Df <- as.numeric(model1_df)
-            rDf <- model1_err_df
-            pvalues <- mapply(pf, Fvals, Df, rDf, MoreArgs = list(lower.tail = FALSE))
-            # effect size (Olejnik and Algina, 2003; Bakeman, 2005)
-            SSr <- colSums(model1_err[grep(f_def$w_id, 
-                                           rownames(model2)), ])
+            pvalues <- t(pf(t(Fvals), model_df, resid_df, lower.tail = FALSE))
+            SSr <- rowSums(resid_ssq[, !duplicated(residnames)])
             if (!is.null(f_def$observed)) {
-                ind <- apply(sapply(f_def$observed, 
-                                    function(x) grepl(x, rownames(model1))),
-                             1, any)
-                SS1 <- colSums(model1[ind, ])
-                SS2 <- sweep(model1, 1, ind, "*")
-                ges <- model1 / sweep(sweep(model1 - SS2, 2, SSr, "+"), 2,
-                                      SS1, "+")
+                ind <- grepl(paste(f_def$observed, collapse = "|"), 
+                             colnames(model_ssq))
+                SS1 <- rowSums(model_ssq[, ind, drop = FALSE])
+                SS2 <- model_ssq; SS2[, !ind] <- 0
+                ges <- model_ssq / (model_ssq - SS2 + SSr + SS1)
             } else {
-                ges <- model1 / sweep(model1, 2, SSr, "+")
+                ges <- model_ssq / (model_ssq + SSr)
             }
         }
-        dimnms <- c(list(modelterm = rownames(Fvals)), d_names[keepdims])
-        arrayIP(Fvals, c(nrow(Fvals), origdims[keepdims]), dimnms)
     }
-    # rearrange dimensions to be compatible with arrayTtest output
-    if (verbose) {
-        tempfn <- function(x) aperm(array(x, dim(Fvals), dimnames(Fvals)), 
-                                    c(keepdims, "modelterm"))
-        pvalues <- tempfn(pvalues)
-        ges <- tempfn(ges)
-    }
-    Fvals <- aperm(Fvals, c(keepdims, "modelterm"))
-    if (verbose) {
-        setattr(Fvals, "Df.term", Df)
-        setattr(Fvals, "Df.resid", rDf)
-        setattr(Fvals, "pvalues", pvalues)
-        setattr(Fvals, "ges", ges)
-        setattr(Fvals, "factor_means", factor_means)
+    #
+    if (attribs) {
+        setattributes(Fvals, obj, "Traditional F statistic")
+        if (verbose) {
+            setattributes(pvalues, obj, "Traditional P-value")
+            setattributes(ges, obj, "Generalized Eta Squared")
+            setattr(ges, "Df", NULL)
+            Df <- cbind(Df_model = model_df, 
+                        Df_residual = rep_len(resid_df, length(model_df)))
+            names(dimnames(Df)) <- c("modelterm", "")
+            setattr(Df, "type", "Degrees of freedom")
+            setattr(Fvals, "p_value", pvalues)
+            setattr(Fvals, "effect_size", ges)
+            setattr(Fvals, "Df", Df)
+        }
     }
     # return
     Fvals
 }
 
+
+#' Parameter checks and data preparation in \code{arrayAnova}
+#' 
+#' \code{preAnova} performs parameter checking, creates a data.frame for 
+#' the ANOVA design and reshapes .arraydat accordingly, prepares the computation
+#' of sum-of-squares. It is called by \code{\link{arrayAnova}} and 
+#' \code{\link{tanova}}.
+#' @param .arraydat numeric array
+#' @param factordef a list of between-subject factors (named 'between'), 
+#' within-subject factors ('within'), subject identifier ('w_id'), and a 
+#' character vector of observed (i.e., not manipulated) variables ('observed').
+#' The last element ('observed') is only used in effect size computations.
+#' @param bwdat a data.frame with the subject-level variables (usually factors)
+#' @param tfce logical value whether TFCE is requested
+#' @param perm logical value whether permutation is requested
+#' @param tanova_type type of tanova ("tanova", "dissimilarity", "gfp") if this 
+#' function is called from \code{tanova}
+#' @keywords internal
+#' @seealso \code{\link{arrayAnova}} and \code{\link{tanova}} are the 
+#' higher-level function exported to the user, \code{\link{preSumSq}}, 
+#' \code{\link{compF}} and \code{\link{compTanovaEffect}} are internal 
+#' functions relying on the returned object of \code{preAnova}.
+preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm, 
+                     tanova_type = NULL) {
+    # helper function
+    checkObligDimnames <- function(method, dimn, full_dimid) {
+        print_dimn <- sub("$", "'", sub("^", "'", dimn))
+        print_dim <- if (length(dimn) > 1L) "dimensions" else "dimension"
+        print_fac <- if (length(dimn) > 1L) "factors" else "factor"
+        print_allow <- if (length(dimn) > 1L) "are" else "is"
+        if (!all(dimn %in% full_dimid)) {
+            stop(sprintf("For %s, the input array must have %s %s.", 
+                         method, print_dimn, print_dim))
+        }
+        if (any(dimn %in% factordef$within)) {
+            stop(sprintf("For %s, %s %s not allowed as within-subject %s.", 
+                         method, print_dimn, print_allow, print_fac))
+        }
+    }
+    #
+    # fast check of arguments
+    #
+    # check if .arraydat is an array
+    if (is.data.frame(.arraydat)) .arraydat <- as.matrix(.arraydat)
+    assertArray(.arraydat, mode = "numeric", min.d = 2L,
+                .var.name = ".arraydat")
+    has_NA <- anyNA(.arraydat)
+    if (has_NA) {
+        stop("Assertion on '.arraydat' failed: Contains missing values")
+    }
+    # check if factordef is a list
+    assertList(factordef, types = "character", names = "unique",
+               .var.name = "factordef")
+    # check if w_id is provided
+    if (is.null(factordef$w_id)) factordef$w_id <- "id"
+    # save dimension names
+    pre_dimnames <- dimnames(.arraydat)
+    full_dimnames <- fillMissingDimnames(pre_dimnames,
+                                         dim(.arraydat))
+    full_dimid_origord <- names(full_dimnames)
+    if (!identical(pre_dimnames, full_dimnames)) {
+        dimnames(.arraydat) <- full_dimnames
+    }
+    full_dimid <- names(full_dimnames)
+    # check dimension names
+    if (!factordef$w_id %in% full_dimid) {
+        stop(sprintf(".arraydat has no '%s' dimension identifier", 
+                     factordef$w_id))
+    }
+    if (anyNA(full_dimnames) || anyDuplicated(full_dimnames)) {
+        stop("Provide array with unique named dimensions")
+    }
+    # if TFCE is requested, "chan" and "time" dimensions are obligatory
+    nr_chanXtime <- nr_chan <- nr_time <- NULL
+    if (tfce) {
+        checkObligDimnames("TFCE", c("chan", "time"), full_dimid)
+        nr_chan <- length(full_dimnames$chan)
+        nr_time <- length(full_dimnames$time)
+        nr_chanXtime <- nr_chan * nr_time
+    } else if (perm) {
+        nr_chanXtime <- c(length(full_dimnames$chan),
+                          length(full_dimnames$time))
+        nr_chanXtime[nr_chanXtime == 0L] <- 1L
+        nr_chanXtime <- prod(nr_chanXtime)
+    } 
+    # if tanova is requested, "chan" dimension is obligatory
+    # create also a logical variable for tanova
+    if (!is.null(tanova_type)) {
+        checkObligDimnames(toupper(tanova_type), "chan", full_dimid)
+        nr_chan <- length(full_dimnames$chan)
+        tanova <- TRUE
+    } else {
+        tanova <- FALSE
+    }
+    # check type of anova
+    type <- 
+        if (!is.null(factordef$between)) {
+            if (is.null(factordef$within)) {
+                "between"
+            } else {
+                "mixed"
+            }
+        } else if (!is.null(factordef$within)) {
+            "within"
+        } else {
+            stop("Provide at least one between- and/or within-subject factor")
+        }
+    # check between subject factors
+    if (!is.null(factordef$between)) {
+        #  check bwdat
+        assertDataFrame(bwdat, .var.name = "bwdat")
+        if (!all(c(factordef$between, factordef$w_id) %in% colnames(bwdat))) {
+            stop("Between-subject factors and 'bwdat' dataset do not match.")
+        }
+        # force to data.frame, keep only relevant variables
+        bwdat <- droplevels(
+            as.data.frame(bwdat[, c(factordef$w_id, factordef$between)]))
+        # check for missing values
+        if (anyNA(bwdat)) stop("Missing values in bwdat are not allowed")
+        # align .arraydat and bwdat on w_id
+        id <- intersect(full_dimnames[[factordef$w_id]],
+                        bwdat[, factordef$w_id])
+        if (length(id) < length(full_dimnames[[factordef$w_id]])) {
+            .arraydat <- subsetArray(.arraydat, 
+                                     setNames(list(id), factordef$w_id))
+            full_dimnames <- dimnames(.arraydat)
+            bwdat <- bwdat[match(id, bwdat[[factordef$w_id]]), ]
+        }
+    }
+    # check if .arraydat has proper dimension identifiers
+    if (!is.null(factordef$within)) {
+        if (!all(factordef$within %in% names(full_dimnames)))
+            stop("Missing within-subject dimension identifiers in .arraydat")
+    }
+    #
+    # reshape data
+    #
+    # if gfp or dissimilarity, modify the input array
+    if (tanova) {
+        if (tanova_type == "gfp") {
+            .arraydat <- compGfp(.arraydat)
+            full_dimnames <- dimnames(.arraydat)
+        }
+        if (tanova_type == "dissimilarity") 
+            .arraydat <- scaleChan(.arraydat)
+    }
+    # set contrasts
+    opcons <- options("contrasts")
+    options(contrasts = c("contr.helmert", "contr.poly"))
+    on.exit(options(opcons))
+    # model dimensions should be in rows
+    modeldims <- c(factordef$w_id, factordef$within)
+    # all other dimensions become columns; "chan" and "time" come first
+    keepdims <- setdiff(names(full_dimnames), modeldims)
+    if ("time" %in% keepdims) keepdims <- unique(c("time", keepdims))
+    if ("chan" %in% keepdims) keepdims <- unique(c("chan", keepdims))
+    .arraydat <- mergeDims(.arraydat, list(modeldims, keepdims),
+                           return_attributes = FALSE,
+                           keep_dimnames = FALSE)
+    # model data
+    dat <- expand.grid(full_dimnames[modeldims], KEEP.OUT.ATTRS = FALSE,
+                       stringsAsFactors = FALSE)
+    colnames(dat) <- modeldims
+    dat[,factordef$between] <- bwdat[,factordef$between]
+    # transform characters to factors, and scale numeric variables
+    dat[] <- lapply(
+        dat, function(x) 
+            if (storage.mode(x) == "character") {
+                factor_(x)
+            } else if (is.numeric(x)) {
+                scale(x)
+            } else {
+                x
+            })
+    #
+    # formulas
+    #
+    mean_formula <- as.formula(paste(
+        "~",
+        gsub("^\\*|\\*$", "", 
+             paste(
+                 paste(factordef$between, collapse = "*"), 
+                 paste(factordef$within, collapse = "*"),
+                 sep = "*")
+        )
+    ))
+    within_formula <- as.formula(paste(
+        "~",
+        gsub("^\\*|\\*$", "", 
+             paste(
+                 paste(factordef$w_id, collapse = "*"), 
+                 paste(factordef$within, collapse = "*"),
+                 sep = "*")
+        )
+    ))
+    model_formula <- 
+        if (type == "between" | tanova) {
+            list(mean_formula)
+        } else if (type == "within") {
+            list(within_formula)
+        } else {
+            list(mean_formula, within_formula)
+        }
+    #
+    # model matrix and others
+    #
+    pre_sumsq <- lapply(
+        model_formula, preSumSq, form_data = dat, scaled = TRUE)
+    if (type == "between" && !tanova) {
+        pre_sumsq[[1]]$ssq_total <- colSums(
+            sweepMatrix(.arraydat, 2, colMeans(.arraydat), "-", has_NA = FALSE)^2)
+        setattr(pre_sumsq[[1]]$ssq_total, "Df", 
+                length(levels(dat[[factordef$w_id]])) - 1L)
+    }
+    #
+    # dimensions for later use
+    #
+    # test statistic
+    pre_dimnames$modelterm <- full_dimnames$modelterm <- 
+        names(pre_sumsq[[1L]]$unique_contrasts)
+    full_dimid <- names(full_dimnames)
+    full_dims <- vapply(full_dimnames, length, integer(1L))
+    setattr(full_dims, "names", full_dimid)
+    teststat_dimid <- c(keepdims, "modelterm")
+    setattr(teststat_dimid, "origpos", 
+            match(teststat_dimid, c(full_dimid_origord, "modelterm")))
+    # not chan or time
+    otherdims <- 
+        if (!is.null(nr_chanXtime)) {
+            other_dimid <- setdiff(teststat_dimid, c("chan", "time"))
+            list(dimid = other_dimid,
+                 index = match(other_dimid, teststat_dimid),
+                 size = prod(full_dims[other_dimid]))
+        } else {
+            list(NULL)
+        }
+    # 
+    #
+    # return
+    #
+    list(.arraydat = .arraydat, dat = dat, factordef = factordef, 
+         pre_sumsq = pre_sumsq, type = type, has_NA = has_NA,
+         mean_formula = mean_formula,
+         full_dimnames = full_dimnames, full_dims = full_dims,
+         pre_dimnames = pre_dimnames,
+         teststat_dimid = teststat_dimid,
+         nr_chan = nr_chan, nr_time = nr_time, nr_chanXtime = nr_chanXtime,
+         otherdims = otherdims)
+}
+
+
+
 #' Perform ANOVA (potentially with TFCE correction) on arrays
 #' 
 #' \code{arrayAnova} performs point-to-point ANOVAs on arrays. Permutation-based
-#' p-values and Threshold-free Cluster Enhancement (TFCE) correction can be requested.
-#' @param arraydat a numeric array with named dimnames containing the EEG (or 
+#' p-values and Threshold-free Cluster Enhancement (TFCE) correction can be 
+#' requested.
+#' @param .arraydat a numeric array with named dimnames containing the EEG (or 
 #' other) data. Missing values are not allowed.
 #' @param factordef a named list of factor definitions, containing the following 
 #' elements:
 #' \itemize{
-#' \item{between:}{character vector of between-subject factors (default: NULL)}
-#' \item{within:}{character vector of within-subject factors (default: NULL)}
-#' \item{w_id:}{name of the dimension which identifies the subjects 
+#' \item{between: }{character vector of between-subject factors (default: NULL)}
+#' \item{within: }{character vector of within-subject factors (default: NULL)}
+#' \item{w_id: }{name of the dimension which identifies the subjects 
 #' (default: "id")}
+#' \item{observed: }{character vector of observed (i.e., not manipulated) 
+#' variables (default: NULL). Only used for effect-size calculations.}
 #' }
 #' @param bwdat a data.frame which contains the identification codes 
-#' (factordef$w_id) and the group memberships (factordef$between) of the 
-#' subjects. Missing values are not allowed.
+#' (factordef$w_id) and all subject-level variables (usually factors) listed in
+#' 'factordef$between'. Missing values are not allowed.
 #' @param verbose logical value indicating if p-values and effect sizes should 
 #' be computed for the traditional ANOVA results
-#' @param nperm integer value giving the number of permutations (default: 999L)
-#' @param useparallel logical value; if TRUE (default), computations are done
-#' in parallel
-#' @param ncores integer value corresponding to the number of cores; 
-#' if NULL (default), it is set to the maximum number of cores available
-#' @param par_method parallelization method; can be "snow" (default) or "mc"
-#' (multicore)
-#' @param cl a cluster definition for snow-type parallelization; if NULL 
-#' (default), it is set up automatically
-#' @param usetfce logical value whether TFCE (threshold-free cluster enhancement)
-#' correction should also be computed (default: TRUE)
-#' @param tfce_options a named list containing the channel neighbourhood matrix
-#' (named ChN) and the vector of the E/H parameters (named EH)
-#' @param seed an integer value which specifies a seed (default: NULL)
-#' @details The function assumes that the input array contains at least two 
-#' named dimensions: chan (corresponding to the channels [electrodes]) and time 
-#' (corresponding to time points). All dimensions which are not listed as 
+#' @param nperm integer value giving the number of permutations (default: 0L) to
+#' compute permuted p-values. If \code{nperm < 2}, no permutation is performed.
+#' @param tfce either 1) NULL (the default) or FALSE (the same as NULL), both of 
+#' which mean no TFCE correction, or 2) TRUE, which means TFCE correction with 
+#' default parameters, or 3) an object as returned by \code{\link{tfceParams}} 
+#' with custom TFCE parameters (see Examples and also \code{\link{tfceParams}}).\cr 
+#' Custom parameters can be also provided by \code{tfce = .(key = value)} to 
+#' save typing (this works by calling \code{\link{tfceParams}} with the given 
+#' parameters).
+#' @param parallel either 1) NULL (the default) or FALSE (the same as NULL), 
+#' both of which mean single-core computation, or 2) TRUE, which means 
+#' parallelization with default parameters, or 3) an object as returned by 
+#' \code{\link{parallelParams}} with custom parameters (see Examples and also 
+#' \code{\link{parallelParams}}).\cr 
+#' Custom parameters can be also provided by \code{parallel = .(key = value)} to 
+#' save typing (this works by calling \code{\link{parallelParams}} with the 
+#' given parameters).
+#' @param seed an integer value which specifies a seed (default: NULL), or a 
+#' list of arguments passed to \code{\link{set.seed}}
+#' @details The function assumes that the input array contains at least three 
+#' named dimensions: "chan" (corresponding to the channels [electrodes]), "time" 
+#' (corresponding to time points), and a subject identifier as given by 
+#' \code{factordef$w_id}. All dimensions which are not listed as 
 #' within-subject factors are treated in a similar way as chan and time, that is 
-#' separate ANOVA-s are computed for each level of those dimensions.
+#' separate ANOVA-s are computed for each level of those dimensions. 
 #' @note The function computes type I p-values - this is correct if the design
 #' is fully balanced and orthogonal (if the number of between-subject 
 #' factors is one, it may have slightly unequal group sizes).
 #' @export
-#' @return A list object with F values, TFCE-corrected F-values and
-#' permutation-based p-values (if requested)
-#' @references The TFCE correction follows Mensen, A. and Khatami, R. (2013):
+#' @return A list object with the following numeric arrays:
+#' \itemize{
+#' \item{stat: }{a numeric array of F-values, with attribute 'Df' (an integer 
+#' matrix) containing the term- and residual degrees of freedom for each model 
+#' term. Optionally (if 'verbose' is TRUE), the F-value array has two extra 
+#' attributes: 'p_value' and 'effect_size', consisiting of the traditional
+#' p-values and the generalized eta squared effect size measures 
+#' (see References), respectively.}
+#' \item{stat_corr: }{a numeric array of TFCE-corrected F-values (if requested)}
+#' \item{p_corr: }{a numeric array of permutation-based p-values (if requested)}
+#' }
+#' @seealso See also the related methods to explore the results, e.g. 
+#' \code{\link{extract.arrayAnova}}, \code{\link{summary.arrayAnova}}, and the
+#' plotting functtions \code{\link{imageValues}}, \code{\link{imagePvalues}}.
+#' @references The TFCE correction follows:\cr
+#' Mensen, A. and Khatami, R. (2013)
 #' Advanced EEG analysis using threshold-free cluster-enhancement and 
 #' non-parametric statistics. Neuroimage, 67, 111-118. 
-#' doi:10.1016/j.neuroimage.2012.10.027 
+#' doi:10.1016/j.neuroimage.2012.10.027  \cr
+#' 
+#' The Generalized Eta Squared effect size statistic is described in:\cr
+#' Olejnik, S., Algina, J. (2003) Generalized eta and omega squared statistics: 
+#' Measures of effect size for some common research designs. Psychological 
+#' Methods 8: pp. 434-447. doi:10.1037/1082-989X.8.4.434 \cr
+#' Bakeman, R. (2005) Recommended effect size statistics for repeated measures 
+#' designs. Behavior Research Methods, 37 (3), 379-384.
 #' @examples
 #' # example dataset
 #' data(erps)
@@ -455,38 +747,85 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
 #'     result_eegr <- arrayAnova(tempdat, 
 #'                               list(between = "group",
 #'                                    within = c("stimclass", "pairtype"),
-#'                                    w_id = "id"),
-#'                               bwdat = dat_id,
-#'                               nperm = 0L, usetfce = FALSE)
+#'                                    w_id = "id",
+#'                                    observed = "group"),
+#'                               bwdat = dat_id)
 #' )
 #' 
 #' # if package 'ez' is installed, you can compare the results; we take only a 
-#' # subset of the data because ezANOVA is much slower
-#' if (require(ez)) {
+#' # subset of the data (choosing "02" channel at time point "207") because 
+#' # ezANOVA is much slower
+#' if (requireNamespace("ez")) {
 #'     sub <- list(chan = "O2", time = "207")
 #'     tempdat_ez <- transformArray(y ~ ., tempdat, subset = sub)
 #'     tempdat_ez$group <- factor(dat_id$group[match(tempdat_ez$id, dat_id$id)])
-#'     result_ez <- ezANOVA(tempdat_ez, y, id, .(stimclass, pairtype),
-#'                          between = group)
+#'     result_ez <- ez::ezANOVA(tempdat_ez, y, id, .(stimclass, pairtype),
+#'                              between = group, observed = group)
 #'     # compare results
-#'     ez_F <- result_ez$ANOVA$F   # F values
+#'     ez_F <- result_ez$ANOVA$F   # F-values
 #'     ez_p <- result_ez$ANOVA$p   # p-values
-#'     ez_ges <- result_ez$ANOVA$ges   # generalized effect sizes
+#'     ez_es <- result_ez$ANOVA$ges   # effect sizes
 #'     eegr_F <- as.vector(
-#'         subsetArray(result_eegr$effect_F_obs, sub))
+#'         subsetArray(extract(result_eegr, "stat"), sub))
 #'     eegr_p <- as.vector(
-#'         subsetArray(attr(result_eegr$effect_F_obs, "pvalues"), sub))
-#'     eegr_ges <- as.vector(
-#'         subsetArray(attr(result_eegr$effect_F_obs, "ges"), sub))
+#'         subsetArray(extract(result_eegr, "p"), sub))
+#'     eegr_es <- as.vector(
+#'         subsetArray(extract(result_eegr, "es"), sub))
 #'     stopifnot(
 #'         all.equal(ez_F, eegr_F),
 #'         all.equal(ez_p, eegr_p),
-#'         all.equal(ez_ges, eegr_ges)
+#'         all.equal(ez_es, eegr_es)
+#'     )
+#' }
+#' 
+#' # the between-subject variable could be numeric, too. Let's create an 'age'
+#' # variable and analyze the effects.
+#' dat_id$age <- rnorm(nrow(dat_id), 10, 1)
+#' result_eegr_c <- arrayAnova(tempdat, 
+#'                             list(between = "age",
+#'                                  within = c("stimclass", "pairtype"),
+#'                                  w_id = "id",
+#'                                  observed = "age"),
+#'                             bwdat = dat_id)
+#'                            
+#' # if package 'car' is installed, you can compare the results; we take only a 
+#' # subset of the data (choosing "01" channel at time point "195")
+#' if (requireNamespace("car")) {
+#'     #
+#'     # subsetting indices
+#'     subs <- list(chan = "O1", time = "195") 
+#'     #
+#'     # extract F values and p values from the eegR results
+#'     eegr_F <- subsetArray(extract(result_eegr_c, "stat"), subs)
+#'     eegr_p <- subsetArray(extract(result_eegr_c, "p"), subs)
+#'     #
+#'     # run the same analysis with the 'car' package (first we have to reshape
+#'     # the data)
+#'     tempdat_car <- subsetArray(tempdat, subs)
+#'     tempdat_car <- mergeDims(tempdat_car, 
+#'                              list("id", c("stimclass", "pairtype")))
+#'     tempdat_car <- data.frame(tempdat_car)
+#'     tempdat_car$id <- dat_id$id
+#'     tempdat_car$age <- dat_id$age
+#'     idata <- expand.grid(dimnames(tempdat)[c("stimclass", "pairtype")])
+#'     maov <- lm(cbind(A.ident, B.ident, C.ident, 
+#'                      A.subst, B.subst, C.subst,
+#'                      A.transp, B.transp, C.transp) ~ age,
+#'                data = tempdat_car)
+#'     maov <- car::Anova(maov, idata = idata, idesign= ~stimclass*pairtype)
+#'     maov <- summary(maov, multivariate = FALSE)$univ
+#'     car_F <- maov[names(eegr_F), "F"]
+#'     car_p <- maov[names(eegr_p), "Pr(>F)"]
+#'     #
+#'     # compare results
+#'     stopifnot(
+#'         all.equal(as.vector(car_F), as.vector(eegr_F)),
+#'         all.equal(as.vector(car_p), as.vector(eegr_p))
 #'     )
 #' }
 #' 
 #' # in order to use TFCE correction, the channel neigbourhood matrix is needed
-#' # (see ?chanNb)
+#' # (see ?tfceParams and ?chanNb)
 #' ChN <- chanNb(chan_pos, alpha = 0.7)
 #' 
 #' # now analyze the data by collapsing the pairtypes, and apply TFCE correction 
@@ -496,10 +835,12 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
 #' result_tfce <- arrayAnova(tempdat, 
 #'                           list(between = "group",
 #'                                within = "stimclass",
-#'                                w_id = "id"),
+#'                                w_id = "id",
+#'                                observed = "group"),
 #'                           bwdat = dat_id,
-#'                           nperm = 499L, useparallel = TRUE, ncores = 2,
-#'                           tfce_options = list(ChN = ChN))
+#'                           nperm = 499L, 
+#'                           tfce = .(ChN = ChN),
+#'                           parallel = .(ncores = 2))
 #' 
 #' # compare traditional and TFCE p-values
 #' p_all <- extract(result_tfce, c("p", "p_corr"))
@@ -514,104 +855,134 @@ arrayAnovaSub <- function(a_dat, f_def, d_names, f_dat, verbose = TRUE) {
 #' # you can also use the imagePvalues function to plot discretized p-values
 #' imagePvalues(p_all, pcrit = c(0.01, 0.05, 0.1))
 #'
-arrayAnova <- function(arraydat, factordef, bwdat = NULL, verbose = TRUE, 
-                       nperm = 999L, useparallel = FALSE, ncores = NULL, 
-                       par_method = "snow", cl = NULL,
-                       usetfce = TRUE, tfce_options = NULL, seed = NULL) {
-    # some checks
-    stopifnot(is.array(arraydat))
-    stopifnot(is.list(factordef))
-    nperm <- as.integer(nperm)
-    if (!is.null(factordef$between) && is.null(bwdat)) {
-        stop("No between-participant data provided")
-    } 
-    if (usetfce) {
-        if (is.null(tfce_options)) stop("Provide at least tfce_options$ChN")
-        ChN <- tfce_options$ChN
-        EH <- if (is.null(tfce_options$EH)) c(0.66, 2) else tfce_options$EH
+arrayAnova <- function(.arraydat, factordef, bwdat = NULL, verbose = TRUE, 
+                       nperm = 0L, tfce = NULL, parallel = NULL, 
+                       seed = NULL) {
+    # deparse tfce and parallel
+    mcall <- match.call() 
+    args <- as.list(mcall[-1])
+    tfce <- argumentDeparser(args$tfce, "tfceParams")
+    ob <- getDoBackend()
+    parallel <- argumentDeparser(args$parallel, "parallelParams")
+    if (is.logical(parallel) && !parallel) {
+        registerDoSEQ()
+    } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {
+        on.exit(stopCluster(parallel$cl))
     }
-    if (useparallel) {
-        if (is.null(ncores)) ncores <- detectCores()
-    }
+    on.exit(setDoBackend(ob), add = TRUE)
     #
-    out <- list(call = match.call())
+    # compute statistics
+    out <- arrayTtestAnova(
+        "ANOVA", .arraydat, 
+        factordef = factordef, bwdat = bwdat, verbose = verbose,
+        nperm = nperm, tfce = tfce, parallel = parallel, seed = seed)
     #
-    #
-    temp <- preAnova(arraydat, factordef, bwdat, 
-                     useparallel, ncores, par_method, usetfce)
-    dat <- temp$dat
-    arraydat <- temp$arraydat
-    factordef <- temp$factordef
-    origdimnames <- temp$origdimnames
-    par_params <- temp$par_params
-    rm(temp)
-    #
-    Fvals_obs <- arrayAnovaSub(arraydat, factordef, origdimnames, 
-                               dat, verbose)
-    mergedimnames <- setdiff(names(dimnames(Fvals_obs)), c("chan", "time"))
-    if (usetfce) {
-        nrchan <- length(origdimnames$chan)
-        nrtime <- length(origdimnames$time)
-        tfce_obs <- fnDims(Fvals_obs, c("chan", "time"), 
-               function(x) tfceFn(matrixIP(x, nrchan, nrtime), 
-                                  chn = ChN, eh = EH), 
-               keep_dimorder = TRUE)
-    }
-    if (nperm > 1L) {
-        #
-        permfn <- function(i) {
-            x <- arrayAnovaSub(arraydat, 
-                               factordef, origdimnames, 
-                               dat[randind[i,], ], FALSE)
-            if (usetfce) {
-                fnDims(x, c("chan", "time"), 
-                       function(xx) max(tfceFn(matrixIP(xx, nrchan, nrtime), 
-                                              chn = ChN, eh = EH)), 
-                       keep_dimorder = TRUE)
-            } else {
-                fnDims(x, c("chan", "time"), max)
-            }
-        }
-        #
-        # generate random orders (dim(randind) = nperm X nrow(dat))
-        if (!is.null(seed)) set.seed(seed)
-        randind <- shuffleSet(nrow(dat), nperm, 
-                              how(within = Within(type = "free"), 
-                                  plots = Plots(strata = dat[,factordef$w_id], 
-                                                type = "free")))
-        #
-        if (!useparallel) {
-            maxperm <- lapply(1:nperm, permfn)
-        } else if (par_method == "snow") {
-            if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncores, 
-                                                    outfile = "")
-            clusterExport(cl, 
-                          varlist = par_params$varlist2snow,
-                          envir = environment())
-            maxperm <- parLapply(cl, 1:nperm, permfn)
-            stopCluster(cl)
-            rm(cl)
-        } else if (par_method == "mc") {
-            maxperm <- mclapply(1:nperm, permfn, mc.cores = par_params$ncores)
-        } 
-        maxperm <- matrixIP(unlist(maxperm, use.names = FALSE), ncol = nperm)
-        sig <- if (usetfce) tfce_obs else Fvals_obs
-        sig <- mergeDims(sig, mergedimnames)
-        for (i in 1:nrow(sig)) {
-            sig[i,,] <- (rowSums(outer(c(sig[i,,]), maxperm[i,], "<="))+1) / 
-                (nperm + 1)
-        }
-        sig <- revMergeDims(sig)
-        type <- if (usetfce) "tfce" else "perm"
-        setattr(sig, "type", type)
-    } 
-    out$effect_F_obs <- Fvals_obs
-    if (usetfce) out$effect_tfce_obs <- tfce_obs
-    if (nperm > 1L) out$perm_pvalues <- sig
+    # replace call to the original
+    out$call <- mcall
+    # set class
     setattr(out, "class", "arrayAnova")
     # return
     out
 }
+
+#' United function for \code{\link{arrayTtest}} and \code{\link{arrayAnova}}
+#' @keywords internal
+arrayTtestAnova <- function(test, 
+                            .arraydat, .arraydat2 = NULL, 
+                            factordef = NULL, bwdat = NULL, 
+                            paired = FALSE, groups = NULL, 
+                            mu = 0, var_equal = FALSE, id_dim = "id", 
+                            verbose = TRUE, nperm = 0L, 
+                            tfce = NULL, parallel = NULL, seed = NULL) {
+    # helper function for back-transform to original
+    backFn <- function(x, obj) {
+        if (is.null(dim(x)) || !is.null(dimnames(x))) return(x)
+        origpos <- order(attr(obj$teststat_dimid, "origpos"))
+        apermArray(x, origpos, keep_attributes = TRUE)
+    }
+    # workaround to avoid CRAN warnings
+    x <- NULL; i <- NULL
+    rm(x, i)
+    # prepare arguments
+    nperm <- as.integer(nperm)
+    use_tfce <- !is.null(tfce)
+    #
+    if (test == "ANOVA") {
+        #
+        # prepare data
+        input <- preAnova(.arraydat, factordef, bwdat, verbose = verbose,
+                          tfce = use_tfce, perm = nperm > 1L)
+        rm(.arraydat)
+        #
+        # observed test statistic
+        stat_obs <- compF(input, attribs = TRUE, verbose = verbose)
+    } else if (test == "T_TEST") {
+        #
+        # prepare data
+        input <- preTtest(.arraydat, .arraydat2, paired, groups, mu, var_equal, 
+                          id_dim, verbose, tfce = use_tfce, perm = nperm > 1L)
+        rm(.arraydat, .arraydat2)
+        #
+        # observed test statistic
+        stat_obs <- 
+            if (input$type == "independent_samples") {
+                isTtest(input, attribs = TRUE)
+            } else {
+                osTtest(input, attribs = TRUE)
+            }
+    }
+    #
+    # TFCE correction
+    if (use_tfce) {
+        has_neg <- if (test == "ANOVA") FALSE else TRUE
+        verbose_type <- sprintf(
+            "TFCE-corrected %s statistic",
+            if (test == "ANOVA") "F" else "t")
+        tfce_obs <- anovaTfce(stat_obs, 1:2, 
+                              has_neg = has_neg,
+                              nr_chan = input$nr_chan, 
+                              nr_time = input$nr_time, tfce = tfce)
+        setattr(tfce_obs, "type", verbose_type)
+    }
+    #
+    # permutations
+    if (nperm > 1L) {
+        obs <- if (use_tfce) tfce_obs else stat_obs
+        perm_pvalues <- permPvalues(input, nperm, seed, obs, tfce)
+    }
+    #
+    # prepare output
+    out <- list(call = match.call())
+    #
+    # back-transform to original shape
+    if (verbose) {
+        setattr(stat_obs, "Df", backFn(attr(stat_obs, "Df"), input))
+        setattr(stat_obs, "p_value", backFn(attr(stat_obs, "p_value"), input))
+        setattr(stat_obs, "effect_size", 
+                backFn(attr(stat_obs, "effect_size"), input))
+    }
+    stat_obs <- backFn(stat_obs, input)
+    out$stat <- stat_obs
+    if (use_tfce) {
+        tfce_obs <- backFn(tfce_obs, input)
+        out$stat_corr <- tfce_obs
+    }
+    if (nperm > 1L) {
+        perm_pvalues <- backFn(perm_pvalues, input)
+        out$p_corr <- perm_pvalues
+    }
+    #
+    # attach dimnames
+    dimind <- sort(attr(input$teststat_dimid, "origpos"))
+    out$dimnames <- input$pre_dimnames[dimind]
+    out$dim <- dim(out$stat)
+    setattr(out$dim, "names", names(out$dimnames))
+    #
+    # return
+    out
+}
+
+
 
 #' Extract interaction
 #' 
@@ -691,41 +1062,152 @@ extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
 
 # TANOVA functions =========== 
 
+
+#' Compute generalized GFP-effects
+#' 
+#' \code{compTanovaEffect} computes the generalized effect size measure as
+#' given in Koenig & Melie-Garcia, 2009, p177. This is an internal function 
+#' called by the high-level function \code{\link{tanova}}.
+#' @param obj a list object as returned by \code{\link{preAnova}}
+#' @param new_indices if not NULL (default), it must be a vector of numeric
+#' indices to be passed to the model matrix. This parameter is used for 
+#' permutation-based analyses.
+#' @param attribs a logical value if dimension attributes should be attached to 
+#' the resulting array (default: FALSE)
+#' @return This function returns a numeric matrix of effects if 'attribs' is 
+#' FALSE, and an array of effects if 'attribs' is TRUE.
+#' @keywords internal
+compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
+    model <- obj$pre_sumsq[[1]]
+    mm <- model$model_matrix
+    if (!is.null(new_indices)) {
+        mm <- mm[new_indices, ]
+    }
+    mm_labels <- model$model_matrix_labels
+    xpx <- model$xpx
+    unc <- model$unique_contrasts
+    #
+    y <- obj$.arraydat
+    #
+    gfp <- !"chan" %in% obj$teststat_dimid
+    #
+    outdimn <- setdiff(obj$teststat_dimid, "chan")
+    out <- matrix_(0, prod(obj$full_dims[setdiff(outdimn, "modelterm")]), 
+                   obj$full_dims["modelterm"])
+    #
+    coeff <- solve(xpx, crossprod(mm, y))
+    setattr(coeff, "dimnames", list(mm_labels, NULL)) 
+    if (gfp) {
+        for (i in seq_along(unc)) {
+            fmeans <- unc[[i]] %*% coeff[colnames(unc[[i]]), , drop = FALSE]
+            out[, i] <- colMeans(abs(fmeans))
+        }
+    } else {
+        for (i in seq_along(unc)) {
+            fmeans <- unc[[i]] %*% coeff[colnames(unc[[i]]), , drop = FALSE]
+            setattr(fmeans, "dim", c(nrow(fmeans), obj$nr_chan, nrow(out)))
+            out[, i] <- colMeans(compGfp(fmeans, channel_dim = 2L))
+        }
+    }
+    if (attribs) {
+        setattributes(out, obj, "Effect (generalized GFP)", outdimn)
+        dimn <-  setNames(vector("list", length(outdimn)), outdimn)
+        setattr(out, "dimnames", dimn)
+    }
+    #
+    out
+}
+
+#' Compute p-values and length-corrected p-values in TANOVA
+#' 
+#' \code{compPvalueTanova} is a helper function to compute p-values and 
+#' length-corrected p-values in the high-level \code{\link{tanova}} function.
+#' @param effect_perm an array of permuted effects (including the observed 
+#' effect)
+#' @param pcrit a vector of p-value limits for consecutive length correction
+#' @return a list of two arrays: the p-values and the corrected p-values
+#' @keywords internal
+compPvalueTanova <- function(effect_perm, pcrit, obj) {
+    # helper function
+    consecLimit <- function(sigvec, .dim, alpha) {
+        out <- matrixRle(matrix_(sigvec, .dim))
+        quantile(out$lengths[out$values > 0], 1 - alpha)
+    }
+    # p-values
+    dims <- dim(effect_perm)
+    names(dims) <- names(dimnames(effect_perm))
+    nperm <- dims["perm"]
+    pvalues_perm <- fnDims(effect_perm, "perm", colRanks, 
+                           arg_list = list(preserveShape = TRUE),
+                           vectorized = TRUE, keep_dimorder = FALSE)
+    pvalues_perm <- (nperm + 1 - pvalues_perm) / nperm
+    pvalues <- subsetArray(pvalues_perm, list(perm = 1L))
+    setattr(pvalues, "dimnames", dimnames(pvalues_perm)[-1L])
+    setattr(pvalues, "type", "Permuted P-value")
+    out <- list(p = pvalues)
+    # consecutive sign. criterion
+    if ("time" %in% names(dims)) {
+        pvalues_perm <- apermArray(pvalues_perm, first = c("time", "perm"))
+        pvalues_consec <- array_(1, dim(pvalues_perm)[-2L], 
+                                 dimnames(pvalues_perm)[-2L])
+        for (alpha in sort(pcrit, TRUE)) {
+            consec_limit <- fnDims(pvalues_perm < alpha, 
+                                   1:2, consecLimit, 
+                                   arg_list = list(alpha = alpha))
+            temp <- matrixRle(
+                array2mat(pvalues < alpha, "time", 
+                          return_attributes = FALSE,
+                          keep_dimnames = FALSE))
+            ind <- temp$lengths < consec_limit[temp$matrixcolumn]
+            temp$values[ind] <- 0
+            temp <- inverse.matrixRle(temp)
+            pvalues_consec[temp > 0] <- alpha
+        }
+        pvalues_consec <- apermArray(pvalues_consec, names(dimnames(pvalues)))
+        setattr(pvalues_consec, "type", 
+                "Permuted P-value (with min. length correction)")
+        out[["p_corr"]] <- pvalues_consec
+    }
+    # return
+    out
+}
+
+
 #' Topographical ANOVA (TANOVA) and related methods
 #' 
 #' \code{tanova} performs point-to-point topographical ANOVA on arrays. Related
 #' methods are GFP-analysis (which is based on the intensity of the signal) and
 #' DISS-analysis (focusing only on the global dissimilarity by comparing 
 #' normalized topographies). See References for further details. 
-#' @param arraydat a numeric array with named dimnames containing the EEG (or 
+#' @param .arraydat a numeric array with named dimnames containing the EEG (or 
 #' other) data. Missing values are not allowed.
 #' @param factordef a named list of factor definitions, containing the following 
 #' elements:
 #' \itemize{
-#' \item{"between"}{"character vector of between-subject factors (default: NULL)"}
-#' \item{"within"}{"character vector of within-subject factors (default: NULL)"}
-#' \item{"w_id"}{"name of the dimension which identifies the subjects 
+#' \item{between: }{character vector of between-subject factors (default: NULL)}
+#' \item{within: }{character vector of within-subject factors (default: NULL)}
+#' \item{w_id: }{name of the dimension which identifies the subjects 
 #' (default: "id")}
 #' }
 #' @param bwdat a data.frame which contains the identification codes 
-#' (factordef$w_id) and the group memberships (factordef$between) of the 
-#' subjects. Missing values are not allowed.
+#' (factordef$w_id) and all subject-level variables (usually factors) listed in
+#' 'factordef$between'. Missing values are not allowed.
 #' @param type a character value of "tanova" (default), "dissimilarity", or 
 #' "gfp"
-#' @param verbose logical value indicating whether means for each factor level 
-#' should be also returned
-#' @param nperm integer value giving the number of permutations (default: 999L)
-#' @param useparallel logical value; if TRUE (default), computations are done
-#' in parallel
-#' @param ncores integer value corresponding to the number of cores; 
-#' if NULL (default), it is set to the maximum number of cores available
-#' @param par_method parallelization method; can be "snow" (default) or "mc"
-#' (multicore)
-#' @param cl a cluster definition for snow-type parallelization; if NULL 
-#' (default), it is set up automatically
-#' @param iaterms_last logival variable whether all interaction terms should 
-#' follow all main effect terms (default: TRUE)
-#' @param seed an integer value which specifies a seed (default: NULL)
+#' @param verbose logical value indicating if p-values should be computed
+#' @param nperm integer value giving the number of permutations (default: 999L) 
+#' to compute permuted p-values. If \code{nperm < 2}, no permutation is 
+#' performed.
+#' @param parallel either 1) NULL (the default) or FALSE (the same as NULL), 
+#' both of which mean single-core computation, or 2) TRUE, which means 
+#' parallelization with default parameters, or 3) an object as returned by 
+#' \code{\link{parallelParams}} with custom parameters (see Examples and also 
+#' \code{\link{parallelParams}}).\cr 
+#' Custom parameters can be also provided by \code{parallel = .(key = value)} to 
+#' save typing (this works by calling \code{\link{parallelParams}} with the 
+#' given parameters).
+#' @param seed an integer value which specifies a seed (default: NULL), or a 
+#' list of arguments passed to \code{\link{set.seed}}
 #' @param pcrit the significance level (or a vector of multiple levels) for the 
 #' consecutive length correction (default: 0.05)
 #' @details The function assumes that the input array contains at least two 
@@ -739,11 +1221,18 @@ extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
 #' @export
 #' @return A list object with effect statistics, uncorrected p-values, and 
 #' two types of corrected p-values: length correction or global correction
-#' @seealso \code{\link{plotTanova}} plots the result of \code{tanova}.
-#' @references Ported from the MATLAB toolbox by Koenig T, Kottlow M, Stein M, 
-#' Melie García L (2011) Ragu: A free tool for the analysis of EEG and MEG 
+#' @seealso See also the related methods to explore the results, e.g. 
+#' \code{\link{extract.tanova}}, \code{\link{summary.tanova}}, and the plotting
+#' function \code{\link{plotTanova}}.
+#' @references Koenig, T., Melie-Garcia, L. (2009) Statistical analysis of 
+#' multichannel scalp field data. In: Michel, C.M., Koenig, T., Brandeis, D.,
+#' Gianotti, L.R.R., Wackermann, J. (eds) Electrical neuroimaging. Cambridge
+#' University Press\cr
+#' See also the MATLAB toolbox by Koenig T, Kottlow M, Stein M, 
+#' Melie-Garcia L (2011) Ragu: A free tool for the analysis of EEG and MEG 
 #' event-related scalp field data using global randomization statistics. 
 #' Computational Intelligence and Neuroscience, 2011:938925
+#' See also 
 #' @examples
 #' # example dataset
 #' data(erps)
@@ -758,187 +1247,104 @@ extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
 #' # for each channel and time sample, taking into account both intensity and 
 #' # distributional differences (the default: type = "tanova")
 #' # Note that the number of permutations should be increased for serious 
-#' # purposes.
+#' # purposes (here we use the default: 999L).
 #' result_tanova <- tanova(tempdat, 
 #'                         list(between = "group",
 #'                              within = c("stimclass", "pairtype"),
 #'                              w_id = "id"),
 #'                         bwdat = dat_id,
-#'                         nperm = 499L,
-#'                         useparallel = TRUE, ncores = 2)
+#'                         parallel = .(ncores = 2))
 #' 
 #' # plot results (for now, only p-values)
 #' plotTanova(result_tanova, only_p = TRUE)
-tanova <- function(arraydat, factordef, bwdat = NULL, 
+tanova <- function(.arraydat, factordef, bwdat = NULL, 
                    type = c("tanova", "dissimilarity", "gfp"), 
-                   verbose = TRUE, nperm = 999L, useparallel = FALSE, ncores = NULL,
-                   par_method = c("snow", "mc"), cl = NULL,
-                   iaterms_last = TRUE, seed = NULL, pcrit = 0.05) {
-    # some checks
-    stopifnot(is.array(arraydat))
-    stopifnot(is.list(factordef))
-    nperm <- as.integer(nperm)
-    if (!is.null(factordef$between) && is.null(bwdat)) {
-        stop("No between-participant data provided")
+                   verbose = TRUE, nperm = 999L, parallel = NULL,
+                   seed = NULL, pcrit = 0.05) {
+    # helper function for back-transform to original
+    backFn <- function(x, obj) {
+        origpos <- attr(obj$teststat_dimid, "origpos")
+        origpos <- origpos[obj$teststat_dimid != "chan"]
+        x <- apermArray(x, order(origpos), keep_attributes = TRUE)
+        setattr(x, "dimnames", NULL)
     }
-    if (useparallel) {
-        if (is.null(ncores)) ncores <- detectCores()
-    }
-    pcrit <- pcrit[pcrit > (1 / (nperm + 1))]
-    if (length(pcrit) < 1) stop("The number of permutations is too low for this pcrit")
-    #
-    out <- list(call = match.call())
-    #
-    effSize <- function(means) {
-        datfn <- if (type == "gfp") abs else compGfp
-        out <- lapply(means, function(x) avgDims(datfn(x), "modelterm"))
-        out <- rearrangeList(out, "modelterm")
-        out <- drop(out)
-        return( out )
-    }
-    # 
-    consecLimit <- function(sigmat, alpha) {
-        out <- matrixRle(sigmat)
-        quantile(out$lengths[out$values > 0], 1 - alpha)
-    }
-    #
-    par_method <- match.arg(par_method)
-    #
+    # CRAN check
+    x <- i <- NULL
+    rm(x, i)
+    # some arguments must be pre-checked (e.g. deparse parallel)
+    assertIntegerish(nperm, len = 1L, any.missing = FALSE,
+                     .var.name = "nperm")
     type <- match.arg(type)
-    if (type == "gfp") {
-        if (verbose) {
-            arraydat_orig <- arraydat
-            arraydat_orig <- preAnova(arraydat, factordef, bwdat, 
-                                      useparallel, ncores, par_method)$arraydat
-        }
-        arraydat <- compGfp(arraydat)
+    mcall <- match.call() 
+    args <- as.list(mcall[-1])
+    ob <- getDoBackend()
+    parallel <- argumentDeparser(args$parallel, "parallelParams")
+    if (is.logical(parallel) && !parallel) {
+        registerDoSEQ()
+    } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {
+        on.exit(stopCluster(parallel$cl))
     }
-    if (type == "dissimilarity") arraydat <- scaleChan(arraydat)
+    on.exit(setDoBackend(ob), add = TRUE)
     #
-    temp <- preAnova(arraydat, factordef, bwdat, useparallel, ncores, par_method)
-    # assign variables to this environment, and potentially overwrite existing ones
-    #assignList(temp, verbose = FALSE)
-    dat <- temp$dat
-    arraydat <- temp$arraydat
-    factordef <- temp$factordef
-    origdimnames <- temp$origdimnames
-    par_params <- temp$par_params
-    rm(temp)
-    # formula of anova
-    aov_formula <- as.formula(paste(
-        as.character(quote(arraydat)), "~", 
-        sub("^\\*|\\*$", "", paste(
-            paste(as.character(factordef$between), collapse = "*"), 
-            paste(as.character(factordef$within), collapse = "*"),
-            sep = "*"))
-    )
-    )
-    # compute marginal means
-    origdims <- vapply(origdimnames, length, 0L)
-    modeldims <- c(factordef$w_id, factordef$within)
-    keepdims <- setdiff(names(origdimnames), modeldims)
-    term_means <- marginalMeans(aov_formula, dat, arraydat, 
-                                origdimnames[keepdims], 
-                                keep_term_order = !iaterms_last, 
-                                residualmean = TRUE)
-    es_obs <- effSize(term_means)
-    out <- c(out, list(effect = es_obs, residual_means = term_means))
-    names(out)[1] <- paste(names(out)[1], type, sep = "_")
-    if (verbose) {
-        if (type == "gfp") {
-            factor_means <- marginalMeans(aov_formula, dat, arraydat_orig, 
-                                          origdimnames[keepdims], 
-                                          keep_term_order = !iaterms_last, 
-                                          residualmean = FALSE)
-            
-        } else {
-            factor_means <- marginalMeans(aov_formula, dat, arraydat, 
-                                          origdimnames[keepdims], 
-                                          keep_term_order = !iaterms_last, 
-                                          residualmean = FALSE)
-        }
-        out <- c(out, list(factor_means = factor_means))
-    }
+    # prepare data
+    input <- preAnova(.arraydat, factordef, bwdat, verbose,
+                      tfce = FALSE, perm = nperm > 1L,
+                      tanova_type = type)
+    rm(.arraydat)
+    #
+    # prepare output
+    out <- list(call = mcall)
+    #
+    # calculate effect
+    es_obs <- compTanovaEffect(input, attribs = TRUE)
+#     if (verbose) {
+#         factor_means <- marginalMeans(input$mean_formula, 
+#                                       input$dat, input$.arraydat, 
+#                                       dimnames(es_obs)[-length(dim(es_obs))], 
+#                                       keep_term_order = !iaterms_last, 
+#                                       residualmean = FALSE)
+#         out$factor_means <- factor_means
+#     }
     if (nperm > 1L) {
-        #
-        permfn <- function(i) {
-            x <- marginalMeans(aov_formula, 
-                               dat[randind[i, ], ], 
-                               arraydat,
-                               origdimnames[keepdims], 
-                               keep_term_order = !iaterms_last, 
-                               residualmean = TRUE)
-            # return
-            effSize(x)
-        }
-        #
-        # generate random orders (dim(randind) = nperm X nrow(dat))
-        if (!is.null(seed)) set.seed(seed)
-        randind <- shuffleSet(nrow(dat), nperm, 
-                              how(within = Within(type = "free"), 
-                                  plots = Plots(strata = dat[,factordef$w_id], 
-                                                type = "free")))
-        #
-        if (!useparallel) {
-            es_perm <- lapply(1:nperm, permfn)
-        } else if (par_method == "snow") {
-            if (is.null(cl)) cl <- makePSOCKcluster(par_params$ncores, outfile = "")
-            clusterExport(cl, 
-                          varlist = par_params$varlist2snow,
-                          envir = environment())
-            es_perm <- parLapply(cl, 1:nperm, permfn)
-            stopCluster(cl)
-            rm(cl)
-        } else if (par_method == "mc") {
-            es_perm <- mclapply(1:nperm, permfn, mc.cores = par_params$ncores)
-        } 
-        # permuted F values
-        es_perm <- c(list(es_obs), es_perm)
-        names(es_perm) <- seq.int(nperm + 1)
-        es_perm <- rearrangeList(es_perm, "perm")
-        #if (!is.null(perm_fname)) save(es_perm, file = perm_fname)
+        # generate random orders (dim(randind) = nrow(dat) x nperm)
+        randind <- anovaRandomIndices(input, nperm, seed)
+        # run calculations
+        chunks <- min(10L, ceiling(nperm/max(1L, length(parallel$cl))))
+        es_perm <- 
+            foreach(x = iter(randind, by = "col", chunksize = chunks), 
+                    .combine = c, .inorder = FALSE,
+                    .options.snow = parallel$snow_options,
+                    .options.multicore = parallel$mc_options) %dopar% 
+                    {
+                        foreach(i = 1:ncol(x)) %do% 
+                            compTanovaEffect(input, x[,i])
+                    }
+        # reshape permuted tanova values
+        es_perm <- c(es_obs, unlist(es_perm, use.names = FALSE))
+        setattr(es_perm, "dim", c(dim(es_obs), nperm + 1L))
+        dimn <-  c(dimnames(es_obs), list(perm = NULL))
+        setattr(es_perm, "dimnames", dimn)
         # p-values
-        pvalues_perm <- fnDims(es_perm, "perm", colRanks, 
-                               arg_list = list(preserveShape = TRUE),
-                               vectorized = TRUE, keep_dimorder = TRUE)
-        pvalues_perm <- (nperm + 2 - pvalues_perm) / (nperm + 1)
-        pvalues <- avgDims(subsetArray(pvalues_perm, 
-                                       list(perm = 1), drop = FALSE),
-                           "perm")
-        # consecutive sign. criterion
-        pvalues_perm <- aperm(pvalues_perm, 
-                              c("time", "perm", 
-                                setdiff(names(dimnames(pvalues_perm)),
-                                        c("time", "perm"))))
-        temp <- dimnames(pvalues_perm)[-2]
-        pvalues_consec <- arrayIP(1, vapply(temp, length, 0L), temp)
-        apply_dim <- setdiff(names(dimnames(pvalues_perm)), c("time", "perm"))
-        for (alpha in sort(pcrit, TRUE)) {
-            consec_limit <- apply(pvalues_perm < alpha, 
-                                       apply_dim, 
-                                       consecLimit, alpha = alpha)
-            temp <- matrixRle(
-                array2mat(pvalues < alpha, "time", 
-                          return_attributes = FALSE,
-                          keep_dimnames = FALSE))
-            ind <- temp$lengths < consec_limit[temp$matrixcolumn]
-            temp$values[ind] <- 0
-            temp <- inverse.matrixRle(temp)
-            pvalues_consec[temp > 0] <- alpha
-        }
-        pvalues_consec <- aperm(pvalues_consec, names(dimnames(pvalues))) 
-        ## number of sign. time points criterion (deprecated)
-        # pvalues_global <- fnDims(pvalues_perm < 0.05, "time", colSums, 
-        #                          vectorized = TRUE)
-        # tempfn <- function(x) colSums(sweep(x, 2, x[1, ], ">="))
-        # pvalues_global <- fnDims(pvalues_global, "perm", tempfn, 
-        #                          vectorized = TRUE)
-        # pvalues_global <- pvalues_global / (nperm + 1)
-        ## return
-        out <- c(out, list(perm_pvalues = pvalues,
-                           perm_pvalues_consec = pvalues_consec))
-    } 
+        pvals <- compPvalueTanova(es_perm, pcrit, input)
+    }
+    # back-transform to original dimorder
+    out$stat <- backFn(es_obs, input)
+    rm(es_obs)
+    if (nperm > 1L) {
+        pvals <- lapply(pvals, backFn, obj = input)
+        setattr(out$stat, "p_value", pvals[["p"]])
+        if (!is.null(pvals[["p_corr"]])) 
+            out$p_corr <- pvals[["p_corr"]]
+    }
+    #
+    # attach dimnames
+    notchan <- input$teststat_dimid != "chan"
+    dimind <- sort(attr(input$teststat_dimid, "origpos")[notchan])
+    out$dimnames <- input$pre_dimnames[dimind]
+    out$dim <- dim(out$stat)
+    setattr(out$dim, "names", names(out$dimnames))
     # return
+    setattr(out, "class", "tanova")
     out
 }
 
@@ -949,7 +1355,7 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
 #' 
 #' \code{peakAnova} performs automatic peak detection and runs traditional 
 #' ANOVA on them
-#' @param arraydat a numeric array with named dimnames containing the EEG (or 
+#' @param .arraydat a numeric array with named dimnames containing the EEG (or 
 #' other) data. Missing values are not allowed.
 #' @param factordef a named list of factor definitions, containing the following 
 #' elements:
@@ -981,25 +1387,19 @@ tanova <- function(arraydat, factordef, bwdat = NULL,
 #' @param iaterms_last logival variable whether all interaction terms should 
 #' follow all main effect terms (default: TRUE)
 #' @param seed an integer value which specifies a seed (default: NULL)
-#' @details The function assumes that the input array contains at least two 
-#' named dimensions: chan (corresponding to the channels [electrodes]) and time 
-#' (corresponding to time points). All dimensions which are not listed as 
-#' within-subject factors are treated in a similar way as chan and time, that is 
-#' separate TANOVA-s are computed for each level of those dimensions.
+#' @details OLD VERSION, DO NOT USE IT! updates will follow...
 #' @note The function computes type I p-values - this is correct if the design
 #' is fully balanced and orthogonal (if the number of between-subject 
 #' factors is one, it may have slightly unequal group sizes).
 #' @export
-#' @return A list object with effect statistics, uncorrected p-values, and 
-#' two types of corrected p-values: length correction or global correction
-#' @references Koenig (2011) RAGU
-peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
+#' @return A list object.
+peakAnova <- function(.arraydat, factordef, peakdef, bwdat = NULL,
                       verbose = TRUE, avg_around_peak = 2, 
                       nperm = 1, useparallel = FALSE, ncores = NULL,
                       par_method = c("snow", "mc"), cl = NULL,
                       iaterms_last = TRUE, seed = NULL) {
     # some checks
-    stopifnot(is.array(arraydat) | missing(arraydat))
+    stopifnot(is.array(.arraydat) | missing(.arraydat))
     stopifnot(is.list(factordef) | missing(factordef))
     stopifnot(length(peakdef) != 2 | missing(peakdef))
     nperm <- as.integer(nperm)
@@ -1012,58 +1412,58 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
     #
     out <- list(call = match.call())
     #
-    sumSq <- function(arraydat, f_dat, aov_form, labels = FALSE) {
+    sumSq <- function(.arraydat, f_dat, aov_form, labels = FALSE) {
         out <- summary(aov(as.formula(aov_form), data = f_dat))
         if (!labels) {
-            out <- matrixIP(unlist(lapply(out, "[", "Mean Sq"), 
-                                   use.names = FALSE),
-                            nrow(out[[1]]), ncol(arraydat))
+            out <- matrix_(unlist(lapply(out, "[", "Mean Sq"), 
+                                  use.names = FALSE),
+                           nrow(out[[1]]), ncol(.arraydat))
         } else {
-            out <- matrixIP(unlist(lapply(out, "[", "Mean Sq"), 
-                                   use.names = FALSE),
-                            nrow(out[[1]]), ncol(arraydat),
-                            list(term = gsub(" ","",rownames(out[[1]])), 
-                                 peak = seq_along(out)))
+            out <- matrix_(unlist(lapply(out, "[", "Mean Sq"), 
+                                  use.names = FALSE),
+                           nrow(out[[1]]), ncol(.arraydat),
+                           list(term = gsub(" ","",rownames(out[[1]])), 
+                                peak = seq_along(out)))
         }         
         return(out)
     }
     # 
     par_method <- match.arg(par_method)
     # prepare data
-    temp <- preAnova(arraydat, factordef, bwdat, useparallel, ncores, par_method)
+    temp <- preAnova(.arraydat, factordef, bwdat, useparallel, ncores, par_method)
     # assign variables to this environment, and potentially overwrite existing ones
     #assignList(temp, verbose = FALSE)
     dat <- temp$dat
-    arraydat <- temp$arraydat
+    .arraydat <- temp$.arraydat
     factordef <- temp$factordef
     origdimnames <- temp$origdimnames
     par_params <- temp$par_params
     rm(temp)
     #
-    timedim <- which(names(dimnames(arraydat)) == "time")
+    timedim <- which(names(dimnames(.arraydat)) == "time")
     origtimedim <- which(names(origdimnames) == "time")
     origdimnames_peaks <- origdimnames
-    arraydat_peaks <- subsetArray(arraydat, 
-                                  list(time = dimnames(arraydat)$time[seq_along(peakdef)]))
+    .arraydat_peaks <- subsetArray(.arraydat, 
+                                  list(time = dimnames(.arraydat)$time[seq_along(peakdef)]))
     origdimnames_peaks$time <- 
-        dimnames(arraydat_peaks)$time <- seq_along(peakdef)
+        dimnames(.arraydat_peaks)$time <- seq_along(peakdef)
     names(origdimnames_peaks)[origtimedim] <- 
-        names(dimnames(arraydat_peaks))[timedim] <- "peak"
+        names(dimnames(.arraydat_peaks))[timedim] <- "peak"
     # formula of anova
     aov_formula_char <- 
         if (is.null(factordef$within)) {
             paste(
-                as.character(quote(arraydat)), " ~ ", 
+                as.character(quote(.arraydat)), " ~ ", 
                 paste(as.character(factordef$between), collapse = "*"),
                 sep = "")
         } else if (is.null(factordef$between)) {
             paste(
-                as.character(quote(arraydat)), " ~ ", 
+                as.character(quote(.arraydat)), " ~ ", 
                 paste(as.character(factordef$within), collapse = "*"),
                 sep = "")
         } else {
             paste(
-                as.character(quote(arraydat)), " ~ ", 
+                as.character(quote(.arraydat)), " ~ ", 
                 paste(
                     paste(as.character(factordef$between), collapse = "*"), 
                     paste(as.character(factordef$within), collapse = "*"),
@@ -1081,7 +1481,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
     peakdef <- lapply(peakdef, function(x) 
         c(which(origdimnames$time %in% as.character(x[1:2])), x[3]))
     # find peaks
-    fmeans <- marginalMeans(mean_formula, dat, arraydat, 
+    fmeans <- marginalMeans(mean_formula, dat, .arraydat, 
                             origdimnames[keepdims], 
                             keep_term_order = !iaterms_last, residualmean = FALSE)
     datrowind <- match(
@@ -1097,16 +1497,16 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
         x[1] -1 + apply(fmeans[[1]][,seq(x[1],x[2])], 1, minmax)})
     #
     # peak amplitudes
-    arraydat_peaks[] <- sapply(1:ncol(peakind), function(i) {
-        out <- matrixIP(0, nrow(arraydat), avg_around_peak*2 + 1)
+    .arraydat_peaks[] <- sapply(1:ncol(peakind), function(i) {
+        out <- matrix_(0, nrow(.arraydat), avg_around_peak*2 + 1)
         avgind <- outer(peakind[,i], c(-avg_around_peak:avg_around_peak), "+")
-        out[] <- arraydat[
+        out[] <- .arraydat[
             cbind(seq_along(datrowind), as.integer(avgind[datrowind,]))]
         return(rowMeans(out))
     })
     #
     # Compute ANOVA on peak amplitudes
-    Fvals_obs <- arrayAnovaSub(arraydat_peaks, 
+    Fvals_obs <- arrayAnovaSub(.arraydat_peaks, 
                                factordef, origdimnames_peaks, dat, verbose)
     out <- c(out, list(F_obs = Fvals_obs))
     # if verbose, save factor means
@@ -1115,7 +1515,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
             group = peakind_facs[rep(1:nrow(peakind_facs), 
                                      length(peakdef)), , drop = F],
             peak = factor_(rep(seq_along(peakdef), each = nrow(fmeans[[1]]))),
-            ampl = c(marginalMeans(mean_formula, dat, arraydat_peaks, 
+            ampl = c(marginalMeans(mean_formula, dat, .arraydat_peaks, 
                                    origdimnames_peaks["peak"], 
                                    keep_term_order = !iaterms_last, 
                                    residualmean = FALSE)[[1]]),
@@ -1132,7 +1532,7 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
         #
         permfn <- function(i) {
             facmeans <- marginalMeans(mean_formula, dat[randind[i,], ], 
-                                      arraydat, 
+                                      .arraydat, 
                                       origdimnames[keepdims], 
                                       keep_term_order = !iaterms_last, 
                                       residualmean = FALSE)[[1]]
@@ -1168,11 +1568,11 @@ peakAnova <- function(arraydat, factordef, peakdef, bwdat = NULL,
             lateff_perm <- mclapply(1:nperm, permfn, mc.cores = par_params$ncores)
         } 
         lateff_perm <- cbind(c(lateff_obs), 
-                             matrixIP(unlist(lateff_perm, use.names = FALSE),
-                                      ncol = nperm))
+                             matrix_(unlist(lateff_perm, use.names = FALSE),
+                                     ncol = nperm))
         lateff_perm <- sweep(lateff_perm[, -1, drop = F], 1, 
                              lateff_perm[, 1], "-")
-        pvalues <- arrayIP(
+        pvalues <- array_(
             (rowSums(lateff_perm >= 0) + 1) / (nperm + 1),
             dim(lateff_obs), dimnames(lateff_obs))
         out <- c(out, list(lat_pvalues = pvalues))

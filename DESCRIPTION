@@ -1,8 +1,8 @@
 Package: eegR
 Type: Package
 Title: A package to analyze EEG signals
-Version: 0.0.2
-Date: 2015-03-19
+Version: 0.0.3
+Date: 2015-05-27
 Author: Denes Toth
 Maintainer: Denes Toth <toth.denes@ttk.mta.hu>
 Description: The eegR package has been developed to process
@@ -13,7 +13,7 @@ Description: The eegR package has been developed to process
     The whole API will change in the short term so do not rely on this package
     in any form (yet).
 Depends:
-    R (>= 3.0.0)
+    R (>= 3.1.0)
 License: GPL-3
 Imports:
     abind,
@@ -37,11 +37,13 @@ Imports:
     utils
 Suggests:
     alphashape3d,
+    car,
     caTools,
     ez,
     geometry,
     grid,
     knitr,
+    microbenchmark,
     plotrix,
     rgl,
     shiny,

@@ -231,7 +231,7 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
     a <- suppressWarnings(alphashape3d::ashape3d(as.matrix(ch_pos), 
                                                  alpha, pert = TRUE))$edge
     a <- a[,c(1, 2, ncol(a))]
-    out <- matrixIP(0, nrow(ch_pos), nrow(ch_pos))
+    out <- matrix_(0, nrow(ch_pos), nrow(ch_pos))
     rownames(out) <- rownames(ch_pos)
     mirror <- out > 0
     for (i in 1:nrow(ch_pos)) {
@@ -360,7 +360,7 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
     }
     # Function to compute C coefficients
     compCmat <- function(x, G, tol) {
-        Gx <- arrayIP(1, dim(G) + 1)
+        Gx <- array_(1, dim(G) + 1)
         Gx[-1, -1] <- G
         Gx[1, 1] <- 0
         diag(Gx) <- diag(Gx) + tol
@@ -392,8 +392,8 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
         } else {
             missing_patterns <- fastUnique(na_ind, margin = 2L)
             message("Done")
-            yy <- arrayIP(0, c(nrow(interp_pos), ncol(y)),
-                          list(rownames(interp_pos), colnames(y)))
+            yy <- array_(0, c(nrow(interp_pos), ncol(y)),
+                         list(rownames(interp_pos), colnames(y)))
             names(dimnames(yy)) <- names(dimnames(y))
         }
         if (!is.null(alarm_tolerance)) {
@@ -516,7 +516,8 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
             if (is.null(interp_pos)) list() else list(chan = rownames(interp_pos))
         out <- fnDims(dat, "chan", interpFn, arg_list = arg_list, 
                       newdims = newdims, vectorized = TRUE)
-        out <- aperm(out, names(dim_names))
+        out <- apermArray(out, names(dim_names),
+                          keep_attributes = TRUE)
     }
     #
     if (is.null(interp_pos)) {
@@ -543,7 +544,6 @@ chanInterp <- function(dat, ch_pos, interp_pos = NULL, maxNA = 0.3,
 #' @param projref projection reference (pole [ = default] or equator)
 #' @param origo a named character vector of lat ( = latitude) and long (longitude)
 #' @param inverse if set to TRUE, back-projection is performed (default = FALSE)
-#' @import proj4
 #' @export
 #' @return A data.frame containing the projected coordinates
 project3dMap <- function(pos, r = 1,

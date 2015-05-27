@@ -6,84 +6,105 @@
 using namespace Rcpp;
 
 // tfce
-NumericMatrix tfce(NumericMatrix inData, int chan_dim, IntegerMatrix ChN, NumericVector EH, int numSteps);
-RcppExport SEXP eegR_tfce(SEXP inDataSEXP, SEXP chan_dimSEXP, SEXP ChNSEXP, SEXP EHSEXP, SEXP numStepsSEXP) {
+NumericMatrix tfce(NumericMatrix input_data, int chan_dim, IntegerMatrix ChN, NumericVector EH, int num_steps, bool has_negative, bool has_positive);
+RcppExport SEXP eegR_tfce(SEXP input_dataSEXP, SEXP chan_dimSEXP, SEXP ChNSEXP, SEXP EHSEXP, SEXP num_stepsSEXP, SEXP has_negativeSEXP, SEXP has_positiveSEXP) {
 BEGIN_RCPP
-    SEXP __sexp_result;
-    {
-        Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< NumericMatrix >::type inData(inDataSEXP );
-        Rcpp::traits::input_parameter< int >::type chan_dim(chan_dimSEXP );
-        Rcpp::traits::input_parameter< IntegerMatrix >::type ChN(ChNSEXP );
-        Rcpp::traits::input_parameter< NumericVector >::type EH(EHSEXP );
-        Rcpp::traits::input_parameter< int >::type numSteps(numStepsSEXP );
-        NumericMatrix __result = tfce(inData, chan_dim, ChN, EH, numSteps);
-        PROTECT(__sexp_result = Rcpp::wrap(__result));
-    }
-    UNPROTECT(1);
-    return __sexp_result;
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericMatrix >::type input_data(input_dataSEXP);
+    Rcpp::traits::input_parameter< int >::type chan_dim(chan_dimSEXP);
+    Rcpp::traits::input_parameter< IntegerMatrix >::type ChN(ChNSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type EH(EHSEXP);
+    Rcpp::traits::input_parameter< int >::type num_steps(num_stepsSEXP);
+    Rcpp::traits::input_parameter< bool >::type has_negative(has_negativeSEXP);
+    Rcpp::traits::input_parameter< bool >::type has_positive(has_positiveSEXP);
+    __result = Rcpp::wrap(tfce(input_data, chan_dim, ChN, EH, num_steps, has_negative, has_positive));
+    return __result;
 END_RCPP
 }
 // consectrueRcpp
 IntegerVector consectrueRcpp(LogicalMatrix x);
 RcppExport SEXP eegR_consectrueRcpp(SEXP xSEXP) {
 BEGIN_RCPP
-    SEXP __sexp_result;
-    {
-        Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< LogicalMatrix >::type x(xSEXP );
-        IntegerVector __result = consectrueRcpp(x);
-        PROTECT(__sexp_result = Rcpp::wrap(__result));
-    }
-    UNPROTECT(1);
-    return __sexp_result;
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< LogicalMatrix >::type x(xSEXP);
+    __result = Rcpp::wrap(consectrueRcpp(x));
+    return __result;
 END_RCPP
 }
 // rleRcpp
 List rleRcpp(NumericMatrix x);
 RcppExport SEXP eegR_rleRcpp(SEXP xSEXP) {
 BEGIN_RCPP
-    SEXP __sexp_result;
-    {
-        Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP );
-        List __result = rleRcpp(x);
-        PROTECT(__sexp_result = Rcpp::wrap(__result));
-    }
-    UNPROTECT(1);
-    return __sexp_result;
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP);
+    __result = Rcpp::wrap(rleRcpp(x));
+    return __result;
 END_RCPP
 }
 // charmatCollapse
 CharacterVector charmatCollapse(CharacterMatrix x, int along_dim);
 RcppExport SEXP eegR_charmatCollapse(SEXP xSEXP, SEXP along_dimSEXP) {
 BEGIN_RCPP
-    SEXP __sexp_result;
-    {
-        Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< CharacterMatrix >::type x(xSEXP );
-        Rcpp::traits::input_parameter< int >::type along_dim(along_dimSEXP );
-        CharacterVector __result = charmatCollapse(x, along_dim);
-        PROTECT(__sexp_result = Rcpp::wrap(__result));
-    }
-    UNPROTECT(1);
-    return __sexp_result;
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< CharacterMatrix >::type x(xSEXP);
+    Rcpp::traits::input_parameter< int >::type along_dim(along_dimSEXP);
+    __result = Rcpp::wrap(charmatCollapse(x, along_dim));
+    return __result;
 END_RCPP
 }
 // groupsum
 NumericMatrix groupsum(NumericMatrix x, IntegerVector g, int ug);
 RcppExport SEXP eegR_groupsum(SEXP xSEXP, SEXP gSEXP, SEXP ugSEXP) {
 BEGIN_RCPP
-    SEXP __sexp_result;
-    {
-        Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP );
-        Rcpp::traits::input_parameter< IntegerVector >::type g(gSEXP );
-        Rcpp::traits::input_parameter< int >::type ug(ugSEXP );
-        NumericMatrix __result = groupsum(x, g, ug);
-        PROTECT(__sexp_result = Rcpp::wrap(__result));
-    }
-    UNPROTECT(1);
-    return __sexp_result;
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type g(gSEXP);
+    Rcpp::traits::input_parameter< int >::type ug(ugSEXP);
+    __result = Rcpp::wrap(groupsum(x, g, ug));
+    return __result;
+END_RCPP
+}
+// sweepcol_multitype_cpp
+SEXP sweepcol_multitype_cpp(SEXP x, SEXP y, std::string fun);
+RcppExport SEXP eegR_sweepcol_multitype_cpp(SEXP xSEXP, SEXP ySEXP, SEXP funSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< SEXP >::type x(xSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type y(ySEXP);
+    Rcpp::traits::input_parameter< std::string >::type fun(funSEXP);
+    __result = Rcpp::wrap(sweepcol_multitype_cpp(x, y, fun));
+    return __result;
+END_RCPP
+}
+// sweepcol_double_cpp
+NumericMatrix sweepcol_double_cpp(NumericMatrix x, NumericVector y, std::string fun);
+RcppExport SEXP eegR_sweepcol_double_cpp(SEXP xSEXP, SEXP ySEXP, SEXP funSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< std::string >::type fun(funSEXP);
+    __result = Rcpp::wrap(sweepcol_double_cpp(x, y, fun));
+    return __result;
+END_RCPP
+}
+// sweepcol_logical_cpp
+LogicalMatrix sweepcol_logical_cpp(SEXP x, SEXP y, std::string fun);
+RcppExport SEXP eegR_sweepcol_logical_cpp(SEXP xSEXP, SEXP ySEXP, SEXP funSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< SEXP >::type x(xSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type y(ySEXP);
+    Rcpp::traits::input_parameter< std::string >::type fun(funSEXP);
+    __result = Rcpp::wrap(sweepcol_logical_cpp(x, y, fun));
+    return __result;
 END_RCPP
 }

@@ -31,20 +31,34 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
                          gfp_plot = TRUE, gfp_col = "black", gfp_lwd = 1.3, 
                          minus_up = NULL, grid_labels = c("time", "ampl"), 
                          grid_dim = NULL, ...) {
+    # helper function
     emptyplot <- function() {
         plot(0, 0, xlim = c(-1,1), type = "n", axes = FALSE, 
              frame.plot = FALSE, xlab = "", ylab = "")
     }
-    if (length(dim(dat)) > 3) {
-        dat <- mergeDims(dat, setdiff(names(dimnames(dat)), c(xdim, sepdim)))
+    #
+    assertArray(dat, mode = "numeric", min.d = 2L, .var.name = "dat")
+    plot_args <- list(...)
+    dat <- decorateDims(dat)
+    if (!is.character(xdim)) xdim <- names(dimnames(dat))[xdim]
+    if (!is.character(sepdim)) sepdim <- names(dimnames(dat))[sepdim]
+    if (gfp_plot && !identical(sepdim, "chan")) {
+        stop("If 'gfp_plot' is TRUE, 'sepdim' must be 'chan'")
     }
-    wrapdim <- setdiff(names(dimnames(dat)), c(xdim, sepdim))
-    dat <- aperm(dat, c(xdim, sepdim, wrapdim))
+    if (length(dim(dat)) > 3L) {
+        wrapdim <- setdiff(names(dimnames(dat)), c(xdim, sepdim))
+        dat <- mergeDims(dat, list(xdim, sepdim, wrapdim))
+    } else {
+        wrapdim <- ""
+        dim(dat) <- c(dim(dat), 1L)
+        dimnames(dat) <- c(dimnames(dat), list(""))
+    }
     subtitle.col <- rep(subtitle.col, length_out = dim(dat)[3])
     if (gfp_plot) gfpdat <- compGfp(dat)
-    x <- as.numeric(as.character(dimnames(dat)[[1]]))
-    xrange <- if (is.null(list(...)$xlim)) range(x) else list(...)$xlim 
-    if (is.null(list(...)$ylim)) {
+    suppressWarnings(x <- as.numeric(as.character(dimnames(dat)[[1]])))
+    if (anyNA(x)) x <- seq_along(x)
+    xrange <- if (is.null(plot_args$xlim)) range(x) else plot_args$xlim 
+    if (is.null(plot_args$ylim)) {
         yr <- range(dat)
         yrange <- mean(yr) + c(-1, 1)*(yr[2]-mean(yr))*1.02
         if (is.null(minus_up)) {
@@ -52,9 +66,9 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
         }
         if (minus_up) yrange <- -yrange
     } else {
-        yrange <- list(...)$ylim
+        yrange <- plot_args$ylim
     } 
-    if (is.null(grid_dim)) grid_dim = rep(ceiling(sqrt(dim(dat)[3])), 2)
+    if (is.null(grid_dim)) grid_dim = rep(ceiling(sqrt(dim(dat)[3L])), 2L)
     layoutmat <- cbind(
         c(0, rep(2, grid_dim[1]), 0, 0),
         rbind(rep(1, grid_dim[2]),
@@ -69,14 +83,14 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
     emptyplot(); text(0, 0, grid_labels[2], cex = 1.3, srt = 90)
     emptyplot(); text(0, 0, grid_labels[1], cex = 1.3)
     par(mar = c(0, 0, 2, 0))
-    for (i in 1:dim(dat)[3]) {
+    for (i in 1:dim(dat)[3L]) {
         matplot(x, dat[,,i], xlim = xrange, ylim = yrange, yaxs = "i",  
                 axes = FALSE, frame.plot = TRUE, type = "n")
         grid()
-        mtext(dimnames(dat)[[3]][i], 3, cex = 0.7, col = subtitle.col[i])
+        mtext(dimnames(dat)[[3L]][i], 3, cex = 0.7, col = subtitle.col[i])
         matlines(x, dat[,,i], axes = FALSE, ...)
-        if (i == max(dim(dat)[3])) {
-            axis(1)
+        if (i == max(dim(dat)[3L])) {
+            axis(1, at = x, labels = dimnames(dat)[[1L]])
             axis(4)
         }
         if (gfp_plot) lines(x, gfpdat[, i], col = gfp_col, lwd = gfp_lwd)
@@ -174,6 +188,9 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
         dat <- colMeans(dat, na.rm = TRUE)
     } else if (length(dim(dat)) > 2L) {
         stop("The input data may not have more than 2 dimensions")
+    } else if (length(dim(dat)) == 1L) {
+        dat <- as.vector(dat)
+        centroid_circle <- NA
     } else {
         centroid_circle <- NA
     }
@@ -231,7 +248,7 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
     gridgeo <- project3dMap(gridpos[ind,], projection = projection, 
                             projref = projref, origo = origo, inverse = TRUE)
     gridcart <- geo2cart(gridgeo)
-    z <- matrixIP(NA_real_, resol, resol)
+    z <- matrix_(NA_real_, resol, resol)
     z[ind] <- chanInterp(dat, ch_pos, gridcart, ...)
     if (is.null(ampl_range)) ampl_range <- range(z, na.rm = TRUE)
     z[z > ampl_range[2]] <- ampl_range[2]
@@ -247,19 +264,21 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
     gridpos <- expand.grid(x = gridx, y = gridy)
     ind <- !in.polygon(gridpos$x, gridpos$y, 
                        boundarypos$x*1, boundarypos$y*1)
-    z <- matrixIP(NA_integer_, 1000, 1000)
+    z <- matrix_(NA_integer_, 1000, 1000)
     z[ind] <- 1L
     image(gridx, gridy, z, useRaster = TRUE, col = "white", add = TRUE)
     lines(boundarypos, col = "white", lwd = 1)
     #
     if (plot_ch) {
         ch_pos_xy <- project3dMap(ch_pos)
-        points(ch_pos_xy,, pch = 20)
+        points(ch_pos_xy, NULL, pch = 20)
         if (plot_chnames) {
             indleft <- ch_pos_xy$x <= 0
             indright <- ch_pos_xy$x > 0
-            text(ch_pos_xy[indleft,], , rownames(ch_pos[indleft, ]), pos = 4)
-            text(ch_pos_xy[indright,], , rownames(ch_pos[indright, ]), pos = 2)
+            text(ch_pos_xy[indleft,], NULL, rownames(ch_pos[indleft, ]), 
+                 pos = 4)
+            text(ch_pos_xy[indright,], NULL, rownames(ch_pos[indright, ]), 
+                 pos = 2)
         }
     }
     #
@@ -267,8 +286,8 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
         xpos.bar <- seq(min(boundarypos$x / 3), max(boundarypos$x / 3), 
                         length.out = resolcol)
         image(xpos.bar, ypos.bar,
-              matrixIP(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
-                       resolcol, 2),
+              matrix_(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
+                      resolcol, 2),
               zlim = ampl_range, col = colors, add = TRUE)
         text(min(xpos.bar), ypos.bar[1], 
              substitute(paste(k, " ", mu, "V", sep = ""), 
@@ -288,7 +307,6 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
     if (!is.null(gfp)) {
         normFn <- function(x, xrange, lims) 
             (x - xrange[1])/diff(xrange) * diff(lims) + lims[1]
-        lgfp <- length(gfp)
         gfp.x <- as.numeric(names(gfp))
         gfp.xr <- range(gfp.x)
         gfp.xlims <- xlim * 0.8
@@ -320,8 +338,8 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
             if (reqFn("plotrix")) {
                 cc <- apply(subjdat, 1, centroid, ch_pos, 
                             proj_unitsphere = centroid_unitsphere)
-                temp <- matrixIP(unlist(lapply(cc, function(x) abs(x-c1))), 
-                                 ncol = length(cc))
+                temp <- matrix_(unlist(lapply(cc, function(x) abs(x-c1))), 
+                                ncol = length(cc))
                 rads <- apply(temp, 2, quantile, 
                               probs = centroid_circle, na.rm = TRUE)
                 plotrix::draw.ellipse(x = c1$x, y = c1$y, 
@@ -462,8 +480,8 @@ complexplot2dview <- function(dat, ch_pos, timepoint,
         xpos.bar <- seq(0.4, 0.6, length.out = resolcol)
         ypos.bar <- c(0.45, 0.55)
         image(xpos.bar, ypos.bar,
-              matrixIP(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
-                       resolcol, 2),
+              matrix_(seq(ampl_range[1], ampl_range[2], length.out = resolcol), 
+                      resolcol, 2),
               xlim = c(0, 1), ylim = c(0, 1), zlim = ampl_range, 
               useRaster = TRUE, col = bluered(resolcol), 
               xlab = "", ylab = "", axes = FALSE 
@@ -562,8 +580,8 @@ reprPlot <- function(p, e, title = "Reproducibility", plim = c(0.05, 0.01),
     p_min <- min(p)
     natnum <- ncol(p)
     nations <- colnames(p)
-    imlayout <- matrixIP((2 * natnum + 1), natnum, natnum)
-    diagpos <- diag(matrixIP(1:natnum^2, natnum, natnum))
+    imlayout <- matrix_((2 * natnum + 1), natnum, natnum)
+    diagpos <- diag(matrix_(1:natnum^2, natnum, natnum))
     for (i in 1:length(imlayout)) {
         imlayout[i] <- 
             if (i %in% diagpos) 0 
@@ -848,34 +866,43 @@ tfce.plot <- function(arraydat, breaks = c(0, 0.001, 0.01, 0.05),
 #' @param plot_title character string; the title of the plot
 #' @param time_label character string; the label of the x (time) axis 
 #' (default: "Time (ms)")
+#' @param highlight_p highlight significant phases based on the corrected
+#' ("p_corr", the default) or uncorrected ("p") p-values
 #' @param only_p logical; if TRUE, p-values are plotted instead of combined 
-#' (effect + p-value) plots (default: FALSE). See note.
-#' @note Use only_p = TRUE if you want to check the uncorrected p-values. If 
-#' only_p is set to FALSE (which is the default), \code{plotTanova} highlights
-#' the significant phases of the effect curves based on the corrected p-values.
+#' (effect + p-value) plots (default: FALSE)
 #' @export
 #' @return A ggplot object
-plotTanova <- function(results, grid = NULL, wrap = NULL, 
+plotTanova <- function(results, 
+                       grid = NULL, wrap = NULL, 
                        plot_title = "", time_label = "Time (ms)", 
-                       only_p = FALSE) {
-    reshapefn <- function(slot, headername) {
-        x <- results[[slot]]
-        x <- array2df(x, response_name = headername, 
-                      dim_types = list(time = "numeric"))
-        return(x)
-    }
+                       highlight_p = c("p_corr", "p"), only_p = FALSE) {
     #
+    if (!inherits(results, "tanova"))
+        stop("'results' does not have class 'tanova'")
+    highlight_p <- match.arg(highlight_p)
     pcrit <- try(eval(as.list(results$call)$pcrit), silent = TRUE)
     if (is.null(pcrit)) {
         pcrit <- formals(tanova)$pcrit
-    } else if (inherits(pcrit, "try-error")) {
-        pcrit <- unique(as.vector(results$perm_pvalues_consec))
+    } else if (inherits(pcrit, "try-error") && 
+               identical(highlight_p, "p_corr")) {
+        pcrit <- unique(as.vector(extract(results, "p_corr")))
+    } else {
+        pcrit <- 0.05
     }
     pcrit <- union(sort(pcrit), 1)
     #
-    dat <- transformArray(effect ~ ., results$effect)
-    dat$pvalue <- -log(as.vector(results$perm_pvalues))
-    dat$pcrit <- factor(results$perm_pvalues_consec, 
+    dat <- transformArray(effect ~ ., extract(results, "stat"))
+    dat$pvalue <- -log(as.vector(extract(results, "p")))
+    hpvals <- extract(results, highlight_p)
+    if (identical(highlight_p, "p")) {
+        ind <- hpvals <= pcrit[1L]
+        hpvals[ind] <- pcrit[1L] 
+        for (i in 2:length(pcrit)) {
+            ind <- !ind & hpvals <= pcrit[i]
+            hpvals[ind] <- pcrit[i] 
+        }
+    }
+    dat$pcrit <- factor(hpvals, 
                         levels = as.character(pcrit), 
                         labels = c(as.character(pcrit[-length(pcrit)]), 
                                    "n.s."))
@@ -902,7 +929,8 @@ plotTanova <- function(results, grid = NULL, wrap = NULL,
     } else if (!is.null(wrap)) {
         qp <- qp + facet_wrap( as.formula(wrap) )
     } else {
-        griddims <- setdiff(names(dimnames(results$effect)), "time")
+        griddims <- names(fillMissingDimnames(results$dimnames, results$dim))
+        griddims <- setdiff(griddims, "time")
         if (length(griddims) > 0) {
             if (length(griddims) > 1) {
                 grid <- paste(griddims, collapse = "~")  

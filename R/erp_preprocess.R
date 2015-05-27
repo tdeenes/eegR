@@ -128,9 +128,9 @@ importBVdat <- function(file_name, file_path = getwd(), id = "",
                        what = "integer", n = eeg_length)
         eeg <- eeg / 1000
         if (eeg_orientation == "vectorized") {
-            eeg <- t(matrixIP(eeg, eeg_length/nr_chan, nr_chan))
+            eeg <- t(matrix_(eeg, eeg_length/nr_chan, nr_chan))
         } else {
-            matrixIP(eeg, nr_chan, eeg_length/nr_chan)
+            matrix_(eeg, nr_chan, eeg_length/nr_chan)
         }
         setattr(eeg, "subject_id", as.character(id))
         procstep <- list(
@@ -253,14 +253,14 @@ importBVdat <- function(file_name, file_path = getwd(), id = "",
     if (!is.null(import_options$eeg_ext)) {
         eeg <- eeg[, c(outer(import_options$segment_dpoints, 
                              markers$dpoint,"+"))]
-        arrayIP(eeg, 
-                c(nr_chan, length(import_options$segment_dpoints), 
-                  nrow(markers)),
-                list(chan = rownames(chan),
-                     time = import_options$segment_dpoints * 1000 / eeg_Hz,
-                     trial = paste(markers$segment, 
-                                   markers$fullcode, 
-                                   sep = "_")))
+        array_(eeg, 
+               c(nr_chan, length(import_options$segment_dpoints), 
+                 nrow(markers)),
+               list(chan = rownames(chan),
+                    time = import_options$segment_dpoints * 1000 / eeg_Hz,
+                    trial = paste(markers$segment, 
+                                  markers$fullcode, 
+                                  sep = "_")))
     }
     # decorate
     setattr(eeg, "processing_steps", list(procstep))
@@ -490,7 +490,7 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
         dims <- attribs$dim[-row_dim]
         dimn <- attribs$dimnames[-row_dim]
         names(dims) <- names(dimn)
-        out <- matrixIP(FALSE, ncol(x), length(crits))
+        out <- matrix_(FALSE, ncol(x), length(crits))
         colnames(out) <- crits
         message("\n****\nStart artifact rejection / Criterion: ...\n")
         if (artrej_options$apply_maxgrad) {
@@ -508,10 +508,10 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
             out[, "amplrange"] <- amplrangeFn(x)
             message(" done\n")
         }
-        arrayIP(out, c(dims, ncol(out)), c(dimn, list(crit = crits)))
-        artrej_summary <- matrixIP(0, dims["chan"]+1, length(crits)+1,
-                                   list(chan = c(dimn$chan, "all"),
-                                        crit = c(crits, "all")))
+        array_(out, c(dims, ncol(out)), c(dimn, list(crit = crits)))
+        artrej_summary <- matrix_(0, dims["chan"]+1, length(crits)+1,
+                                  list(chan = c(dimn$chan, "all"),
+                                       crit = c(crits, "all")))
         dimres <- dim(artrej_summary)
         artrej_summary[-dimres[1], -dimres[2]] <- avgDims(out, "trial")
         artrej_summary[dimres[1], -dimres[2]] <- 
@@ -581,19 +581,31 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
 #'
 #' \code{compGfp} computes Global Field Power (the standard deviation of 
 #' channel values for each sampling point)
-#' @param dat numeric matrix or array with named dimensions (one of which
-#' must be "chan")
+#' @param dat numeric matrix or array, usually with named dimensions (one of 
+#' which is "chan")
 #' @param keep_channels logical value; if TRUE, the original channels are 
-#' retained, and the GFP values are added with channel code \dQuote{GFP}
+#' retained, and the GFP values are added with channel code "GFP"
 #' (default = FALSE)
+#' @param channel_dim a character value or numeric index indicating the
+#' channel dimension of \code{dat} (default: "chan")
 #' @export
 #' @return The function returns a matrix or an array. Note that if
 #' the original channels are not retained, the channel dimension is dropped.
-compGfp <- function(dat, keep_channels = FALSE) {
-    out <- fnDims(dat, "chan", colSds, vectorized = TRUE)
+compGfp <- function(dat, keep_channels = FALSE, channel_dim = "chan") {
+    out <- fnDims(dat, channel_dim, colSds, vectorized = TRUE)
     if (keep_channels) {
-        out <- bindArrays(dat, GFP = out, along_name = "chan")
-    } 
+        dimn <- names(dimnames(dat))
+        if (!is.null(dimn) && is.numeric(channel_dim))
+            channel_dim <- dimn[channel_dim]
+        out <- 
+            if (is.character(channel_dim)) {
+                bindArrays(dat, GFP = out, along_name = channel_dim)
+            } else {
+                bindArrays(dat, GFP = out, along = channel_dim)
+            }
+        if (is.null(dimnames(dat)))
+            setattr(out, "dimnames", NULL)
+    }
     # return
     out
 }

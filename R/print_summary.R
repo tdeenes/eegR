@@ -4,29 +4,26 @@
 
 #' Extract slots from arrayAnova, arrayTtest, or tanova object
 #' 
-#' \code{extract} extracts slots from arrayAnova, arrayTtest, or tanova objects,
-#' each produced by the corresponding function.
-#' @param obj an object as returned by \code{\link{arrayTtest}},
-#' \code{\link{arrayAnova}}, or \code{\link{tanova}}
-#' @param ... parameters to the correspondig extractor method
-#' (e.g. \code{\link{extract.arrayAnova}})
-#' @note Only \code{arrayAnova} is implemented at the moment.
-#' @export
-#' @return an array of the requested component or a named list of arrays if
-#' multiple components were requested
-#' @seealso See the examples of \code{\link{arrayAnova}}
-extract <- function(obj, ...) UseMethod("extract")
-
-#' Default extractor
-extract.default <- function(obj, ...) {
-    stop("No extractor for this class")
-}
-
-#' Extract slots from an \code{arrayAnova} object
-#' 
-#' Extractor for \code{\link{arrayAnova}} objects
-#' @param obj an object of class \code{arrayAnova}
-#' @param what a character vector indicating the slots to extract
+#' \code{extract} is a generic function for extracting slots from 
+#' \code{\link{arrayTtest}}, \code{\link{arrayAnova}}, or \code{\link{tanova}}
+#' objects, each produced by the corresponding function.
+#' @param object an object of class \code{arrayTtest}, \code{arrayAnova}, or 
+#' \code{tanova}
+#' @param what a character vector indicating which slot(s) to extract. If 
+#' 'what' is 'all' (default), all relevant slots is extracted (see the Usage
+#' section for the relevant slot names in each particular method). Otherwise,
+#' the slots to extract are found by partial matching to the following choices:
+#' \itemize{
+#' \item{stat: }{Test statistic (e.g. F values in \code{arrayAnova})}
+#' \item{stat_corr: }{Corrected test statistic (e.g. TFCE values in 
+#' \code{arrayAnova})}
+#' \item{p: }{Uncorrected P-values}
+#' \item{p_corr: }{Corrected P-values (e.g. TFCE-corrected P-values in 
+#' \code{arrayAnova}, or consecutive length correction in \code{tanova})}
+#' \item{es: }{Effect size statistic (e.g. Generalized Eta Squared in 
+#' \code{arrayAnova})}
+#' \item{means: }{Marginal means for each model term}
+#' }
 #' @param time_window numeric vector of length two indicating the time window
 #' which should be extracted. If NULL (default), all time points are returned.
 #' @param term character vector indicating the name of the model terms which
@@ -35,104 +32,253 @@ extract.default <- function(obj, ...) {
 #' (default), all channels are returned.
 #' @param drop logical value; if TRUE, singleton dimensions are dropped from
 #' the arrays after subsetting on time, term, and/or chan (default: FALSE)
+#' @param ... not used yet
+#' @note Only \code{arrayAnova} is implemented at the moment.
 #' @export
-extract.arrayAnova <- function(obj, 
-                               what = c("stat", "p", "es", 
-                                        "stat_corr", "p_corr",
-                                        "means", "df"),
-                               time_window = NULL, term = NULL, chan = NULL, 
-                               drop = FALSE) {
-    what <- tolower(what)
-    what <- match.arg(what, several.ok = TRUE)
-    dimn <- dimnames(obj$effect_F_obs)
-    if (is.null(term)) term <- dimn$modelterm
-    if (is.null(chan)) chan <- dimn$chan
+#' @return The function returns an array of the requested component or a named 
+#' list of arrays if multiple components were requested.
+#' @seealso See the examples of \code{\link{arrayAnova}}
+extract <- function(...) UseMethod("extract")
+
+#' Default extractor
+#' 
+#' Default extractor which is behind \code{\link{extract.arrayTtest}},
+#' \code{\link{arrayAnova}}, and \code{\link{tanova}}, and does nothing 
+#' (at the moment) for objects of other classes.
+#' @export
+#' @keywords internal
+extract.default <- function(object, what, 
+                            time_window = NULL, term = NULL, chan = NULL, 
+                            drop = FALSE, ...) {
+    # helper function
+    extractor <- function(x, params) {
+        out <- copy(x)
+        if (is.null(out)) return(out)
+        if (identical(unname(dim(out)), unname(params$dims)) )
+            setattr(out, "dimnames", params$dimn)
+        subs <- params$subs[intersect(names(params$subs), 
+                                      names(dimnames(out)))]
+        if (length(subs) > 0L) {
+            out <- subsetArray(out, subsets = subs, drop = params$drop, 
+                               keep_attributes = FALSE)
+            setattr(out, "type", attr(x, "type"))
+        }
+        # return
+        out
+    }
+    #
+    if (!inherits(object, c("arrayTtest", "arrayAnova", "tanova")))
+        stop("No extractor for this class")
+    exparams <- list(
+        dims = object$dim, dimn = object$dimnames,
+        drop = drop
+    )
+    if (is.null(term)) term <- exparams$dimn$modelterm
+    if (is.null(chan)) chan <- exparams$dimn$chan
     time <- 
         if (is.null(time_window)) {
-            dimnames(obj$effect_F_obs)$time
+            dimnames(object$stat)$time
         } else if (length(time_window) != 2L) {
             stop("time_window must contain two values")
         } else if (anyNA(time_window)) {
             stop("time_window has missing value(s)")
         } else {
             time_window <- sort(time_window)
-            timep <- as.numeric(dimn$time)
-            time <- as.character(timep[timep > time_window[1] & 
-                                           timep < time_window[2]])
+            timep <- as.numeric(exparams$dimn$time)
+            time <- as.character(timep[timep >= time_window[1] & 
+                                           timep <= time_window[2]])
         }
-    sub <- list(chan = chan, time = time, modelterm = term)
+    subs <- list(chan = chan, time = time, modelterm = term)
+    exparams$subs <- subs[!vapply(subs, is.null, FALSE)]
     out <- setNames(vector("list", length(what)), what)
     if ("stat" %in% what) {
-        out[["stat"]] <- subsetArray(obj$effect_F_obs, sub, drop = drop)
-        setattr(out[["stat"]], "Df.term", NULL)
-        setattr(out[["stat"]], "Df.resid", NULL)
-        setattr(out[["stat"]], "pvalues", NULL)
-        setattr(out[["stat"]], "ges", NULL)
-        setattr(out[["stat"]], "factor_means", NULL)
+        out[["stat"]] <- extractor(object[["stat"]], exparams)
     }
     if ("p" %in% what) {
-        out[["p"]] <- subsetArray(attr(obj$effect_F_obs, "pvalues"), sub, 
-                                  drop = drop)
+        out[["p"]] <- extractor(attr(object[["stat"]], "p_value"), exparams)
     }
     if ("es" %in% what) {
-        out[["es"]] <- subsetArray(attr(obj$effect_F_obs, "ges"), sub, 
-                                   drop = drop)
+        out[["es"]] <- extractor(attr(object[["stat"]], "effect_size"), exparams)
     }
     if ("means" %in% what) {
-        m <- attr(obj$effect_F_obs, "factor_means")
-        m <- lapply(m, subsetArray, subsets = sub[c("chan", "time")], 
-                    drop = drop)
-        out[["means"]] <- 
-            if (drop && length(term) == 1L) m[[term]] else m[term]
+        m <- attr(object$stat, "marginal_means")
+        if (!is.null(m)) {
+            m <- lapply(m, subsetArray, subsets = sub[c("chan", "time")], 
+                        drop = drop)
+            out[["means"]] <- 
+                if (drop && length(term) == 1L) m[[term]] else m[term]    
+        } else {
+            out[["means"]] <- NULL
+        }
     }
     if ("stat_corr" %in% what) {
-        out[["stat_corr"]] <- subsetArray(obj$effect_tfce_obs, sub, drop = drop)
+        out[["stat_corr"]] <- extractor(object[["stat_corr"]], exparams)
     }
     if ("p_corr" %in% what) {
-        out[["p_corr"]] <- subsetArray(obj$perm_pvalues, sub, drop = drop)
-        setattr(out[["p_corr"]], "type", attr(obj$perm_pvalues, "type"))
+        out[["p_corr"]] <- extractor(object[["p_corr"]], exparams)
     }
     if ("df" %in% what) {
-        out[["df"]] <- cbind(attr(obj$effect_F_obs, "Df.term"),
-                             attr(obj$effect_F_obs, "Df.resid"))
-        setattr(out[["df"]], "dimnames", list(modelterm = dimn$modelterm, 
-                                              c("Df.term", "Df.resid")))
-        out[["df"]] <- out[["df"]][term, , drop = drop]
+        out[["df"]] <- extractor(attr(object[["stat"]], "Df"), exparams)
     }
     what_null <- vapply(out[what], is.null, FALSE)
     if (any(what_null)) {
         warning(paste0(paste(what[what_null], collapse = ", "), 
                        " values are not available"))
     }
-    if (length(out) == 1) out <- out[[1]]
+    if (length(what) == 1L) out <- out[[1L]]
     # return
     out
 }
 
-#' Compute summary statistics for \code{arrayAnova} object
+#' @describeIn extract
+extract.arrayTtest <- function(object, 
+                               what = c("all", "stat", "p", "es", 
+                                        "stat_corr", "p_corr",
+                                        "means", "df"),
+                               time_window = NULL, term = NULL, chan = NULL, 
+                               drop = FALSE,
+                               ...) {
+    what <- matchArg(what)
+    NextMethod(what = what, time_window = time_window, term = term,
+               chan = chan, drop = drop, ...)
+}
+
+#' @describeIn extract
+extract.arrayAnova <- function(object, 
+                               what = c("all", "stat", "p", "es", 
+                                        "stat_corr", "p_corr",
+                                        "means", "df"),
+                               time_window = NULL, term = NULL, chan = NULL, 
+                               drop = FALSE,
+                               ...) {
+    what <- matchArg(what)
+    NextMethod(what = what, time_window = time_window, term = term,
+               chan = chan, drop = drop, ...)
+}
+
+#' @describeIn extract
+extract.tanova <- function(object, 
+                           what = c("all", "stat", "p", 
+                                    "stat_corr", "p_corr",
+                                    "means"),
+                           time_window = NULL, term = NULL, 
+                           drop = FALSE,
+                           ...) {
+    what <- matchArg(what)
+    NextMethod(what = what, time_window = time_window, term = term,
+               chan = NULL, drop = drop, ...)
+}
+
+
+#' Compute summary statistics for \code{arrayTtest}, \code{arrayAnova}, or
+#' \code{tanova} objects
 #' 
-#' \code{summary.arrayAnova} computes the minimum, maximum and median of
-#' F-values, generalized eta squared effect sizes and P-values for all 
-#' channel X time points which meet a certain criterion.
-#' @param obj an object of class \code{\link{arrayAnova}}
-#' @param basis character value indicating the criterion; if \code{p_corr} 
-#' (the default), channel X time points below a specified corrected alpha-level 
-#' are selected (choose \code{p} for uncorrected p-values); if \code{es} or 
-#' \code{stat} (or \code{stat_corr}), the effect size or (corrected) test 
-#' statistic should exceed a given limit.
-#' @param crit the level of criterion
+#' \code{summary.arrayTtest}, \code{summary.arrayAnova}, and 
+#' \code{summary.tanova} compute the minimum, maximum and median of
+#' criterion-referenced test statistics, effect sizes and P-values for 
+#' particular subviews (e.g. channel X time subviews).
+#' @name summary
+#' @param object an object of class \code{\link{arrayTtest}}, 
+#' \code{\link{arrayAnova}}, or \code{\link{tanova}}
+#' @param basis character value indicating the criterion node (default: 
+#' "p_corr"), see Details
+#' @param basis_dim integer or character vector indicating the dimensions
+#' which form relevant subparts for which summary statistics should be 
+#' computed (default: c("chan", "time"))
+#' @param crit numeric scalar, the level of criterion (see Details)
 #' @param ... arguments passed to \code{\link{extract}}, e.g. 
 #' \code{time_window = c(100, 200)}
+#' @details If 'basis' is "p_corr" (the default) or "p", denoting corrected and 
+#' uncorrected P-values, respectively, argument 'crit' refers to the desired 
+#' alpha-level (set to 0.05 by default). In this case the basis values should be 
+#' \emph{below} or equal to the criterion. If basis is "stat" (test statistic), 
+#' "stat_corr" (corrected test statistic) or "es" (effect size), absolute basis 
+#' values \emph{above} or equal to the 'crit' criterion are selected.\cr
+#' The summary statistics are computed for those data points which correspond 
+#' to the selected positions in the 'basis_dim' subviews. For example, 
+#' supposing the object is the result of an uncorrected ANOVA calculation (see 
+#' \code{\link{arrayAnova}}), and separate analyses were conducted for each 
+#' channel X time data points but no other dimension, \code{summary} returns 
+#' the list of \code{min}, \code{max}, and \code{median} of F-values and effect 
+#' sizes (generalized eta squares) taking into consideration only those 
+#' channel X time values for each model term, which were significant at the 
+#' level of 0.05.\cr
+#' The returned list also contains the descriptive statistics of the selected 
+#' P-values together with the number and ratio of significant values. Note that 
+#' if no data points meet the given criterion in a particular subview, no 
+#' summaries can be computed, resulting in \code{NA} values in the 
+#' corresponding cells.
 #' @export
-#' @return a list of summaries
-summary.arrayAnova <- function(obj, 
-                               basis = c("p_corr", "p", "es", "stat", "stat_corr"),
-                               crit = 0.05,
+#' @return The methods return a list of summaries which can be printed with
+#' the corresponding \code{print} method.
+summary.arrayTtest <- function(object, 
+                               basis = c("p_corr", "p", 
+                                         "es", "stat", "stat_corr"),
+                               basis_dim = c("chan", "time"),
+                               crit = NULL,
                                ...) {
-    #
+    basis <- tolower(basis)
+    basis <- match.arg(basis)
+    if (is.null(crit) && grepl("p", basis)) crit <- 0.05
+    out <- summary.eegr(object, basis, basis_dim, crit, ...)
+    setattr(out, "class", c("summary.arrayTtest", "summary.eegr"))
+    # return
+    out
+}
+
+#' @rdname summary
+#' @export
+summary.arrayAnova <- function(object, 
+                               basis = c("p_corr", "p", 
+                                         "es", "stat", "stat_corr"),
+                               basis_dim = c("chan", "time"),
+                               crit = NULL,
+                               ...) {
+    basis <- tolower(basis)
+    basis <- match.arg(basis)
+    if (is.null(crit) && grepl("p", basis)) crit <- 0.05
+    out <- summary.eegr(object, basis, basis_dim, crit, ...)
+    setattr(out, "class", c("summary.arrayAnova", "summary.eegr"))
+    # return
+    out
+}
+
+#' @rdname summary
+#' @export
+summary.tanova <- function(object, 
+                           basis = c("p_corr", "p", "stat"),
+                           basis_dim = "time",
+                           crit = NULL,
+                           ...) {
+    basis <- tolower(basis)
+    basis <- match.arg(basis)
+    if (is.null(crit) && grepl("p", basis)) crit <- 0.05
+    out <- summary.eegr(object, basis, basis_dim, crit, ...)
+    setattr(out, "class", c("summary.tanova", "summary.eegr"))
+    # return
+    out
+}
+
+#' Workhorse function for eegR-summary methods
+#' 
+#' \code{summary.eegr} is the main function behind eegR-summary methods 
+#' (\code{\link{summary.arrayTtest}}, \code{\link{summary.arrayAnova}}, 
+#' \code{\link{summary.arrayAnova}}).
+#' @param object an object of class \code{\link{arrayTtest}}, 
+#' \code{\link{arrayAnova}}, or \code{\link{tanova}}
+#' @param basis character value indicating the criterion node
+#' @param basis_dim integer or character vector indicating the dimensions
+#' which form relevant subparts for which summary statistics should be 
+#' computed
+#' @param crit numeric scalar, the level of criterion
+#' @param ... arguments passed to \code{\link{extract}}, e.g. 
+#' \code{time_window = c(100, 200)}
+#' @keywords internal
+summary.eegr <- function(object, basis, basis_dim, crit, ...) {
+    # helper functions
     applyFn <- function(x, size = FALSE) {
-        x[!ind] <- NA
-        out <- t(colQuantiles(x, probs = c(0, 1, 0.5), na.rm = TRUE))
+        out <- t(colQuantiles(x, probs = c(0, 1, 0.5), 
+                              na.rm = TRUE, drop = FALSE))
         if (size) {
             size <- colSums(!is.na(x))
             ratio <- size/nrow(x)
@@ -148,56 +294,74 @@ summary.arrayAnova <- function(obj,
             } else {
                 "descriptives"
             }
-        aperm(x, c(dims, setdiff(ndimn, dims)))
+        # return
+        if (length(dim(x)) > 1L) {
+            apermArray(x, first = dims, keep_attributes = TRUE)
+        } else {
+            x
+        }
     }
     #
-    basis <- tolower(basis)
-    basis <- match.arg(basis)
-    what <- 
-        if (any(grepl("corr", basis))) {
-            c("stat", "stat_corr", "p_corr", "es", "means", "df")
+    # basis must be extracted
+    assertString(basis, .var.name = "basis")
+    args <- list(...)
+    args$what <- 
+        if (is.null(args$what)) {
+            "all"
         } else {
-            c("stat", "p", "es", "means", "df")
+            unique(c(tolower(args$what), basis))
         }
-    out <- extract.arrayAnova(obj, what = what, ...)
-    names(out)[names(out) == "p_corr"] <- "p"
-    if ("p_corr" %in% what) {
-        if (is.null(out[["p"]]) && basis == "p_corr") 
-            stop("TFCE corrected or permuted p-values are not available. Check 'basis'")
-    } else {
-        if (is.null(out[["p"]])) 
-            stop("Traditional P-values are not available")
-    }
+    #
+    # extract nodes
+    suppressWarnings(out <- do("extract", object, arg_list = args))
+    if (!is.list(out)) out <- setNames(list(out), args$what)
+    #
+    # basis must be present
+    if (!basis %in% names(out))
+        stop(sprintf("The node corresponding to basis ('%s') is not available",
+                     basis))
+    #
+    # use absolute values of the test statistics
+    abs_ind <- grep("stat", names(out))
+    if (length(abs_ind) > 0L) 
+        out[abs_ind] <- lapply(out[abs_ind], abs)
+    #
+    # find values above (or below) the criteria
+    assertNumber(crit, .var.name = "crit")
     ind <- 
         if (basis %in% c("p_corr", "p")) {
-            out[["p"]] < crit
+            out[[basis]] <= crit
         } else {
-            out[[basis]] > crit
+            out[[basis]] >= crit
         }
-    aslots <- setdiff(names(out), c("p", "means", "df"))
-    out[aslots] <- lapply(out[aslots], function(slot) 
-        Aperm(fnDims(
-            slot, target_dim = c("chan", "time"), applyFn,
-            newdims = list(descriptives = c("min", "max", "median")),
+    #
+    # compute summary statistics
+    excl <- "means"
+    if (!is.null(dimnames(attr(object$stat, "Df"))))
+        excl  <- c(excl, "df")
+    for (i in setdiff(names(out), excl)) {
+        if (i != basis) {
+            arg_size <- FALSE
+            descr <- c("min", "max", "median")
+        } else {
+            arg_size <- TRUE
+            descr <- c("min", "max", "median", "size", "ratio")
+        }
+        temp <- out[[i]]
+        temp[!ind] <- NA
+        temp <- fnDims(
+            temp, target_dim = basis_dim, applyFn,
+            arg_list = list(size = arg_size),
+            newdims = list(descriptives = descr),
             vectorized = TRUE)
-        ))
-    p_type <- 
-        if ("p_corr" %in% what) {
-            attr(out[["p"]], "type")
-        } else {
-            "trad"
-        }
-    out[["p"]] <- Aperm(
-        fnDims(out[["p"]], target_dim = c("chan", "time"),
-               applyFn, arg_list = list(size = TRUE),
-               newdims = list(descriptives = c("min", "max", "median",
-                                               "size", "ratio")),
-               vectorized = TRUE))
-    setattr(out[["p"]], "type", p_type)
-    out[["call"]] <- obj[["call"]]
-    out[["basis"]] <- data.frame(basis = basis, crit = crit, 
-                                 stringsAsFactors = FALSE)
-    setattr(out, "class", "summary.arrayAnova")
+        setattr(temp, "type", attr(out[[i]], "type"))
+        out[[i]] <- Aperm(temp)
+    }
+    #
+    # some decoration
+    out[["call"]] <- object[["call"]]
+    out[["basis"]] <- list(basis = basis, crit = crit, dim = basis_dim)
+    #
     # return
     out
 }
@@ -205,73 +369,44 @@ summary.arrayAnova <- function(obj,
 #' Print summaries of \code{\link{arrayTtest}}, \code{\link{arrayAnova}}, or
 #' \code{\link{tanova}} objects
 #' 
-#' \code{print.summary} prints summaries of \code{\link{arrayTtest}}, 
+#' \code{print.summary.eegr} prints summaries of \code{\link{arrayTtest}}, 
 #' \code{\link{arrayAnova}}, or \code{\link{tanova}} objects
-#' @param obj an object of class \code{summary.arrayTtest}, 
+#' @name print
+#' @param x an object of class \code{summary.arrayTtest}, 
 #' \code{summary.arrayAnova}, or \code{summary.tanova}
-#' @param ... arguments passed to the specific methods
+#' @param ... further arguments passed to other methods (not used yet)
+#' @param digits the minimum number of digits to be printed (default: 3)
+#' @param quote logical value indicating whether or not strings should be 
+#' printed with surrounding quotes (default: FALSE [no quotes printed])
+#' @param fill_na a character string which is used to indicate NA values in 
+#' printed output, that is descriptive statistics which could not be computed
+#' because no data points met the given criterion (default: "-")
 #' @export
 #' @return The function invisibly returns the input object.
-print.summary <- function(obj, ...) UseMethod("print.summary")
-
-print.summary.default <- function(obj, ...) {
-    print.default(obj, ...)
-}
-
-#' Print summaries of \code{\link{arrayAnova}} objects
-#' 
-#' \code{print.summary.arrayAnova} prints summaries of  
-#' \code{\link{summary.arrayAnova}} objects
-#' @param obj an object of class \code{summary.arrayAnova}
-#' @param ... not used yet
-#' @export
-#' @return The function invisibly returns the input object.
-print.summary.arrayAnova <- function(obj, ...) {
+print.summary.eegr <- function(x, digits = 3L, quote = FALSE, fill_na = "-", 
+                               ...) {
     # function to remove "descriptives" header
     rD <- function(x) {
-        names(dimnames(x))[2] <- ""
+        ind <- match("descriptives", names(dimnames(x)))
+        names(dimnames(x))[ind] <- ""
+        attr(x, "type") <- NULL
         x
     }
+    # check arguments
+    assertIntegerish(digits, len = 1L, .var.name = "digits")
+    assertLogical(quote, any.missing = FALSE, len = 1L, .var.name = "quote")
     # main
     cat("\n----\nCall\n----\n", 
-        paste(deparse(obj$call), sep = "\n", collapse = "\n"))
+        paste(deparse(x$call), sep = "\n", collapse = "\n"))
     cat("\n\n----\nDesriptive statistics\n----\n")
-    rel <- if (grepl("p", obj$basis$basis)) "<" else ">"
-    basis <- Replace(obj$basis$basis, 
-                     c("stat", "stat_corr", "es", "p", "p_corr"),
-                     c("F-statistic", 
-                       "TFCE-corrected F-statistic",
-                       "Effect size",
-                       "Uncorrected P-values",
-                       "Corrected P-values"))
-    cat("\n( Basis:", paste(basis, rel, obj$basis$crit, ")\n", sep = " "))
-    cat("\n<<< F-values >>>\n")
-    print(formatC(
-        rD(obj$stat), digits = 2, format = "f"), quote = FALSE)
-    cat("\nDegrees of freedom:\n")
-    print(obj$df)
-    p_type <- Replace(attr(obj$p, "type"), 
-                      c("trad", "perm", "tfce"),
-                      c("\n<<< (Traditional)",
-                        "\n<<< (Permuted)",
-                        "\n<<< (TFCE-corrected)"))
-    cat(p_type, "P-values >>>\n")
-    print(
-        formatC(rD(subsetArray(obj$p, 
-                               list(descriptives = c("min", "max", "median")))), 
-                digits = 3, format = "f"),
-        quote = FALSE
-    )
-    cat("\nNumber and ratio of significant time points:\n")
-    p <- subsetArray(obj$p, list(descriptives = c("size", "ratio")))
-    pchar <- arrayIP("", dim(p), dimnames(p))
-    subsetArray(pchar, list(descriptives = "size")) <- 
-        formatC(subsetArray(obj$p, list(descriptives = "size")), 
-                digits = 0, format = "f")
-    subsetArray(pchar, list(descriptives = "ratio")) <- 
-        formatC(subsetArray(obj$p, list(descriptives = "ratio")), 
-                digits = 3, format = "f")
-    print(rD(pchar), quote = FALSE)
+    rel <- if (grepl("p", x$basis$basis)) "<" else ">"
+    basis <- attr(x[[x$basis$basis]], "type")
+    cat("\n( Basis:", paste(basis, rel, x$basis$crit, ")\n", sep = " "))
+    for (i in seq_along(x[setdiff(names(x), c("call", "basis"))])) {
+        cat("\n<<<", attr(x[[i]], "type"),  ">>>\n")
+        print(rD(x[[i]]), digits = digits, quote = quote, na.print = fill_na,
+              ...)
+    }
     # return
-    invisible(obj)
+    invisible(x)
 }

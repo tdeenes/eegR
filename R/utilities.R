@@ -42,9 +42,9 @@ Replace <- function(x, from, to, digits = 10L) {
     if (!identical(typeof(x), typeof(from)) || 
         !identical(typeof(x), typeof(to)))
         stop("The type of 'x', 'from', and 'to' must be identical")
-    checkVector(x, strict = TRUE)
-    checkVector(from, strict = TRUE, any.missing = FALSE)
-    checkVector(to, strict = TRUE, any.missing = FALSE)
+    assertVector(x, strict = TRUE, .var.name = "x")
+    assertVector(from, strict = TRUE, any.missing = FALSE, .var.name = "x")
+    assertVector(to, strict = TRUE, any.missing = FALSE, .var.name = "x")
     if (is.double(x)) {
         back <- TRUE
         x <- format(x, digits = digits)
@@ -145,4 +145,211 @@ listS <- function(..., indices_ = NULL) {
     names(list_def) <- onames
     # return
     list_def
+}
+
+#' Execute a function call not unlike \code{do.call}.
+#'
+#' This function serves as an efficient replacement for 
+#' \code{\link[base]{do.call}}; arguments can be passed via \code{...} to avoid 
+#' any copying of potentially large objects.
+#' @param what either a function or a non-empty character string naming the 
+#' function to be called
+#' @param ... arguments to \code{what}, usually specified as \code{key = value}
+#' pairs
+#' @param arg_list a list of arguments to the function call. The names attribute
+#' of arg_list gives the argument names.
+#' @return The result of the (evaluated) function call.
+#' @note This function was inspired by \code{do.call2} in package 
+#' \pkg{BBmisc}
+#' @export
+#' @examples
+#' # create a largish data.frame
+#' x <- data.frame(a = seq_len(1e7), b = seq_len(1e7)/10)
+#' 
+#' # check that do() and do.call() returns the same;
+#' # suppose we want to call head() to display the first 10 rows
+#' stopifnot(identical(head(x, n = 10L), 
+#'                     do("head", arg_list = list(x, n = 10L))))
+#' stopifnot(identical(do.call("head", list(x, n = 10L)), 
+#'                     do("head", x, n = 10L)))
+#' 
+#' #
+#' # speed comparisons
+#' # 
+#' 
+#' # a little helper function (do not use for serious measurements)
+#' test <- function(expr) {
+#'     gc(reset = TRUE)
+#'     cat("CPU time:\n")
+#'     print(system.time(expr, gcFirst = FALSE))
+#'     cat("\nRAM usage:\n")
+#'     print(gc())
+#' }
+#' 
+#' # a direct call for comparison
+#' test(head(x, n = 10L))
+#' 
+#' # do.call() can be substantially slower because it might make a copy
+#' test(do.call("head", list(x, n = 10L)))
+#' 
+#' # do() is almost as fast as a direct call in this case
+#' test(do("head", x, n = 10L))
+#' 
+#' # try to avoid using the 'arg_list' argument for passing large objects
+#' test(do("head", n = 10L, arg_list = list(x = x)))
+#' 
+do <- function(what, ..., arg_list = list()) {
+    mc <- match.call(expand.dots = FALSE)[["..."]]
+    to_call <- 
+        if (is.function(what)) {
+            c(list(what), mc, arg_list)
+        } else if (is.character(what)) {
+            c(list(as.name(what[[1L]])), mc, arg_list)
+        } else {
+            stop("'what' must be either a function or a non-empty character string naming the function to be called")
+        }
+    expr <- as.call(to_call)
+    eval(expr, parent.frame())
+}
+
+#' Pass \code{arg = .(key1 = value1, key2 = value2)} function arguments
+#' 
+#' \code{argumentDeparser} passes \code{arg = .(key1 = value1, key2 = value2)} 
+#' function arguments to the appropriate function
+#' @param arg an unevaluated call, see Details
+#' @param replace_dot a character string which defines the function to which
+#' \code{arg} should be passed to
+#' @param transform_true logical; if TRUE (default), a single logical 
+#' \code{arg} argument is treated specially (see Details)
+#' @param null_params a list of parameters which is passed to the parameter
+#' setter function (see 'replace_dot') if \code{argumentDeparser} would return
+#' NULL
+#' @details This function is not intended for direct use. It allows  
+#' \code{method = .(key = value)} argument definition in high-level functions 
+#' by substituting \code{.} to the appriopriate \code{methodParams}
+#' function. If \code{transform_true} is TRUE, the call 
+#' \code{method = TRUE} is transformed to \code{method = methodParams()}, 
+#' thereby it returns the default parameter setting.
+#' @export
+#' @keywords internal
+#' @examples
+#' mymethodParams <- function(x = 3, y = 4) {
+#'     list(x = x, y = y)
+#' }
+#' tempfn <- function(my_method = NULL) {
+#'     args <- as.list(match.call()[-1])
+#'     argumentDeparser(args$my_method, "mymethodParams")
+#' }
+#' stopifnot(is.null(tempfn()))
+#' stopifnot(identical(FALSE, tempfn(my_method = FALSE)))
+#' stopifnot(identical(tempfn(my_method = TRUE),
+#'                     tempfn(my_method = mymethodParams())))
+#' new_y = 1:5
+#' stopifnot(identical(tempfn(my_method = .(y = new_y)),
+#'                     tempfn(my_method = mymethodParams(y = new_y))))
+argumentDeparser <- function(arg, replace_dot, transform_true = TRUE,
+                             null_params = NULL) {
+    txt <- sub("^\\.\\(", paste0(replace_dot, "("), deparse(arg))
+    out <- eval(parse(text = txt), parent.frame())
+    if (transform_true && !is.null(out) && is.logical(out) && out) {
+        out <- eval.parent(parse(text = paste0(replace_dot, "()")))
+    }
+    if (is.null(out) && !is.null(null_params)) {
+        assertList(null_params, .var.name = "null_params")
+        out <- do.call(replace_dot, null_params)
+    }
+    # return
+    out
+}
+
+
+#' Set seed
+#' 
+#' \code{setSeed} is called for its side effect, namely it specifies a random 
+#' seed by calling \code{\link{set.seed}}.
+#' @param seed either NULL, in which case \code{setSeed} does nothing, or an 
+#' integer value, in which case it is interpreted as the 'seed' argument in
+#' \code{\link{set.seed}}, or a list of arguments passed to 
+#' \code{\link{set.seed}}
+setSeed <- function(seed) {
+    if (!is.null(seed)) {
+        if (is.list(seed)) {
+            do.call("set.seed", seed)
+        } else {
+            set.seed(seed = seed)
+        }
+    }
+}
+
+#' Argument verification if there might be an "all" option
+#' 
+#' \code{matchArg} is a wrapper around \code{\link[base]{match.arg}} to check
+#' arguments which have an "all" option in their choices. Note that the defaults
+#' are not the same as in \code{\link[base]{match.arg}}.
+#' @param arg a character vector (of length one unless several_ok is TRUE) or 
+#' NULL
+#' @param choices a character vector of candidate values (if NULL [default], it 
+#' is deduced from the formals of the calling function)
+#' @param several_ok logical specifying whether arg should be allowed to have 
+#' more than one element (default: TRUE)
+#' @return If 'arg' has an element 'all' (or 'ALL', 'All', etc.), all other 
+#' choices are returned. Otherwise see \code{\link[base]{match.arg}}.
+#' @keywords internal 
+matchArg <- function(arg, choices = NULL, several_ok = TRUE) {
+    arg <- tolower(arg)
+    if (is.null(choices)) {
+        formal_args <- formals(sys.function(sys.parent()))
+        choices <- eval(formal_args[[deparse(match.call()$arg)]])
+    }
+    choices <- setdiff(tolower(choices), "all")
+    # return choices if "all" and matching choice(s) otherwise
+    if (length(arg) > 0L && any(arg == "all")) {
+        if (!several_ok) stop("'arg' may not be 'all' if 'several_ok' is FALSE")
+        choices
+    } else {
+        match.arg(arg, choices, several.ok = several_ok)
+    }
+}
+
+#' Replace parts of an object without creating an interim copy
+#' @keywords internal
+fill_ <- function(x, index, y, arg_check = TRUE) {
+    if (arg_check) {
+    #     if (!storage.mode(x) %in% c("logical", "character", "integer", "double"))
+    #         stop("Only vectors of logical, character, integer, or double values are accepted")
+        if (!identical(storage.mode(x), storage.mode(y))) {
+            stop("The types of the original and replacement vectors must be identical")
+        }
+        index <- as.integer(index)
+        if (!identical(length(index), length(y)))
+            stop("The length of replacement positions and replacement values must be identical")
+    }
+    .Call('eegR_fillWithoutCopy', PACKAGE = 'eegR', x, index, y)
+}
+
+
+#' Attach dimension and type attributes to test statistics
+#' 
+#' Used internally in the workhorse functions for arrayAnova, arrayTtest, etc.
+#' to set the dimension, dimension names and verbose type of the given test
+#' statistic
+#' @param x the vector or matrix of the test statistic
+#' @param obj if not NULL (default), a list object returned by 
+#' \code{\link{preTtest}} or \code{\link{preAnova}}
+#' @param type if not NULL (default), a character string with a verbose 
+#' description of the test statistic (e.g. "Traditional F-value", "Welch t", 
+#' "Generalized Eta Squared", etc.)
+#' @param dimorder if not NULL (default), a numeric or character vector 
+#' indicating the order (or subset) of the dimensions
+#' @keywords internal
+setattributes <- function(x, obj = NULL, type = NULL, dimorder = NULL) {
+    if (!is.null(obj)) {
+        if (is.null(dimorder)) dimorder <- seq_along(obj$teststat_dimid)
+        array_(x, obj$full_dims[obj$teststat_dimid][dimorder], 
+               arg_check = FALSE)    
+    }
+    if (!is.null(type))
+        setattr(x, "type", type)
+    # return
+    invisible(x)
 }

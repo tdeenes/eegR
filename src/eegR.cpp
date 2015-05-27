@@ -2,7 +2,6 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
-
 #ifndef MAX
 #define MAX(A,B) ((A) > (B) ? (A) : (B))
 #endif
@@ -15,12 +14,14 @@ int indexFn (const int& chdim, const int& dimc, const int& dimt, const int& ic, 
     return (chdim == 0) ? ((it*dimc) + ic) : ((ic*dimt) + it);
 }
 
+
 // [[Rcpp::export]] 
-NumericMatrix tfce(NumericMatrix inData, int chan_dim, IntegerMatrix ChN, NumericVector EH, int numSteps) {
+NumericMatrix tfce(NumericMatrix input_data, int chan_dim, IntegerMatrix ChN, NumericVector EH, int num_steps, bool has_negative, bool has_positive) {
     double valToAdd;
-    int ii, iT, iC, tiC, tiT, maxt, mint, temp, growingInd, growingCur, ChCurr, idx;
+    int ii, iT, iC, tiC, tiT;
+    int maxt, mint, temp, growingInd, growingCur, ChCurr, idx;
     double thresh0, thresh, delta;
-    int dims[2] = {inData.nrow(), inData.ncol()};
+    int dims[2] = {input_data.nrow(), input_data.ncol()};
     int dimsChN[2] = {ChN.nrow(), ChN.ncol()};
     int numVoxels = dims[0] * dims[1];
     chan_dim = chan_dim - 1;
@@ -29,17 +30,22 @@ NumericMatrix tfce(NumericMatrix inData, int chan_dim, IntegerMatrix ChN, Numeri
     int dimT = dims[time_dim];
     double E = EH[0];
     double H = EH[1];
-    double fmax = max(inData);
     NumericMatrix outData(dims[0], dims[1]);
-    
-    delta = fmax/numSteps;
+    // calculate steps (thresholds)
+    double fmax = 0.0;
+    for (ii = 0; ii < numVoxels; ++ii) {
+        if (has_positive && input_data[ii] > fmax) fmax = input_data[ii];
+        else if (has_negative && -input_data[ii] > fmax) fmax = -input_data[ii];
+    }
+    delta = fmax/num_steps;
     thresh0 = delta/2.0;
     
     std::vector<bool> flagUsed;
     std::vector<int> grow_t;
     std::vector<int> grow_c;
-     
-    for (ii = 0; ii < numSteps; ii++) {
+    
+    // main part
+    for (ii = 0; ii < num_steps; ii++) {
         thresh = thresh0 + (double)ii*delta;
 		valToAdd = 0.0;
         flagUsed.resize(numVoxels);
@@ -49,7 +55,7 @@ NumericMatrix tfce(NumericMatrix inData, int chan_dim, IntegerMatrix ChN, Numeri
     			// temp is the current point in the grid
     			temp = indexFn(chan_dim, dimC, dimT, iC, iT);
     			// Check if this point has been seen (flagUsed) and whether its over the threshold
-    			if (!flagUsed[temp] && inData[temp] >= thresh) {
+    			if (has_positive && !flagUsed[temp] && input_data[temp] >= thresh) {
     				// make the flagUsed so that algorithm doesn't visit this point again
     				flagUsed[temp] = true;
     				growingInd = 1;
@@ -81,7 +87,7 @@ NumericMatrix tfce(NumericMatrix inData, int chan_dim, IntegerMatrix ChN, Numeri
     							ChCurr = ChCurr - 1;
     							
     							temp = indexFn(chan_dim, dimC, dimT, ChCurr, tiT);
-    							if (!flagUsed[temp] && inData[temp] >= thresh) {
+    							if (!flagUsed[temp] && input_data[temp] >= thresh) {
     								flagUsed[temp] = true;
     								grow_c.push_back(ChCurr);
     								grow_t.push_back(tiT);
@@ -108,6 +114,47 @@ NumericMatrix tfce(NumericMatrix inData, int chan_dim, IntegerMatrix ChN, Numeri
     				}
                     grow_c.clear();
                     grow_t.clear();
+    			}
+    			// Check the same for negative values
+    			if (has_negative && !flagUsed[temp] && -input_data[temp] >= thresh) {
+    			    flagUsed[temp] = true; 
+    			    growingInd = 1; 
+    			    growingCur = 0;
+    			    grow_c.reserve(numVoxels);
+    			    grow_t.reserve(numVoxels);
+    			    grow_c.push_back(iC);
+    			    grow_t.push_back(iT);
+    			    while (growingCur < growingInd) {
+    			        maxt = MIN(dimT, grow_t[growingCur] + 2);
+    			        mint = MAX(0, grow_t[growingCur] - 1);
+    			        for (tiT = mint; tiT < maxt; ++tiT) {
+    			            for (tiC = 0; tiC < dimsChN[1]; ++tiC) {
+    			                idx = (tiC*dimsChN[0]) + grow_c[growingCur];
+    			                ChCurr = ChN[idx];
+    			                if (ChCurr == 0) {
+    			                    break;
+    			                }  							
+    			                ChCurr = ChCurr - 1;
+    			                temp = indexFn(chan_dim, dimC, dimT, ChCurr, tiT);
+    			                if (!flagUsed[temp] && -input_data[temp] >= thresh) {
+    			                    flagUsed[temp] = true;
+    			                    grow_c.push_back(ChCurr);
+    			                    grow_t.push_back(tiT);
+    			                    growingInd++;
+    			                }
+    			            }	
+    			        }
+    			        growingCur++;
+    			    }
+    			    growingCur = 0;
+    			    valToAdd = pow(growingInd, E) * pow(thresh, H) * delta;
+    			    while (growingCur < growingInd) {
+    			        temp = indexFn(chan_dim, dimC, dimT, grow_c[growingCur], grow_t[growingCur]);
+    			        outData[temp] -= valToAdd;
+    			        growingCur++;
+    			    }
+    			    grow_c.clear();
+    			    grow_t.clear();
     			}
     		}
     	}
@@ -218,3 +265,142 @@ NumericMatrix groupsum(NumericMatrix x, IntegerVector g, int ug) {
     }
     return out;
 }
+
+//
+// fast sweep ------
+//
+
+// operators
+template <typename opType>
+opType f_mtype_operator(opType x, opType y, std::string f) {
+    if (f == "*") {
+        return x * y;
+    } else if (f == "+") {
+        return x + y;
+    } else if (f == "-") {
+        return x - y;
+    } else {
+        throw std::invalid_argument( "operator not implemented" );
+    }
+}
+
+double f_double_operator(double x, double y, std::string f) {
+    if (f == "/") {
+        return x / y;
+    } else if (f == "^") {
+        return pow(x, y);
+    } else {
+        throw std::invalid_argument( "operator not implemented" );
+    }
+}
+
+template <typename logType>
+bool f_logical_operator(logType x, logType y, std::string f) {
+    if (f == "<") {
+        return x < y;
+    } else if (f == ">") {
+        return x > y;
+    } else if (f == "==") {
+        return x == y;
+    } else if (f == ">=") {
+        return x >= y;
+    } else if (f == "<=") {
+        return x <= y;
+    } else if (f == "!=") {
+        return x != y;
+    } else {
+        throw std::invalid_argument( "operator not implemented" );
+    }
+}
+
+// [[Rcpp::export]]
+SEXP sweepcol_multitype_cpp(SEXP x, SEXP y, std::string fun){
+    switch( TYPEOF(x) ){
+        case REALSXP: {
+            NumericMatrix X(x);
+            NumericVector Y(y);
+            int nrow = X.nrow();
+            int ncol = X.ncol();
+            NumericMatrix output(nrow, ncol);
+            double yy;
+            for(int i = 0; i < ncol; i++) {
+                yy = Y[i];
+                for(int j = 0; j < nrow; j++) {
+                    output(j, i) = f_mtype_operator(X(j, i), yy, fun);
+                }
+            }
+            return wrap( output );
+        }
+        case INTSXP: {
+            IntegerMatrix X(x);
+            IntegerVector Y(y);
+            int nrow = X.nrow();
+            int ncol = X.ncol();
+            IntegerMatrix output(nrow, ncol);
+            int yy;
+            for(int i = 0; i < ncol; i++) {
+                yy = Y[i];
+                for(int j = 0; j < nrow; j++) {
+                    output(j, i) = f_mtype_operator(X(j, i), yy, fun);
+                }
+            }
+            return wrap( output );
+        }
+        default: {
+            return R_NilValue;
+        }
+    }
+}
+
+// [[Rcpp::export]]
+NumericMatrix sweepcol_double_cpp(NumericMatrix x, NumericVector y, std::string fun){
+    NumericMatrix output(x.nrow(), x.ncol());
+    double yy;
+    for(int i = 0; i < x.ncol(); i++) {
+        yy = y[i];
+        for(int j = 0; j < x.nrow(); j++) {
+            output(j, i) = f_double_operator(x(j, i), yy, fun);
+        }
+    }
+    return output ;
+} 
+
+// [[Rcpp::export]]
+LogicalMatrix sweepcol_logical_cpp(SEXP x, SEXP y, std::string fun){
+    switch( TYPEOF(x) ){
+        case REALSXP: {
+            NumericMatrix X(x);
+            NumericVector Y(y);
+            int nrow = X.nrow();
+            int ncol = X.ncol();
+            LogicalMatrix output(nrow, ncol);
+            double yy;
+            for(int i = 0; i < ncol; i++) {
+                yy = Y[i];
+                for(int j = 0; j < nrow; j++) {
+                    output(j, i) = f_logical_operator(X(j, i), yy, fun);
+                }
+            }
+            return output;
+        }
+        case INTSXP: {
+            IntegerMatrix X(x);
+            IntegerVector Y(y);
+            int nrow = X.nrow();
+            int ncol = X.ncol();
+            LogicalMatrix output(nrow, ncol);
+            int yy;
+            for(int i = 0; i < ncol; i++) {
+                yy = Y[i];
+                for(int j = 0; j < nrow; j++) {
+                    output(j, i) = f_logical_operator(X(j, i), yy, fun);
+                }
+            }
+            return output;
+        }
+        default: {
+            return R_NilValue;
+        }
+    }
+} 
+

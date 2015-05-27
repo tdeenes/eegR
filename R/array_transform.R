@@ -2,31 +2,259 @@
 # <<< array reformatting functions >>> --------
 #
 
+#' Array transposition
+#' 
+#' Transpose an array by permuting its dimensions and optionally resizing it.
+#' This function is a simple wrapper around \code{\link{aperm.default}} with two
+#' minimal enhancements: 1) It checks if the permutation order is the same as 
+#' the original order of the dimensions. In this case it simply returns a copy 
+#' of the input array without any unnecessary time-consuming manipulation. See 
+#' also NOTE. 2) It allows for partial definition of the permutation order.
+#' See argument 'first'.
+#' @param a the array to be transposed
+#' @param perm the subscript permutation vector, usually a permutation of the 
+#' integers 1:n, where n is the number of dimensions of a. When a has named 
+#' dimnames, it can be a character vector of length n giving a permutation of 
+#' those names. The default (used whenever perm has zero length) is to reverse 
+#' the order of the dimensions.
+#' @param resize a flag indicating whether the vector should be resized as well 
+#' as having its elements reordered (default: TRUE)
+#' @param first dimension(s) which should come first; either numeric index(es), 
+#' or if the array has named dimensions, 'first' can be a character vector. 
+#' Ignored if 'perm' is not NULL.
+#' @param keep_attributes see NOTE (default: FALSE)
+#' @export
+#' @return A transposed version of array \code{a}, with subscripts permuted as 
+#' indicated by the array \code{perm}. If \code{resize} is TRUE, the array is 
+#' reshaped as well as having its elements permuted, the dimnames are also 
+#' permuted; if \code{resize = FALSE} then the returned object has the same 
+#' dimensions as \code{a}, and the dimnames are dropped. In each case other 
+#' attributes are dropped unless \code{keep_attributes = TRUE}. See NOTE!
+#' @note The documentation of \code{aperm} wrongly states that "other 
+#' attributes are copied from \code{a}". Instead, \code{aperm} drops all
+#' attributes other than \code{dim} and \code{dimnames}. To make 
+#' \code{apermArray} a replacement function of \code{aperm}, this unexpected
+#' behaviour is also reproduced unless explicitly required by the user not to
+#' do so.
+#' @examples
+#' # example data
+#' data(erps)
+#' str(erps) # five dimensions
+#' 
+#' # a use case where argument 'first' is helpful: suppose we need 'time'
+#' # as the first dimension
+#' time_first <- apermArray(erps, first = "time")
+#' 
+#' # compare to the more cumbersome perm = setdiff(...) solution 
+#' time_first_aperm <- aperm(erps, 
+#'                           perm = c("time", 
+#'                                    setdiff(names(dimnames(erps)), "time")))
+#' stopifnot(identical(time_first, time_first_aperm))
+#' 
+#' # create permutation order by simply replicating the original order;
+#' # note that in this special case it is more efficient to request
+#' # keep_attributes = TRUE
+#' perm <- seq_along(dim(erps))
+#' 
+#' # timing
+#' if (require(microbenchmark)) {
+#'     microbenchmark(
+#'         aperm(erps, perm),
+#'         apermArray(erps, perm),
+#'         apermArray(erps, names(dimnames(erps))),
+#'         apermArray(erps, perm, keep_attributes = TRUE),
+#'         times = 200L
+#'     )
+#' }
+#' 
+#' # check if identical
+#' aperm_orig <- aperm(erps, perm)
+#' stopifnot(identical(aperm_orig, 
+#'                     apermArray(erps, perm)))
+#' stopifnot(identical(aperm_orig, 
+#'                     apermArray(erps, names(dimnames(erps)))))
+#' stopifnot(all.equal(aperm_orig, 
+#'                     apermArray(erps, perm, keep_attributes = TRUE), 
+#'                     check.attributes = FALSE))
+#' stopifnot(identical(erps, 
+#'                     apermArray(erps, perm, keep_attributes = TRUE)))
+#' 
+#' # if resize = FALSE, dimension names are dropped
+#' noresize <- apermArray(erps, perm, resize = FALSE)
+#' stopifnot(is.null(dimnames(noresize)))
+#' stopifnot(identical(unname(aperm_orig),
+#'                     noresize))
+#' 
+apermArray <- function(a, perm = NULL, resize = TRUE, first = perm, 
+                       keep_attributes = FALSE) {
+    assertArray(a, min.d = 2L, .var.name = "input array ('a')")
+    dims <- dim(a)
+    num_dims <- length(dims)
+    orig_attribs <- attributes(a)
+    orig_attribs <- orig_attribs[setdiff(names(orig_attribs), 
+                                         c("dim", "dimnames"))]
+    if (is.null(perm) && !is.null(first)) {
+        if (is.numeric(first)) {
+            assertNumeric(first, lower = 1, upper = num_dims, 
+                          any.missing = FALSE, max.len = num_dims,
+                          .var.name = "first")
+        } else if (is.character(first)) {
+            dimn <- names(dimnames(a))
+            if (is.null(dimn))
+                stop("Input array ('a') does not have named dimnames")
+            assertCharacter(first,  
+                            any.missing = FALSE, max.len = num_dims,
+                            .var.name = "first")
+            first <- match(first, dimn)
+            if (anyNA(first))
+                stop(sprintf("Not all elements in 'first' match the dimenion names: %s",
+                             paste(dimn, collapse = ", ")))
+        }
+        perm <- c(first, seq_len(num_dims)[-first])
+    }
+    if (!is.null(perm) &&
+        (
+         (is.character(perm) && identical(perm, names(dimnames(a)))) || 
+         (is.numeric(perm) && identical(as.integer(perm), seq_along(dim(a))))
+        )
+       ) {
+        x <- copy(a)
+        if (keep_attributes) {
+            if (!resize) setattr(x, "dimnames", NULL)
+            x    
+        } else {
+            dims <- dim(a)
+            if (!resize) {
+                attributes(x) <- NULL
+                setattr(x, "dim", dims)
+            } else {
+                dimn <- dimnames(a)
+                attributes(x) <- NULL
+                setattr(x, "dim", dims)
+                setattr(x, "dimnames", dimn)
+            }
+            x
+        }
+    } else {
+        x <- aperm.default(a, perm, resize)
+        if (keep_attributes) {
+            for (i in names(orig_attribs))
+                setattr(x, i, orig_attribs[[i]])
+        }
+        x
+    }
+} 
+
+
 #' Add dimension names to a matrix or array with (partially) missing dimension 
 #' names
 #' 
-#' \code{decorateDims} is not unlike \code{\link{provideDimnames}}. The main 
-#' difference is that \code{decorateDims} can modify the input data in place and
-#' it has a more convenient interface for providing names of dimensions
+#' \code{decorateDims} is not unlike \code{\link{provideDimnames}}: it provides
+#' dimension names for dimensions which have 'missing' dimension names 
+#' ('missing' in a broad sense: either NA, NULL or ""). The main difference is 
+#' that it has a more convenient interface for providing names of dimensions, 
+#' and via \code{decorateDims_} the user can modify the input data in place 
+#' (without creating even a shallow copy).
+#' @name decorateDims
 #' @param dat a matrix or array
 #' @param names logical; if TRUE (default), named list of dimnames are returned. 
-#' Ignored if new_names is provided.
+#' Ignored (or more precisely, considered TRUE) if new_names is provided.
 #' @param new_names character vector for named dimnames
-#' @param new_dimnames list of new dimension names. If new_names is not 
-#' provided but new_dimnames is a named list, its names are considered as
-#' new_names
-#' @param in_place logical; if TRUE, dat is modified in place (without copy)
-#' and it is returned only invisibly (default: FALSE). Use in_place with extra 
-#' care because it modifies in place all objects which dat refers to.
-#' @return The original matrix or array with non-null dimension names
+#' @param new_dimnames list of new dimension names. If 'new_names' is not 
+#' provided but 'new_dimnames' is a named list, its names are considered as
+#' 'new_names'.
+#' @note Use \code{decorateDims_} with extra care because it modifies in place 
+#' all objects which 'dat' refers to.
+#' @return \code{decorateDims} returns a \emph{copy} of the original matrix or 
+#' array with non-null dimension names. \code{decorateDims} invisibly returns 
+#' the \emph{original} matrix or array with modified dimnames attribute.
 #' @export
 #' @seealso \code{\link{provideDimnames}} for a slightly different solution
+#' @examples
+#' # create a matrix without dimension names
+#' mat <- matrix(rnorm(1:10), 2, 5)
+#' 
+#' # add default dimension names
+#' mat2 <- decorateDims(mat)
+#' str(mat2)
+#' 
+#' # remove names from the 'dimnames' attribute
+#' names(dimnames(mat2)) <- NULL
+#' 
+#' # create a new variable which is referenced to 'mat2'
+#' mat3 <- mat2
+#' 
+#' # modify the names of dimnames in place
+#' new_names <- c("Row dimension", "Column dimension")
+#' decorateDims_(mat3, new_names = new_names)
+#' str(mat3)
+#' stopifnot(identical(names(dimnames(mat3)),
+#'                     new_names))
+#' 
+#' # NOTE that the attributes of 'mat2' has been also changed!
+#' str(mat2)
+#' stopifnot(identical(dimnames(mat2), dimnames(mat3)))
+#' 
 decorateDims <- function(dat, names = TRUE, 
-                         new_names = NULL, new_dimnames = NULL,
-                         in_place = FALSE) {
-    dims <- dim(dat)
-    dimn <- dimnames(dat)
-    if (is.null(dimn)) dimn <- vector("list", length(dims))
+                         new_names = NULL, new_dimnames = NULL) {
+    assertArray(dat, min.d = 2L, .var.name = "dat")
+    new_dimn <- fillMissingDimnames(dimnames(dat), dim(dat),
+                                    names = names, 
+                                    new_names = new_names,
+                                    new_dimnames = new_dimnames)
+    # return
+    if (identical(new_dimn, dimnames(dat))) {
+        dat
+    } else {
+        dimnames(dat) <- new_dimn
+        dat
+    }
+}
+
+#' @rdname decorateDims
+#' @export
+decorateDims_ <- function(dat, names = TRUE, 
+                         new_names = NULL, new_dimnames = NULL) {
+    assertArray(dat, min.d = 2L, .var.name = "dat")
+    new_dimn <- fillMissingDimnames(dimnames(dat), dim(dat),
+                                    names = names, 
+                                    new_names = new_names,
+                                    new_dimnames = new_dimnames)
+    setattr(dat, "dimnames", new_dimn)
+    # return
+    invisible(dat)
+}
+
+#' Find and fill missing dimension names and identifiers
+#' 
+#' \code{fillMissingDimnames} is the workhorse function for 
+#' \code{\link{decorateDims}} and \code{\link{decorateDims_}}. It replaces
+#' missing dimension names and identifiers and returns the modified 'dimnames'
+#' attribute.
+#' @param dimn a list of the original dimension names
+#' @param .dim an integer vector of dimensions
+#' @inheritParams decorateDims
+#' @keywords internal
+fillMissingDimnames <- function(dimn, .dim, names = TRUE, 
+                                new_names = NULL, new_dimnames = NULL) {
+    # helper function
+    checkForMissing <- function(x) {
+        is.null(x) || anyNA(x) || any(x == "")
+    }
+    # argument checks and fast return if no missings are found
+    assertLogical(names, any.missing = FALSE, len = 1L, .var.name = "names")
+    if (!any(vapply(dimn, checkForMissing, FALSE))) {
+        if (!names || !checkForMissing(names(dimn))) {
+            return(dimn)
+        } 
+    }
+    if (!is.null(new_names))
+        assertCharacter(new_names, any.missing = FALSE, .var.name = "new_names")
+    if (!is.null(new_dimnames))
+        assertList(new_dimnames, types = "character", any.missing = FALSE,
+                   .var.name = "new_names")
+    # main part
+    if (is.null(dimn)) dimn <- vector("list", length(.dim))
     if (!is.null(new_dimnames) && !is.list(new_dimnames)) {
         new_dimnames <- list(new_dimnames)
     }
@@ -36,15 +264,15 @@ decorateDims <- function(dat, names = TRUE,
     counter <- 1L
     tempfn <- 
         if (is.null(new_dimnames)) {
-            function() as.character(seq_len(dims[i]))
+            function(i) as.character(seq_len(.dim[i]))
         } else {
-            function() {
-                out <- rep_len(new_dimnames[[counter]], dims[i])
+            function(i) {
+                out <- rep_len(new_dimnames[[counter]], .dim[i])
                 make.unique(as.character(out), "__")
             }
         }
-    for (i in which(vapply(dimn, is.null, NA))) {
-        dimn[[i]] <- tempfn()
+    for (i in which(vapply(dimn, is.null, FALSE))) {
+        dimn[[i]] <- tempfn(i)
         counter <- counter + 1L
     }
     dimn.n <- names(dimn)
@@ -59,68 +287,108 @@ decorateDims <- function(dat, names = TRUE,
                 paste0("_Dim", which(ind))
             }
     }
-    if (in_place) {
-        setattr(dat, "dimnames", dimn)
-        setattr(dimnames(dat), "names", dimn.n)
-    } else {
-        dimnames(dat) <- dimn
-        names(dimnames(dat)) <- dimn.n
-        return(dat)
-    }
+    names(dimn) <- dimn.n
+    # return
+    dimn
 }
-
 
 #' Fast in-place transformation to a matrix (without copy)
 #' 
-#' \code{matrixIP} transforms its data argument to a matrix by reference. No
-#' copy is made at all, and it invisibly returns the matrix.
+#' \code{matrix_} transforms its data argument to a matrix by reference. If the 
+#' length of data remains the same, no copy is made at all, and it invisibly 
+#' returns the matrix. This is mostly useful for manipulating interim objects
+#' in functions, and should not be used for interactive analyses.
 #' @param x a data vector, matrix or array
 #' @param nrow the desired number of rows
 #' @param ncol the desired number of columns
+#' @param byrow logical. If FALSE (the default), the matrix is filled by 
+#' columns, otherwise the matrix is filled by rows. If TRUE, it results in an
+#' error!
 #' @param dimnames A dimnames attribute for the matrix: NULL or a list of 
 #' length 2 giving the row and column names respectively. The list can be 
 #' named, and the list names will be used as names for the dimensions. An empty 
 #' list is treated as NULL, and a list of length one as row names. 
-#' @param force_length logical. If TRUE (the default), \code{matrixIP} checks if 
+#' @param force_length logical. If TRUE (the default), \code{matrix_} checks if 
 #' length(x)==nrow*ncol. If not, x is recycled or subsetted to the desired 
 #' length.
-#' @note Use \code{matrixIP} with extra care because it modifies in place all
+#' @param arg_check logical indicating if argument checks should be performed
+#' (TRUE, the default). Do not set to FALSE unless you really know what you 
+#' are doing! 
+#' @note Use \code{matrix_} with extra care because it modifies in place all
 #' objects which x refers to. If you want to avoid this, call 
-#' \code{x <- copy(x)} before calling \code{matrixIP} or use the standard way as
+#' \code{x <- copy(x)} before calling \code{matrix_} or use the standard way as
 #' described in the Note section of \code{\link{matrix}}. However, for input 
-#' objects created on-the-fly (e.g. a temporary vector), \code{matrixIP} is safe 
+#' objects created on-the-fly (e.g. a temporary vector), \code{matrix_} is safe 
 #' and more compact than the latter solution, and can be many times faster than 
 #' \code{matrix}. 
-#' @return A matrix (invisibly)
+#' @return \code{matrix_} invisibly returns a matrix without duplicating the 
+#' input values.
 #' @export
-#' @seealso \code{\link{arrayIP}} for in-place transformation of x to an array 
+#' @seealso \code{\link{array_}} for in-place transformation of x to an array 
 #' (without copy) and \code{\link{matrix}} for creating a new matrix without 
 #' modifying the original input
-matrixIP <- function(x, nrow, ncol, dimnames = NULL, force_length = TRUE) {
-    if (missing(nrow) && missing(ncol)) {
-        nrow <- length(x)
-        ncol <- 1L
-    } else if (missing(nrow)) {
-        nrow <- length(x)/ncol
-    } else if (missing(ncol)) {
-        ncol <- length(x)/nrow
+#' @examples
+#' # create two vectors
+#' x <- y <- 1:10
+#' 
+#' # suppose 'x' should be a 2x5 matrix
+#' matrix_(x, 2, 5)
+#' str(x)
+#' 
+#' # however, since 'x' was referenced to 'y', 'y' has been changed, too
+#' str(y)
+#' 
+#' # compare the timing for matrix creation 
+#' if (require(microbenchmark)) {
+#'     microbenchmark(
+#'         matrix = matrix(0L, 1e3, 1e3),
+#'         matrix_ = matrix_(0L, 1e3, 1e3),
+#'         times = 100L
+#'     )
+#' }
+#' 
+matrix_ <- function(x, nrow, ncol, byrow = FALSE, 
+                    dimnames = NULL, force_length = TRUE, arg_check = TRUE) {
+    if (arg_check) {
+        # argument checks
+        assertLogical(byrow, len = 1)
+        if (byrow) stop("'byrow' must be FALSE")
+        assertAtomic(x)
+        if (missing(nrow) && missing(ncol)) {
+            nrow <- length(x)
+            ncol <- 1L
+        } else if (missing(nrow)) {
+            assertNumeric(ncol, len = 1L, any.missing = FALSE)
+            nrow <- length(x)/as.integer(ncol)
+        } else if (missing(ncol)) {
+            assertNumeric(nrow, len = 1L, any.missing = FALSE)
+            ncol <- length(x)/as.integer(nrow)
+        }
+        nrow <- as.integer(nrow)
+        ncol <- as.integer(ncol)
+        # dimension names
+        if (!is.null(dimnames)) {
+            if (grepl(deparse(substitute(x)), 
+                      deparse(substitute(dimnames)))) {
+                dimnames <- copy(dimnames)
+            }
+            
+        }
+        # check length
+        if (force_length && length(x) != nrow*ncol) {
+            x <- rep_len(x, nrow*ncol)
+        }
     }
-    if (!is.null(dimnames) && 
-            grepl(deparse(substitute(x)), 
-                  deparse(substitute(dimnames)))) {
-        dimnames <- copy(dimnames)
-    }
-    if (force_length && length(x) != nrow*ncol) {
-        x <- rep_len(x, nrow*ncol)
-    }
+    # set attributes
     setattr(x, "dim", c(nrow, ncol))
     setattr(x, "dimnames", dimnames)
+    # return
     invisible(x)
 }
 
 #' Fast in-place transformation to an array (without copy)
 #' 
-#' \code{arrayIP} transforms its data argument to an array by reference. No
+#' \code{array_} transforms its data argument to an array by reference. No
 #' copy is made at all, and it invisibly returns the array.
 #' @param x a data vector, matrix or array
 #' @param dim the dim attribute for the array to be created, that is an integer 
@@ -131,30 +399,45 @@ matrixIP <- function(x, nrow, ncol, dimnames = NULL, force_length = TRUE) {
 #' dimension. The list can be named, and the list names will be used as names 
 #' for the dimensions. If the list is shorter than the number of dimensions, it 
 #' is extended by NULLs to the length required.
-#' @param force_length logical. If TRUE (the default), \code{arrayIP} checks if 
+#' @param force_length logical. If TRUE (the default), \code{array_} checks if 
 #' length(x)==nrow*ncol. If not, x is recycled or subsetted to the desired 
 #' length.
-#' @note Use \code{arrayIP} with extra care because it modifies in place all
-#' objects which x refers to. See \code{\link{matrixIP}} for further hints.
-#' @return An array (invisibly) or a matrix if length(dim)==2L.
+#' @param arg_check logical indicating if argument checks should be performed
+#' (TRUE, the default). Do not set to FALSE unless you really know what you 
+#' are doing!
+#' @note Use \code{array_} with extra care because it modifies in place all
+#' objects which x refers to. See \code{\link{matrix_}} for further hints.
+#' @return This function (invisibly) returns an array (or a matrix if 
+#' \code{length(dim)==2L}) without duplicating the input values.
 #' @export
-#' @seealso \code{\link{matrixIP}} for in-place transformation of x to a matrix 
+#' @seealso \code{\link{matrix_}} for in-place transformation of x to a matrix 
 #' (without copy) and \code{\link{array}} for creating a new array without 
 #' modifying the original input
-arrayIP <- function(x, dim, dimnames = NULL, force_length = TRUE) {
-    if (missing(dim)) {
-        dim <- length(x)
+array_ <- function(x, dim, dimnames = NULL, 
+                   force_length = TRUE, arg_check = TRUE) {
+    if (arg_check) {
+        # check arguments
+        assertAtomic(x)
+        assertNumeric(dim)
+        if (missing(dim)) {
+            dim <- length(x)
+        }
+        if (!is.null(dimnames)) {
+            if (grepl(deparse(substitute(x)), 
+                      deparse(substitute(dimnames)))) {
+                dimnames <- copy(dimnames)
+            }
+        }
+        dim <- as.integer(dim)
+        # force length
+        if (force_length && length(x) != prod(dim)) {
+            x <- rep_len(x, prod(dim))
+        }
     }
-    if (!is.null(dimnames) && 
-            grepl(deparse(substitute(x)), 
-                  deparse(substitute(dimnames)))) {
-        dimnames <- copy(dimnames)
-    }
-    if (force_length && length(x) != prod(dim)) {
-        x <- rep_len(x, prod(dim))
-    }
+    # set attributes
     setattr(x, "dim", dim)
     setattr(x, "dimnames", dimnames)
+    # return
     invisible(x)
 }
 
@@ -164,31 +447,138 @@ arrayIP <- function(x, dim, dimnames = NULL, force_length = TRUE) {
 #' \code{subsetArray} is a convenience function for extracting or replacing a 
 #' part of an array which has dimension names
 #' @name subsetArray
-#' @usage subsetArray(dat, subsets, keep_attr = TRUE, ...)
+#' @usage subsetArray(dat, subsets, which_dims = NULL, drop = NULL, keep_attributes = TRUE)
 #' @usage subsetArray(dat, subsets) <- value
 #' @param dat array to be subsetted
-#' @param subsets a named list of character, numeric, or logical vectors 
-#' indicating which levels of which dimensions to subset (see Details)
-#' @param keep_attr a logical variable which determines if the result inherits 
-#' the custom attributes of the input (TRUE, default) or not  
+#' @param subsets a (named) list of character, numeric, or logical vectors 
+#' indicating which levels of which dimensions to subset (see Details). If 
+#' 'subsets' is an unnamed list, the argument 'which_dims' must be provided.
+#' @param keep_attributes a logical variable which determines if the result 
+#' inherits the custom attributes of the input (TRUE, default) or not  
 #' @param value a vector, matrix or array of the new values
-#' @param ... further arguments to be passed to \code{\link[abind]{asub}}
-#' @details Names of subsets indicate which dimensions are to be subsetted in 
+#' @param which_dims numeric or character indices of the dimensions which 
+#' should be subsetted. If 'which_dims' is not NULL, 'which_dims' is used and
+#' the names of 'subsets' is ignored.
+#' @param drop either 1) NULL (the default), or 2) a logical value 
+#' (TRUE or FALSE), or 3) numeric or character indices of the dimensions which 
+#' should be dropped if they become singleton dimensions (i.e. have only one 
+#' level) after subsetting (see Details)
+#' @details Names of 'subsets' or the indices of dimensions as given in 
+#' 'which_dim' indicate which dimensions are to be subsetted in 
 #' the input array, and each list element indicates which levels of the given 
-#' dimension will be selected. If a list element is a named empty vector, or 
-#' the name of a dimension does not appear in subsets, all levels of the 
-#' correspondig dimension will be selected.
+#' dimension will be selected. If a list element is an empty vector, all levels 
+#' of the correspondig dimension will be selected.\cr 
+#' The argument 'drop' defines the procedure if a dimension becomes a singleton 
+#' dimension after subsetting. The default behaviour (\code{drop = NULL}) is to 
+#' drop all subsetting dimensions but no others. If 'drop' is FALSE, all
+#' dimensions are kept, if TRUE, all singleton dimensions are dropped. If 'drop'
+#' is a numeric or character vector, its elements define which dimensions to 
+#' drop.
 #' @export
 #' @seealso \code{\link[abind]{asub}}
-#' @return A subset of an array or the array with replaced values
+#' @return The function returns a subset of the array or the array with replaced 
+#' values.
 #' @rdname subsetArray
 #' @export
+#' @examples
+#' # example data (see ?erps)
+#' data(erps)
+#' str(erps)
+#' 
+#' # subsetting without knowing the exact order of dimensions
+#' sub1 <- subsetArray(erps, 
+#'                     list(time = "0", chan = "Fp2", 
+#'                          stimclass = c(TRUE, FALSE, FALSE)),
+#'                     keep_attributes = FALSE)
+#'                     
+#' # traditional subsetting                    
+#' sub2 <- erps["A", , "Fp2", "0", ]
+#' 
+#' # the results are identical
+#' stopifnot(identical(sub1, sub2))
+#' 
+#' # the same for replacement
+#' subsetArray(sub1, list(id = 1)) <- NA
+#' sub2[, 1] <- NA
+#' stopifnot(identical(sub1, sub2))
+#' 
 # Extract a part of an array
-subsetArray <- function(dat, subsets, keep_attr = TRUE, ...) {
+subsetArray <- function(dat, subsets, which_dims = NULL, drop = NULL,
+                        keep_attributes = TRUE) {
+    # if NULL, return
     if (is.null(dat)) return(NULL)
-    dimpos <- match(names(subsets), names(dimnames(dat)))
-    out <- asub(dat, subsets, dimpos, ...)
-    if (keep_attr) {
+    #
+    # check arguments (dat, subsets, which_dims)
+    assertArray(dat, min.d = 2L, .var.name = "dat")
+    assertList(subsets, types = c("logical", "integerish", "character"),
+               .var.name = "subsets")
+    dat_d <- dim(dat)
+    dat_dnn <- names(dimnames(dat))
+    if (is.null(which_dims)) {
+        if (anyDuplicated(dat_dnn)) {
+            stop("'dat' has duplicated dimension identifiers. Provide 'which_dims' and do not rely on the names of 'subsets'.")
+        }
+        which_dims <- match(names(subsets), dat_dnn)
+        if (anyNA(which_dims)) {
+            stop("Not all names of 'subsets' correspond to existing dimensions in 'dat'. Provide either 'which_dim' to disambiguate or set the names of 'subsets' properly.")
+        }
+    } else {
+        if (is.null(which_dims))
+            stop("If 'subsets' is not a named list, 'which_dims' must be provided.")
+        assertVector(which_dims, strict = TRUE, any.missing = FALSE, 
+                     len = length(subsets), unique = TRUE, 
+                     .var.name = "which_dims")
+        if (is.character(which_dims)) {
+            which_dims <- match(which_dims, dat_dnn)
+        }
+    }
+    #
+    # do subsetting
+    ind <- as.list(rep(TRUE, length(dat_d)))
+    for (i in seq_along(subsets)) {
+        ind[[which_dims[i]]] <- subsets[[i]]
+    }
+    out <- do("[", dat, arg_list = c(ind, list(drop = FALSE)))
+    #
+    # drop singleton dimensions if requested
+    if (!identical(drop, FALSE)) {
+        out_d <- dim(out)
+        out_dn <- dimnames(out)
+        keep_dim <- out_d > 1L
+        if (is.null(drop)) {
+            keep_dim[-which_dims] <- TRUE
+        } else if (is.logical(drop)) {
+            if (length(drop) != 1L) {
+                stop("If 'drop' is logical, it must be a single value")
+            }
+        } else {
+            assertVector(drop, strict = TRUE, any.missing = FALSE,
+                         max.len = length(out_d), unique = TRUE,
+                         .var.name = "drop")
+            if (is.character(drop)) {
+                drop <- match(drop, dat_dnn)
+                if (anyNA(drop)) 
+                    stop("Not all elements of 'drop' correspond to existing dimensions in 'dat'")
+                keep_dim[-drop] <- TRUE
+            } else if (is.numeric(drop)) {
+                assertIntegerish(drop, lower = 1L, upper = length(dim(dat)), 
+                                 any.missing = FALSE, .var.name = "drop")
+                keep_dim[-drop] <- TRUE
+            } else {
+                stop("If 'drop' is not NULL, TRUE or FALSE, it must be a character or numeric vector")
+            }
+        }
+        if (sum(keep_dim) > 0L) {
+            setattr(out, "dim", out_d[keep_dim])
+            setattr(out, "dimnames", out_dn[keep_dim])
+        } else {
+            setattr(out, "dim", NULL)
+            setattr(out, "dimnames", NULL)
+        }
+    }
+    #
+    # reattach attributes if requested
+    if (keep_attributes) {
         a <- attributes(dat)
         a2keep <- setdiff(names(a), 
                           c("class", "comment", "dim", "dimnames", "names", 
@@ -205,6 +595,7 @@ subsetArray <- function(dat, subsets, keep_attr = TRUE, ...) {
             setattr(out, "factors", tempa) 
         }
     }
+    #
     # return
     out
 }
@@ -212,20 +603,48 @@ subsetArray <- function(dat, subsets, keep_attr = TRUE, ...) {
 #' @rdname subsetArray
 #' @export
 # Replace a part of an array
-`subsetArray<-` <- function(dat, subsets, value) {
-    dimn <- dimnames(dat)
-    dimn[names(subsets)] <- subsets
-    dimvn <- names(dimnames(value))
-    if (!is.null(dimvn) && !any(dimvn == "") && !anyNA(dimvn)) {
-        value <- aperm(value, na.omit(match(names(dimn), dimvn)))
+`subsetArray<-` <- function(dat, subsets, which_dims = NULL, value) {
+    #
+    # check arguments (dat, subsets, which_dims)
+    assertArray(dat, min.d = 2L, .var.name = "dat")
+    assertList(subsets, types = c("logical", "integerish", "character"),
+               .var.name = "subsets")
+    dat_d <- dim(dat)
+    dat_dnn <- names(dimnames(dat))
+    if (is.null(which_dims)) {
+        if (anyDuplicated(dat_dnn)) {
+            stop("'dat' has duplicated dimension identifiers. Provide 'which_dims' and do not rely on the names of 'subsets'.")
+        }
+        which_dims <- match(names(subsets), dat_dnn)
+        if (anyNA(which_dims)) {
+            stop("Not all names of 'subsets' correspond to existing dimensions in 'dat'. Provide either 'which_dim' to disambiguate or set the names of 'subsets' properly.")
+        }
+    } else {
+        if (is.null(which_dims))
+            stop("If 'subsets' is not a named list, 'which_dims' must be provided.")
+        assertVector(which_dims, strict = TRUE, any.missing = FALSE, 
+                     len = length(subsets), unique = TRUE, 
+                     .var.name = "which_dims")
+        if (is.character(which_dims)) {
+            which_dims <- match(which_dims, dat_dnn)
+        }
     }
-    eval(parse(
-        text = paste("dat[", 
-                     paste(paste0("dimn$", names(dimn)), collapse = ","), 
-                     "] <- value", sep = ""))
-    )
+    #
+    # do subsetting
+    ind <- as.list(rep(TRUE, length(dat_d)))
+    for (i in seq_along(subsets)) {
+        ind[[which_dims[i]]] <- subsets[[i]]
+    }
+    value_dnn <- names(dimnames(value))
+    if (!is.null(value_dnn) && !anyDuplicated(value_dnn) &&
+        !anyNA(value_dnn)) {
+        value <- apermArray(value, na.omit(match(dat_dnn, value_dnn)),
+                            keep_attributes = FALSE)
+    }
+    dat <- do("[<-", dat, arg_list = c(ind, list(value = value)))
+    #
     # return
-    dat
+    invisible(dat)
 }
 
 
@@ -249,7 +668,8 @@ array2mat <- function(dat, row_dim, return_attributes = TRUE,
         row_dim <- which(names(dimnames(dat)) == row_dim)
     }
     col_dims <- seq_along(dim(dat))[-row_dim]
-    out <- aperm(dat, c(row_dim, col_dims))
+    out <- apermArray(dat, c(row_dim, col_dims),
+                      keep_attributes = TRUE)
     if (!keep_dimnames || is.null(dimnames(dat))) {
         out_dimnames <- NULL
     } else {
@@ -261,7 +681,7 @@ array2mat <- function(dat, row_dim, return_attributes = TRUE,
                 c(names(dimnames(dat))[row_dim], 
                   paste(names(dimnames(dat))[col_dims], collapse = "|")))
     }
-    matrixIP(out, nrow(out), dimnames = out_dimnames)
+    matrix_(out, nrow(out), dimnames = out_dimnames)
     if (return_attributes) {
         setattr(out, "array_attributes", 
                 c(attributes(dat), list(row_dim = row_dim)))
@@ -304,7 +724,8 @@ mat2array <- function(dat, dims = NULL, row_dim = NULL) {
     }
     matdims <- c(dims[row_dim], dims[-row_dim])
     dimord <- order( c(row_dim, seq_along(dims)[-row_dim]) )
-    out <- aperm(array(dat, matdims), dimord)
+    out <- apermArray(array(dat, matdims), dimord,
+                      keep_attributes = TRUE)
     dimnames(out) <- dimn
     # return
     out
@@ -356,7 +777,8 @@ array2df <- function(dat, response_name = "values",
     if (!all(unlist(dim_types, use.names = FALSE) %in% valid_types)) {
         stop("Invalid dim_type argument")
     }
-    dimn <- dimnames(decorateDims(dat, ...))
+    assertArray(dat, min.d = 2L, .var.name = "dat")
+    dimn <- fillMissingDimnames(dimnames(dat), dim(dat), ...)
     out <- expand.grid(dimn, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
     if (!is.null(row_names)) {
         setattr(out, "row.names", row_names)
@@ -416,7 +838,7 @@ mergeDims <- function(dat, dims, return_attributes = TRUE,
                            x
                        }
                    })
-    if (any(duplicated(unlist(dims)))) 
+    if (anyDuplicated(unlist(dims))) 
         stop("Duplicated dimensions in the dims parameter are not allowed")
     if (length(unlist(dims)) < length(dim(dat))) {
         dims <- c(dims, as.list(setdiff(seq_along(dim(dat)), unlist(dims))))
@@ -434,9 +856,17 @@ mergeDims <- function(dat, dims, return_attributes = TRUE,
     } else {
         dimn <- NULL
     }
-    out <- arrayIP(aperm(dat, unlist(dims)),
-                   vapply(relist(dim(dat)[unlist(dims)], dims), prod, 0),
+    udims <- unlist(dims, use.names = FALSE)
+    out <- 
+        if (identical(udims, seq_along(dim(dat)))) {
+            array_(as.vector(dat),
+                   vapply(relist(dim(dat)[udims], dims), prod, 0),
                    dimn)
+        } else {
+            array_(aperm(dat, udims),
+                   vapply(relist(dim(dat)[udims], dims), prod, 0),
+                   dimn)
+        }
     if (return_attributes) {
         setattr(out, "orig_dimattributes",
                 c(dimattribs, list(sep = sep, merged_dims = dims)))
@@ -553,12 +983,13 @@ splitArray <- function(dat, whichdim, f = NULL, drop = FALSE) {
     } else {
         whichdim_num <- whichdim
     }
-    dat <- decorateDims(dat)
+    assertArray(dat, min.d = 2L, .var.name = "dat")
+    dimn <- fillMissingDimnames(dimnames(dat), dim(dat))
     if (is.null(f)) {
-        f <- dimnames(dat)[whichdim_num]
+        f <- dimn[whichdim_num]
     } else if (!is.list(f)) {
         f <- list(f)
-        names(f) <- names(dimnames(dat))[whichdim_num[1]]
+        names(f) <- names(dimn)[whichdim_num[1]]
     }
     if (length(f) != length(whichdim_num)) {
         stop("Length of f must match the length of whichdim")
@@ -572,7 +1003,7 @@ splitArray <- function(dat, whichdim, f = NULL, drop = FALSE) {
     }
     f <- lapply(f, function(x) split(seq_along(x), x))
     out.dimnames <- lapply(f, names)
-    out.dim <- vapply(out.dimnames, length, integer(1))
+    out.dim <- vapply(out.dimnames, length, integer(1L))
     setattr(out.dimnames, "names", names(out.dim))
     f <- expand.grid(f, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
     out <- lapply(1:nrow(f), function(i) subFn(f[i, ]))
@@ -700,7 +1131,7 @@ bindArrays <- function(..., along = NULL, rev.along = NULL, new.names = NULL,
 mergeArrays <- function(..., base_value = NA, 
                         sort_dims = FALSE, sort_dimlevels = FALSE) {
     is_bad <- function(x) {
-        anyNA(x) || is.null(x) || any(x == "") || any(duplicated(x))
+        anyNA(x) || is.null(x) || any(x == "") || anyDuplicated(x)
     }
     dimnCheck <- function(x) {
         if (is_bad(names(x))) return(FALSE)
@@ -734,8 +1165,8 @@ mergeArrays <- function(..., base_value = NA,
     }
     out <- base_value[1L]
     storage.mode(out) <- typeof(dat[[1L]])
-    out <- arrayIP(out, vapply(all_dimn, length, integer(1L)),
-                   all_dimn)
+    out <- array_(out, vapply(all_dimn, length, integer(1L)),
+                  all_dimn)
     for (i in dat) {
         subsetArray(out, dimnames(i)) <- i
     }
@@ -932,7 +1363,7 @@ prepare2plot <- function(dat, datid,
                 temp <- c(temp,tempd)
                 dimn.perm[[diffFac[ii, 1]]] <- dimn.orig[[diffFac[ii, 1]]] <- 
                     c(dimn.orig[[diffFac[ii, 1]]], diffFac[ii, 4])
-                arrayIP(temp, vapply(dimn.perm, length, 0L), dimn.perm)
+                array_(temp, vapply(dimn.perm, length, 0L), dimn.perm)
                 temp <- aperm(temp, names(dimn.orig))
             }
         }
@@ -1045,9 +1476,7 @@ prepare2plot <- function(dat, datid,
 transformArray <- function(formula, data, group = NULL, subset = NULL,
                            datfr = TRUE, auto_dimtype = TRUE, ...) {
     # checks
-    if (!is.atomic(data) || !is.array(data)) {
-        stop("Provide a matrix or array as input")
-    }
+    assertArray(data, mode = "atomic", min.d = 2L)
     dn <- dimnames(data)
     dnn <- names(dn)
     if (is.null(dnn) || any(dnn == "")) 
@@ -1123,7 +1552,7 @@ transformArray <- function(formula, data, group = NULL, subset = NULL,
                                      stringsAsFactors = FALSE))
     # transform to a data.frame
     if (datfr) {
-        data <- decorateDims(data)
+        data <- decorateDims_(data)
         dn <- dimnames(data)
         singleton <- which(dim(data) == 1L & 
                                grepl("_Dim", names(dn)))

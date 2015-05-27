@@ -9,9 +9,9 @@
 #' schemes and performs the given function on these data chunks. The resulting
 #' array is identical to the result of a function call on the whole array.
 #' @param dat matrix or array with named dimnames
-#' @param fun name of the function (can be a character string). See details.
+#' @param fun name of the function (can be a character string). See Details.
 #' @param arg_list a list of parameters passed to \code{fun}
-#' @param chunks a named list which defines the chunking scheme. See details.
+#' @param chunks a named list which defines the chunking scheme. See Details.
 #' @details The main purpose of \code{chunkify} is twofold: 1) it can decrease
 #' memory load if a memory-intensive function is called on a large array; 2) it
 #' enables within-dimension computations (e.g. perform baseline correction 
@@ -27,10 +27,13 @@
 #' Chunking can be based only on those dimensions which are not affected by
 #' \code{fun}. 
 #' @export
+#' @note This function is experimental.
 #' @return An array (or vector/matrix); its shape and dimension names are 
 #' identical to the return value of \code{fun} called on \code{dat} without 
 #' chunking
 chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
+    #
+    # helper function
     chunkCheckFn <- function(x, name) {
         dimlen <- dimlens[name]
         if (is.character(x)) {
@@ -40,20 +43,20 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
         } else if (!is.integer(x)) {
             x <- as.integer(x)
         } 
-        out <- 
-            if (length(x) == 1) {
-                rep(seq_len(x), 
-                    vapply(parallel::splitIndices(dimlen, x), length, 0L))
-            } else if (length(x) == dimlen) {
-                as.integer(x)
-            } else {
-                rep(as.integer(x), length.out = dimlen)
-            }
-        out
+        # return chunk code
+        if (length(x) == 1) {
+            rep(seq_len(x), 
+                vapply(parallel::splitIndices(dimlen, x), length, 0L))
+        } else if (length(x) == dimlen) {
+            as.integer(x)
+        } else {
+            rep(as.integer(x), length.out = dimlen)
+        }
     }
-    # 
+    #
+    # argument checks
     if (is.null(chunks)) {
-        return( do.call(fun, append(list(dat), arg_list)) )
+        return( do(fun, dat, arg_list = arg_list) )
     }
     if (!is.list(chunks) && is.null(names(chunks))) {
         stop("chunks must be a named list")
@@ -61,6 +64,7 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
     dimlens <- dim(dat)
     names(dimlens) <- names(dimnames(dat))
     #
+    # main part
     chunks <- setNames(
         mapply(chunkCheckFn, chunks, names(chunks),
                SIMPLIFY = FALSE, USE.NAMES = FALSE),
@@ -75,9 +79,9 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
                      drop = FALSE)
     message()
     outpart <- do.call(fun, append(list(x), arg_list))
-    #
+    # --
     if (nrow(chunkgrid) == 1) return( outpart )
-    #
+    # --
     out.dims <- dim(outpart)
     out.dims[match(names(chunks), names(dimnames(outpart)))] <- 
         dimlens[names(chunks)]
@@ -92,7 +96,7 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
     )
     na <- NA
     storage.mode(na) <- storage.mode(outpart)
-    out <- arrayIP(na, out.dims, out.dimnames)
+    out <- array_(na, out.dims, out.dimnames)
     for (i in 1:nrow(chunkgrid)) {
         if (i > 1) {
             message(sprintf("\n==== Analyze Chunk %i/%i ====", 
@@ -101,7 +105,7 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
             x <- subsetArray(dat,
                              subsets = subs,
                              drop = FALSE)
-            outpart <- do.call(fun, append(list(x), arg_list))
+            outpart <- do(fun, x, arg_list = arg_list)
         }
         subsetArray(
             out,
@@ -128,8 +132,9 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
 #' @return An array (or matrix) with averaged data (the number of dimensions of 
 #' dat is decreased by the length of dims)
 avgDims <- function(dat, dims, na_rm = TRUE) {
+    assertArray(dat, mode = "numeric", min.d = 2L, .var.name = "dat")
     if (is.character(dims)) dims <- match(dims, names(dimnames(dat)))
-    out <- aperm(dat, c(dims, seq_along(dim(dat))[-dims]))
+    out <- apermArray(dat, first = dims, keep_attributes = TRUE)
     out <- colMeans(out, na.rm = na_rm, dims = length(dims))
     if (is.vector(out)) {
         dim(out) <- c(length(out), 1)
@@ -160,10 +165,15 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
 #' @param keep_dimorder logical value; if TRUE, and the returned matrix or array 
 #' has the same dimension identifiers as dat, the order of dimensions in the 
 #' returned object will be the same as in dat (default = FALSE)
-#' @param useparallel logical value; if TRUE, a snow-type parallel backend is 
-#' used (default: FALSE)
-#' @param cl cluster definition if useparallel is TRUE
-#' @param ncores number of cpus if useparallel is TRUE and clust is NULL
+#' @param parallel either 1) NULL (the default) or FALSE (the same as NULL), 
+#' both of which mean single-core computation, or 2) TRUE, which means 
+#' parallelization with default parameters, or 3) an object as returned by 
+#' \code{\link{parallelParams}} with custom parameters (see Examples and also 
+#' \code{\link{parallelParams}}).\cr 
+#' Custom parameters can be also provided by \code{parallel = .(key = value)} to 
+#' save typing (this works by calling \code{\link{parallelParams}} with the 
+#' given parameters).
+#' @param arg_check logical value if arguments should be checked (default: TRUE)
 #' @details This function works by transforming dat to a matrix with a row 
 #' dimension corresponding to target_dim and calling target_fn on each column 
 #' of the matrix repeatedly, or if vectorized is TRUE, by feeding the transformed
@@ -175,8 +185,8 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
 #' original input. If target_fn outputs a list, no back-transformation is done.
 #' @export
 #' @return see Details
-#' @seealso If target_fn is \code{mean}, \code{colMeans}, or \code{rowMeans},
-#' \code{\link{avgDims}}  might be a better choice
+#' @seealso \code{\link{avgDims}} migth be a better choice if target_fn is one 
+#' of \code{mean}, \code{colMeans}, or \code{rowMeans}.
 #' @examples
 #' # example dataset
 #' data(erps)
@@ -187,7 +197,7 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
 #' system.time(max_simple <- fnDims(erps, c("chan", "time"), range, 
 #'                                  newdims = newdimn))
 #' 
-#' # the resulting array has an appropriate shape
+#' # the resulting array has appropriate shape
 #' str(max_simple)
 #' 
 #' # apply is less handy in such cases
@@ -202,13 +212,14 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
 #' # the same using parallelization (only faster if the computation time is much
 #' # higher than the overhead of starting the clusters, which is not the case here)
 #' system.time(max_parallel <- fnDims(erps, c("chan", "time"), range,
-#'                                    useparallel = TRUE, ncores = 2L,
+#'                                    parallel = .(ncores = 2L),
 #'                                    newdims = newdimn))
 #' 
 #' # usually it is much faster to use a vectorized function;
 #' # note that matrixStats::colRanges returns an Nx2 matrix, but we need 2xN
+#' fastRange <- function(x) t(matrixStats::colRanges(x))
 #' system.time(max_vectorized <- fnDims(erps, c("chan", "time"), 
-#'                                      function(x) t(matrixStats::colRanges(x)), 
+#'                                      fastRange, 
 #'                                      vectorized = TRUE,
 #'                                      newdims = newdimn))
 #' 
@@ -218,49 +229,73 @@ avgDims <- function(dat, dims, na_rm = TRUE) {
 #' stopifnot(all.equal(max_simple, max_vectorized))
 fnDims <- function(dat, target_dim, target_fn, arg_list = NULL, 
                    newdims = list(), vectorized = FALSE, columnwise = TRUE, 
-                   keep_dimorder = FALSE, 
-                   useparallel = FALSE, cl = NULL, ncores = NULL) {
-    if (is.data.frame(dat)) dat <- as.matrix(dat)
-    if (is.character(target_dim)) 
-        target_dim <- match(target_dim, names(dimnames(dat)))
-    dimord <- c(target_dim, seq_along(dim(dat))[-target_dim])
-    dims <- dim(dat)[dimord]
-    dims.n <- dimnames(dat)[dimord]
-    out <- 
-        if (length(target_dim) == 1L) {
-            array2mat(dat, target_dim, return_attributes=FALSE, 
-                      keep_dimnames = FALSE)
-        } else {
-            mergeDims(dat, list(target_dim, seq_along(dim(dat))[-target_dim]),
-                      return_attributes=FALSE, keep_dimnames = FALSE)
-        }
-    if (vectorized) {
-        out <- do.call(target_fn, append(list(out), arg_list))
-    } else {
-        if (!columnwise) out <- t(out)
-        if (!useparallel) {
-            out <- sapply(1:ncol(out), function(i) 
-                do.call(target_fn, append(list(out[, i]), arg_list)))
-        } else {
-            if (is.null(ncores)) ncores <- detectCores()
-            if (is.null(cl)) cl <- makePSOCKcluster(ncores)
-            tempfn <- function(i) 
-                do.call(target_fn, append(list(out[, i]), arg_list))
-            clusterExport(cl, 
-                          varlist = c("tempfn","out","arg_list","target_fn"),
-                          envir = environment())
-            out <- parLapply(cl, 1:ncol(out), tempfn)
-            stopCluster(cl)
-            rm(cl)
-            if (is.vector(out[[1]])) {
-                tempdim <- c(length(out[[1]]), length(out))
+                   keep_dimorder = FALSE, parallel = NULL,
+                   arg_check = TRUE) {
+    if (arg_check) {
+        # check if dat is a data.frame
+        if (is.data.frame(dat)) dat <- as.matrix(dat)
+        # check array
+        assertArray(dat, mode = "atomic", min.d = 2L)
+        # check target_dim
+        if (is.character(target_dim)) {
+            target_dim_num <- match(target_dim, names(dimnames(dat)))
+            if (anyNA(target_dim_num)) {
+                stop(paste0("The input array does not have dimension(s) ",
+                            paste0(target_dim, collapse = ", ")))
             } else {
-                tempdim <- c(dim(out[[1]]), length(out))
+                target_dim <- target_dim_num
             }
-            out <- drop(arrayIP(unlist(out, use.names = FALSE), tempdim))
+        } else if (!checkIntegerish(target_dim)) {
+            stop("Target dimension(s) must be integer-like (e.g. 2L or 2) or character")
         }
+        if (any(target_dim < 1 || target_dim > length(dim(dat)))) {
+            stop("Target dimensions and input data size do not match")
+        }    
     }
-    if (length(out) == 1 | is.list(out)) {
+    # parallel setting
+    args <- as.list(match.call()[-1])
+    ob <- getDoBackend()
+    parallel <- argumentDeparser(args$parallel, "parallelParams")
+    if (is.logical(parallel) && !parallel) {
+        registerDoSEQ()
+    } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {
+        on.exit(stopCluster(parallel$cl))
+    }
+    on.exit(setDoBackend(ob), add = TRUE)
+    # save original dimensions
+    orig_dim <- dim(dat)
+    orig_dimn <- dimnames(dat)
+    orig_length <- length(dat)
+    # reshape data
+    dimord <- c(target_dim, seq_along(orig_dim)[-target_dim])
+    dims <- orig_dim[dimord]
+    dims.n <- orig_dimn[dimord]
+    if (length(target_dim) == 1L && 
+        (length(orig_dim) != 2L || target_dim != 1L)) {
+        dat <- array2mat(dat, target_dim, return_attributes = FALSE, 
+                         keep_dimnames = FALSE)
+    } else if (length(target_dim) > 1L) {
+        dat <- mergeDims(dat, 
+                         list(target_dim, seq_along(dim(dat))[-target_dim]),
+                         return_attributes = FALSE, keep_dimnames = FALSE)
+    }
+    # do calculations
+    if (vectorized) {
+        out <- do(target_fn, dat, arg_list = arg_list)
+    } else {
+        bydim <- if (columnwise) "col" else "row"
+        out <- foreach(x = iter(dat, by = bydim)) %dopar% 
+            do(target_fn, x, arg_list = arg_list)
+        if (is.list(out[[1L]])) {
+            return(out)
+        } else if (is.vector(out[[1L]])) {
+            tempdim <- c(length(out[[1L]]), length(out))
+        } else {
+            tempdim <- c(dim(out[[1L]]), length(out))
+        }
+        out <- drop(array_(unlist(out, use.names = FALSE), tempdim))
+    }
+    if (length(out) == 1L | is.list(out)) {
         return(out)
     } else if (length(dim(out)) <= 1) {
         if (columnwise) {
@@ -270,7 +305,7 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
             dims <- dims[seq_along(target_dim)]
             dims.n <- dims.n[seq_along(target_dim)]
         }
-    } else if (length(out) != length(dat) || length(newdims) > 0) {
+    } else if (length(out) != orig_length || length(newdims) > 0) {
         if (length(newdims) == 0)
             newdims <- list(function.values = 1:nrow(out))
         if (columnwise) {
@@ -285,11 +320,12 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
                              dims.n[seq_along(target_dim)])
         }
     } 
-    arrayIP(out, dims, dims.n)
+    array_(out, dims, dims.n)
     if (keep_dimorder && 
         identical(sort(names(dimnames(out))),
-                  sort(names(dimnames(dat))))) {
-        out <- aperm(out, names(dimnames(dat)))
+                  sort(names(orig_dimn)))) {
+        out <- apermArray(out, names(orig_dimn),
+                          keep_attributes = TRUE)
     }
     # return
     out
@@ -387,7 +423,8 @@ avgBin <- function(dat, target_dim, bin_length = NULL, bin_ind = NULL,
         names(newdim) <- target_dim
         dimnames(out) <- c(newdim, dimnames(out)[-1])
     }
-    out <- aperm(out, names(dimnames(dat)))
+    out <- apermArray(out, names(dimnames(dat)),
+                      keep_attributes = TRUE)
     # return
     out
 }
@@ -457,6 +494,7 @@ scaleArray <- function(dat, by_dims = NULL, along_dims = NULL,
         FUN(x, stats)
     }
     #
+    assertArray(dat, mode = "numeric", min.d = 2L)
     if (!center & !scale) return(dat)
     if (!is.null(base_subset) & is.null(center_subset)) {
         center_subset <- base_subset
@@ -482,7 +520,8 @@ scaleArray <- function(dat, by_dims = NULL, along_dims = NULL,
     if (anyNA(by_dims) || !all(by_dims %in% seq_along(dim(dat)))) 
         stop("Wrong by_dims or along_dims argument")
     along_dims <- setdiff(seq_along(dim(dat)), by_dims)
-    out <- aperm(dat, c(along_dims, by_dims))
+    out <- apermArray(dat, c(along_dims, by_dims),
+                      keep_attributes = TRUE)
     if (center) {
         stat <- 
             if (!is.null(center_subset)) {
@@ -519,7 +558,8 @@ scaleArray <- function(dat, by_dims = NULL, along_dims = NULL,
     }
     # return
     if (keep_dimorder) {
-        aperm(out, order(c(along_dims, by_dims)))
+        apermArray(out, order(c(along_dims, by_dims)),
+                   keep_attributes = TRUE)
     } else {
         out
     }

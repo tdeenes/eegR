@@ -93,7 +93,7 @@ tempdat <- transformArray(y ~ . + .(id), erps,
                           datfr = FALSE)
 
 # split the array along the readgroup and stimclass dimensions
-tempdat <- splitArray(tempdat, c("readgroup", "stimclass"))
+tempdat <- splitArray(tempdat, c("readgroup", "stimclass"), drop = TRUE)
 
 # compute GFP
 gfpdat <- lapply(tempdat, compGfp)
@@ -143,11 +143,12 @@ results <- arrayAnova(
     tempdat, 
     factordef = list(between = "group",
                      w_id = "id", 
-                     within = c("stimclass", "pairtype")),
+                     within = c("stimclass", "pairtype"),
+                     observed = "group"),
     bwdat = id_dat, 
     nperm = 99, 
-    useparallel = TRUE, ncores = 2,
-    tfce_options = list(ChN = ChN))
+    tfce = .(ChN = ChN),
+    parallel = .(ncores = 2))
 
 # plot the results (for now, only the p-values of the TFCE method)
 imagePvalues(extract(results, "p_corr"), grid = "modelterm ~ .")
