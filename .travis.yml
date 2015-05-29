@@ -1,7 +1,11 @@
 language: r
+sudo: required
+r_github_packages:
+  - mllg/checkmate
+  - Rdatatable/data.table
 notifications:
-    email:
-        recipients:
-            - toth.denes@ttk.mta.hu
+  email:
+    recipients:
+      - toth.denes@ttk.mta.hu
 on_success: change
 on_failure: always
