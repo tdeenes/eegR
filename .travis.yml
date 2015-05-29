@@ -1,0 +1,7 @@
+language: r
+notifications:
+    email:
+        recipients:
+            - toth.denes@ttk.mta.hu
+on_success: change
+on_failure: always
