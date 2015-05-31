@@ -1,7 +1,6 @@
 language: r
 sudo: required
 apt_packages:
-  - libgdal-dev
   - libproj-dev
 r_github_packages:
   - mllg/checkmate
