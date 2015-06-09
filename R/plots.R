@@ -883,11 +883,14 @@ plotTanova <- function(results,
     pcrit <- try(eval(as.list(results$call)$pcrit), silent = TRUE)
     if (is.null(pcrit)) {
         pcrit <- formals(tanova)$pcrit
-    } else if (inherits(pcrit, "try-error") && 
-               identical(highlight_p, "p_corr")) {
-        pcrit <- unique(as.vector(extract(results, "p_corr")))
-    } else {
-        pcrit <- 0.05
+    }
+    if (!is.numeric(pcrit) || is.na(pcrit)) {
+        pcrit <- 
+            if (identical(highlight_p, "p_corr")) {
+                unique(as.vector(extract(results, "p_corr")))
+            } else {
+                0.05
+            }
     }
     pcrit <- union(sort(pcrit), 1)
     #
