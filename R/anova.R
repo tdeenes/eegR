@@ -342,7 +342,7 @@ compF <- function(obj, new_indices = NULL, attribs = FALSE, verbose = FALSE) {
         Fvals <- (model_ssq/resid_ssq) * (resid_df/model_df)
         if (verbose) {
             pvalues <- t(pf(t(Fvals), model_df, resid_df, lower.tail = FALSE))
-            SSr <- rowSums(model_ssq)
+            SSr <- rowSums(resid_ssq)
             ges <- model_ssq / (model_ssq + SSr)
         }
     } else if (type == "mixed") {
@@ -619,7 +619,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
     #
     # test statistic
     pre_dimnames$modelterm <- full_dimnames$modelterm <- 
-        names(pre_sumsq[[1L]]$unique_contrasts)
+        attr(terms(mean_formula), "term.labels")
     full_dimid <- names(full_dimnames)
     full_dims <- vapply(full_dimnames, length, integer(1L))
     setattr(full_dims, "names", full_dimid)
@@ -760,7 +760,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #'     tempdat_ez <- transformArray(y ~ ., tempdat, subset = sub)
 #'     tempdat_ez$group <- factor(dat_id$group[match(tempdat_ez$id, dat_id$id)])
 #'     result_ez <- ez::ezANOVA(tempdat_ez, y, id, .(stimclass, pairtype),
-#'                              between = group, observed = group)
+#'                              between = group, observed = group, type = 1)
 #'     # compare results
 #'     ez_F <- result_ez$ANOVA$F   # F-values
 #'     ez_p <- result_ez$ANOVA$p   # p-values

@@ -114,7 +114,7 @@ if (requireNamespace("ez")) {
     tempdat_ez <- transformArray(y ~ ., tempdat, subset = sub)
     tempdat_ez$group <- factor(dat_id$group[match(tempdat_ez$id, dat_id$id)])
     result_ez <- ez::ezANOVA(tempdat_ez, y, id, .(stimclass, pairtype),
-                             between = group, observed = group)
+                             between = group, observed = group, type = 1)
     # compare results
     ez_F <- result_ez$ANOVA$F   # F-values
     ez_p <- result_ez$ANOVA$p   # p-values
