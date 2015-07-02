@@ -4,32 +4,45 @@
 
 #' Plot ERP curves
 #' 
-#' \code{plotERParray} is a generalization of \code{matplot} onto array inputs.
+#' \code{plotERParray} is a generalization of \code{\link{matplot}} onto array 
+#' inputs.
 #' @param dat a numeric array with named dimensions
-#' @param xdim character value; the name of the dimension of dat which defines 
+#' @param xdim character string; the name of the dimension of dat which defines 
 #' the x axis (default: "time")
-#' @param sepdim character value; the name of the dimension of dat which 
+#' @param sepdim character string; the name of the dimension of dat which 
 #' separates the lines (default: "chan")
-#' @param title character value; the title of the plot
-#' @param subtitle.col the colour of the subtitles
-#' @param gfp_plot logical value; if TRUE (default), the GFP curves are also 
-#' plotted
+#' @param gfp_plot logical value whether GFP curves should be also plotted
+#' (only if 'sepdim' is "chan")
 #' @param gfp_col the colour of the GFP curves (if plotted)
 #' @param gfp_lwd the thickness of the GFP curves (if plotted)
 #' @param minus_up logical value; if set to TRUE, minus values are plotted 
-#' upwards. If set to FALSE, minus values are plotted downwards. If NULL 
-#' (default), it is set to TRUE or FALSE depending on the gfp_plot parameter. 
-#' NULL
+#' upwards. If FALSE, minus values are plotted downwards. By default, it 
+#' is set to TRUE or FALSE depending on the 'gfp_plot' argument. 
+#' @param title character string; the title of the plot
+#' @param subtitle_col colour(s) of the subtitles (recycled if necessary)
 #' @param grid_labels character vector; the name of the x and y axes
 #' @param grid_dim integer vector giving the number of rows and columns
 #' in which the plots are arranged; if set to NULL (default), the arrangement 
 #' of the plot is set up automatically
-#' @param ... additional parameters to be passed to \code{matlines}
+#' @param ... additional parameters to be passed to \code{\link{matlines}}
+#' @seealso \code{\link{matlines}}
+#' @examples
+#' # example data
+#' data(erps)
+#' 
+#' # compute grand averages
+#' plotdat <- avgDims(erps, "id")
+#' 
+#' # plot the channels in light grey, draw only solid lines
+#' plotERParray(plotdat, col = "grey70", lty = 1)
+#' 
 #' @export
-plotERParray <- function(dat, xdim = "time", sepdim = "chan", 
-                         title = "", subtitle.col = "black",
-                         gfp_plot = TRUE, gfp_col = "black", gfp_lwd = 1.3, 
-                         minus_up = NULL, grid_labels = c("time", "ampl"), 
+plotERParray <- function(dat, xdim = "time", sepdim = "chan",  
+                         gfp_plot = if (sepdim == "chan") TRUE else FALSE, 
+                         gfp_col = "black", gfp_lwd = 1.3, 
+                         minus_up = if (gfp_plot) FALSE else TRUE,
+                         title = "", subtitle_col = "black",
+                         xlab = xdim, ylab = "amplitude", 
                          grid_dim = NULL, ...) {
     # helper function
     emptyplot <- function() {
@@ -53,44 +66,49 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
         dim(dat) <- c(dim(dat), 1L)
         dimnames(dat) <- c(dimnames(dat), list(""))
     }
-    subtitle.col <- rep(subtitle.col, length_out = dim(dat)[3])
+    subtitle_col <- rep(subtitle_col, length_out = dim(dat)[3])
     if (gfp_plot) gfpdat <- compGfp(dat)
-    suppressWarnings(x <- as.numeric(as.character(dimnames(dat)[[1]])))
-    if (anyNA(x)) x <- seq_along(x)
+    suppressWarnings(x <- as.numeric(dimnames(dat)[[1]]))
+    if (anyNA(x)) {
+        x <- seq_along(x)
+        setattr(x, "type", "char")
+    } else {
+        setattr(x, "type", "num")
+    }
     xrange <- if (is.null(plot_args$xlim)) range(x) else plot_args$xlim 
     if (is.null(plot_args$ylim)) {
         yr <- range(dat)
         yrange <- mean(yr) + c(-1, 1)*(yr[2]-mean(yr))*1.02
-        if (is.null(minus_up)) {
-            minus_up <- if (!gfp_plot) TRUE else FALSE
-        }
         if (minus_up) yrange <- -yrange
     } else {
         yrange <- plot_args$ylim
     } 
     if (is.null(grid_dim)) grid_dim = rep(ceiling(sqrt(dim(dat)[3L])), 2L)
-    layoutmat <- cbind(
-        c(0, rep(2, grid_dim[1]), 0, 0),
+    layoutmat <- matrix(0, grid_dim[1] + 2, grid_dim[2] + 2)
+    layoutmat[-nrow(layoutmat), -c(1, ncol(layoutmat))] <- 
         rbind(rep(1, grid_dim[2]),
-              matrix(1:prod(grid_dim), grid_dim[1], grid_dim[2], TRUE) + 3,
-              rep(0, grid_dim[2]),
-              rep(3, grid_dim[2])),
-        c(rep(0, grid_dim[1] + 3)))
-    layout(layoutmat, widths = c(0.3, rep(1, grid_dim[2]), 0.3),
-           heights = c(0.3, rep(1, grid_dim[1]), 0.3, 0.3))
+              matrix(1:prod(grid_dim), 
+                     grid_dim[1], grid_dim[2], TRUE) + 1L)
+    layout(layoutmat, 
+           widths = c(0.1, rep(1, grid_dim[2]), 0.2),
+           heights = c(0.2, rep(1, grid_dim[1]), 0.4))
     par(mar = rep(0, 4))
     emptyplot(); text(0, 0, title, cex = 1.5)
-    emptyplot(); text(0, 0, grid_labels[2], cex = 1.3, srt = 90)
-    emptyplot(); text(0, 0, grid_labels[1], cex = 1.3)
     par(mar = c(0, 0, 2, 0))
     for (i in 1:dim(dat)[3L]) {
         matplot(x, dat[,,i], xlim = xrange, ylim = yrange, yaxs = "i",  
                 axes = FALSE, frame.plot = TRUE, type = "n")
         grid()
-        mtext(dimnames(dat)[[3L]][i], 3, cex = 0.7, col = subtitle.col[i])
+        mtext(dimnames(dat)[[3L]][i], 3, cex = 0.7, col = subtitle_col[i])
         matlines(x, dat[,,i], axes = FALSE, ...)
         if (i == max(dim(dat)[3L])) {
-            axis(1, at = x, labels = dimnames(dat)[[1L]])
+            mtext(xlab, 1, 3)
+            mtext(ylab, 4, 3)
+            if (attr(x, "type") == "char") {
+                axis(1, at = x, labels = dimnames(dat)[[1]])
+            } else {
+                axis(1)
+            }
             axis(4)
         }
         if (gfp_plot) lines(x, gfpdat[, i], col = gfp_col, lwd = gfp_lwd)
@@ -106,11 +124,19 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
 #' @param ch_pos a data.frame with the channel coordinates
 #' @param r a numeric value; the radius of the head (not used if ch_pos contains
 #' a column \code{r})
-#' @param timepoint an integer value
+#' @param timepoint an integer value representing the time point at which the 
+#' amplitude values were recorded. This is used as the title of the topoplot if 
+#' the 'title' argument is not provided, and for highlighting the time point on
+#' the GFP curve if 'gfp' data are provided (with proper names or dimnames 
+#' attribute).
 #' @param ampl_range numeric vector, the minimum and maximum value of the 
 #' amplitudes (default: c(-5, 5))
-#' @param resol integer value, the resolution of the projection (default: 100L)
-#' @param resolcol integer value, the resolution of the colours (default: 1000L)
+#' @param type the type of the topoplot, either "contour" (the default) or 
+#' "raster". The latter is faster for very high resolution topoplots.
+#' @param resol integer value, the resolution of the projection locations for
+#' each axis (default: 30L) 
+#' @param resolcol integer value, the number of levels for colouring (default: 
+#' 101L)
 #' @param projection character value (default = "laea"). See 
 #' \url{http://www.remotesensing.org/geotiff/proj_list/} for common projections
 #' @param projref projection reference (pole [default] or equator)
@@ -148,8 +174,8 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
 #' plot2dview(subsetArray(plotdat, list(time = "200")),
 #'            chan_pos, timepoint = 200, gfp = gfpdat)
 plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL, 
-                       ampl_range = NULL, 
-                       resol = 100L, resolcol = 1000L,
+                       ampl_range = NULL, type = c("contour", "raster"),
+                       resol = 30L, resolcol = 101L, 
                        projection = "laea", projref = c("pole", "equator"),
                        origo = c(lat = ifelse(projref == "pole", 90, 0),
                                  long = ifelse(projref == "pole", 270, 0)),
@@ -161,7 +187,10 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
                        color_scale = function(n) gplots::colorpanel(n, "blue", "white", "red"), 
                        ...) {
     #
+    type <- match.arg(type)
+    projref <- match.arg(projref)
     colors <- do.call(match.fun(color_scale), list(resolcol))
+    #
     ch_pos <- as.data.frame(ch_pos)
     if (all(c("x", "y", "z") %in% colnames(ch_pos))) {
         ch_pos <- ch_pos[, c("x", "y", "z")]
@@ -194,8 +223,6 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
     } else {
         centroid_circle <- NA
     }
-    #
-    projref <- match.arg(projref)
     #
     boundarypos <- 
         if (projref == "pole") {
@@ -244,30 +271,33 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
     gridy <- seq(min(boundarypos$y), max(boundarypos$y), length.out = resol)
     gridpos <- expand.grid(x = gridx, y = gridy)
     ind <- in.polygon(gridpos$x, gridpos$y, 
-                      boundarypos$x * 1.1, boundarypos$y * 1.1)
+                      boundarypos$x*1.1, boundarypos$y*1.1)
     gridgeo <- project3dMap(gridpos[ind,], projection = projection, 
                             projref = projref, origo = origo, inverse = TRUE)
     gridcart <- geo2cart(gridgeo)
     z <- matrix_(NA_real_, resol, resol)
-    z[ind] <- chanInterp(dat, ch_pos, gridcart, ...)
-    if (is.null(ampl_range)) ampl_range <- range(z, na.rm = TRUE)
-    z[z > ampl_range[2]] <- ampl_range[2]
-    z[z < ampl_range[1]] <- ampl_range[1]
+    z_ind <- chanInterp(dat, ch_pos, gridcart, ...)
+    if (is.null(ampl_range)) ampl_range <- range(z_ind, na.rm = TRUE)
+    z_ind[z_ind > ampl_range[2]] <- ampl_range[2]
+    z_ind[z_ind < ampl_range[1]] <- ampl_range[1]
+    z[ind] <- z_ind
+    rm(z_ind)
     par(mar = rep(0, 4))
-    image(gridx, gridy, z, useRaster = TRUE, col = colors,
-          xlim = xlim, ylim = ylim,
-          zlim = ampl_range, xlab = "", ylab = "", axes = FALSE)
-    gridx <- seq(min(boundarypos$x), max(boundarypos$x), 
-                 length.out = 1000) * 1.1
-    gridy <- seq(min(boundarypos$y), max(boundarypos$y), 
-                 length.out = 1000) * 1.1
-    gridpos <- expand.grid(x = gridx, y = gridy)
-    ind <- !in.polygon(gridpos$x, gridpos$y, 
-                       boundarypos$x*1, boundarypos$y*1)
-    z <- matrix_(NA_integer_, 1000, 1000)
-    z[ind] <- 1L
-    image(gridx, gridy, z, useRaster = TRUE, col = "white", add = TRUE)
-    lines(boundarypos, col = "white", lwd = 1)
+    plot.new()
+    plot.window(xlim = xlim, ylim = ylim, xaxs = "i", yaxs = "i")
+    if (type == "contour") {
+        .filled.contour(
+            gridx, gridy, z, 
+            levels = seq(ampl_range[1], ampl_range[2], length.out = resolcol + 1L), 
+            col = colors)
+    } else {
+        image(gridx, gridy, z, useRaster = TRUE, col = colors,
+              xlim = xlim, ylim = ylim,
+              zlim = ampl_range, xlab = "", ylab = "", axes = FALSE, add = TRUE)
+    }
+    polypath(c(xlim, rev(xlim), xlim[1], NA_real_, boundarypos$x),
+             c(rep(ylim, each = 2L), ylim[1], NA_real_, boundarypos$y),
+             border = NA, col = "white", rule = "evenodd")
     #
     if (plot_ch) {
         ch_pos_xy <- project3dMap(ch_pos)
@@ -324,9 +354,9 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
         lines(gfp.x, gfp, col = "white")
         smpl <- 
             if (is.null(names(gfp))) {
-                which(as.numeric(dimnames(gfp)[[1]]) == timepoint)
+                which(as.integer(dimnames(gfp)[[1]]) == timepoint)
             } else {
-                which(as.numeric(names(gfp)) == timepoint)
+                which(as.integer(names(gfp)) == timepoint)
             }
         if (length(smpl) == 1) {
             points(gfp.x[smpl], gfp[smpl], pch = 16, col = "red", cex = 1.1)
@@ -402,8 +432,7 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
 #'                     list(time = as.character(timepoint)))
 #' complexplot2dview(plotdat,
 #'                   chan_pos, timepoint, 
-#'                   gfp = gfpdat, plot_ch = FALSE, 
-#'                   resol = 50L, resolcol = 50L)
+#'                   gfp = gfpdat, plot_ch = FALSE)
 #
 complexplot2dview <- function(dat, ch_pos, timepoint, 
                               datgrid = NULL, layout_matrix = NULL, 

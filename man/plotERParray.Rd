@@ -4,45 +4,58 @@
 \alias{plotERParray}
 \title{Plot ERP curves}
 \usage{
-plotERParray(dat, xdim = "time", sepdim = "chan", title = "",
-  subtitle.col = "black", gfp_plot = TRUE, gfp_col = "black",
-  gfp_lwd = 1.3, minus_up = NULL, grid_labels = c("time", "ampl"),
-  grid_dim = NULL, ...)
+plotERParray(dat, xdim = "time", sepdim = "chan", gfp_plot = if (sepdim ==
+  "chan") TRUE else FALSE, gfp_col = "black", gfp_lwd = 1.3, minus_up = if
+  (gfp_plot) FALSE else TRUE, title = "", subtitle_col = "black",
+  xlab = xdim, ylab = "amplitude", grid_dim = NULL, ...)
 }
 \arguments{
 \item{dat}{a numeric array with named dimensions}
 
-\item{xdim}{character value; the name of the dimension of dat which defines
+\item{xdim}{character string; the name of the dimension of dat which defines
 the x axis (default: "time")}
 
-\item{sepdim}{character value; the name of the dimension of dat which
+\item{sepdim}{character string; the name of the dimension of dat which
 separates the lines (default: "chan")}
 
-\item{title}{character value; the title of the plot}
-
-\item{subtitle.col}{the colour of the subtitles}
-
-\item{gfp_plot}{logical value; if TRUE (default), the GFP curves are also
-plotted}
+\item{gfp_plot}{logical value whether GFP curves should be also plotted
+(only if 'sepdim' is "chan")}
 
 \item{gfp_col}{the colour of the GFP curves (if plotted)}
 
 \item{gfp_lwd}{the thickness of the GFP curves (if plotted)}
 
 \item{minus_up}{logical value; if set to TRUE, minus values are plotted
-upwards. If set to FALSE, minus values are plotted downwards. If NULL
-(default), it is set to TRUE or FALSE depending on the gfp_plot parameter.
-NULL}
+upwards. If FALSE, minus values are plotted downwards. By default, it
+is set to TRUE or FALSE depending on the 'gfp_plot' argument.}
 
-\item{grid_labels}{character vector; the name of the x and y axes}
+\item{title}{character string; the title of the plot}
+
+\item{subtitle_col}{colour(s) of the subtitles (recycled if necessary)}
 
 \item{grid_dim}{integer vector giving the number of rows and columns
 in which the plots are arranged; if set to NULL (default), the arrangement
 of the plot is set up automatically}
 
-\item{...}{additional parameters to be passed to \code{matlines}}
+\item{...}{additional parameters to be passed to \code{\link{matlines}}}
+
+\item{grid_labels}{character vector; the name of the x and y axes}
 }
 \description{
-\code{plotERParray} is a generalization of \code{matplot} onto array inputs.
+\code{plotERParray} is a generalization of \code{\link{matplot}} onto array
+inputs.
+}
+\examples{
+# example data
+data(erps)
+
+# compute grand averages
+plotdat <- avgDims(erps, "id")
+
+# plot the channels in light grey, draw only solid lines
+plotERParray(plotdat, col = "grey70", lty = 1)
+}
+\seealso{
+\code{\link{matlines}}
 }
 

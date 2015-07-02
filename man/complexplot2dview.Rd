@@ -61,8 +61,7 @@ plotdat[] <- lapply(plotdat, subsetArray,
                     list(time = as.character(timepoint)))
 complexplot2dview(plotdat,
                   chan_pos, timepoint,
-                  gfp = gfpdat, plot_ch = FALSE,
-                  resol = 50L, resolcol = 50L)
+                  gfp = gfpdat, plot_ch = FALSE)
 }
 \seealso{
 \code{\link{plot2dview}}

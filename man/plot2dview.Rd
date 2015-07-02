@@ -5,13 +5,14 @@
 \title{Plot the topography of the signals}
 \usage{
 plot2dview(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = NULL,
-  resol = 100L, resolcol = 1000L, projection = "laea",
-  projref = c("pole", "equator"), origo = c(lat = ifelse(projref == "pole",
-  90, 0), long = ifelse(projref == "pole", 270, 0)), plot_centroid = TRUE,
-  centroid_circle = 0.5, centroid_unitsphere = FALSE, plot_bar = TRUE,
-  plot_ch = TRUE, plot_chnames = TRUE, title = NULL, gfp = NULL,
-  gfp_max = NULL, color_scale = function(n) gplots::colorpanel(n, "blue",
-  "white", "red"), ...)
+  type = c("contour", "raster"), resol = 30L, resolcol = 101L,
+  projection = "laea", projref = c("pole", "equator"), origo = c(lat =
+  ifelse(projref == "pole", 90, 0), long = ifelse(projref == "pole", 270, 0)),
+  plot_centroid = TRUE, centroid_circle = 0.5,
+  centroid_unitsphere = FALSE, plot_bar = TRUE, plot_ch = TRUE,
+  plot_chnames = TRUE, title = NULL, gfp = NULL, gfp_max = NULL,
+  color_scale = function(n) gplots::colorpanel(n, "blue", "white", "red"),
+  ...)
 }
 \arguments{
 \item{dat}{a numeric vector or matrix. If a matrix is provided, it must
@@ -22,14 +23,23 @@ contain the participants in rows and the channels in columns}
 \item{r}{a numeric value; the radius of the head (not used if ch_pos contains
 a column \code{r})}
 
-\item{timepoint}{an integer value}
+\item{timepoint}{an integer value representing the time point at which the
+amplitude values were recorded. This is used as the title of the topoplot if
+the 'title' argument is not provided, and for highlighting the time point on
+the GFP curve if 'gfp' data are provided (with proper names or dimnames
+attribute).}
 
 \item{ampl_range}{numeric vector, the minimum and maximum value of the
 amplitudes (default: c(-5, 5))}
 
-\item{resol}{integer value, the resolution of the projection (default: 100L)}
+\item{type}{the type of the topoplot, either "contour" (the default) or
+"raster". The latter is faster for very high resolution topoplots.}
 
-\item{resolcol}{integer value, the resolution of the colours (default: 1000L)}
+\item{resol}{integer value, the resolution of the projection locations for
+each axis (default: 30L)}
+
+\item{resolcol}{integer value, the number of levels for colouring (default:
+101L)}
 
 \item{projection}{character value (default = "laea"). See
 \url{http://www.remotesensing.org/geotiff/proj_list/} for common projections}
