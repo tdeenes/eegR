@@ -130,13 +130,11 @@ tfceParams <- function(ChN = NULL, EH = NULL, auto = TRUE, steps = 50L) {
 #'     #
 #'     # parallel argument can be a logical or a direct call to parallelParams
 #'     # or a .(key = value)-type call
-#'     args <- as.list(match.call()[-1])
-#'     parallel <- argumentDeparser(args$parallel, "parallelParams", 
+#'     parallel <- argumentDeparser(substitute(parallel), "parallelParams", 
 #'                                  null_params = list(ncores = 0L))
 #'     #
 #'     # stop cluster on exit if it was created by parallelParams
 #'     ob <- getDoBackend()
-#'     parallel <- argumentDeparser(args$parallel, "parallelParams")
 #'     if (is.logical(parallel) && !parallel) {
 #'         registerDoSEQ()
 #'     } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {

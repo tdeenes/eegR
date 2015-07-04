@@ -218,9 +218,11 @@ do <- function(what, ..., arg_list = list()) {
 #' function arguments to the appropriate function
 #' @param arg an unevaluated call, see Details
 #' @param replace_dot a character string which defines the function to which
-#' \code{arg} should be passed to
+#' \code{arg} should be passed to. If not provided, the name of \code{arg} is
+#' guessed using \code{deparse} and \code{substitute}, and "Params" is attached
+#' to call the corresponding parameter setter function.
 #' @param transform_true logical; if TRUE (default), a single logical 
-#' \code{arg} argument is treated specially (see Details)
+#' \code{arg} argument is treated in a special way (see Details)
 #' @param null_params a list of parameters which is passed to the parameter
 #' setter function (see 'replace_dot') if \code{argumentDeparser} would return
 #' NULL
@@ -236,24 +238,34 @@ do <- function(what, ..., arg_list = list()) {
 #' mymethodParams <- function(x = 3, y = 4) {
 #'     list(x = x, y = y)
 #' }
-#' tempfn <- function(my_method = NULL) {
-#'     args <- as.list(match.call()[-1])
-#'     argumentDeparser(args$my_method, "mymethodParams")
+#' tempfn <- function(mymethod = NULL) {
+#'     argumentDeparser(substitute(mymethod), "mymethodParams")
 #' }
 #' stopifnot(is.null(tempfn()))
-#' stopifnot(identical(FALSE, tempfn(my_method = FALSE)))
-#' stopifnot(identical(tempfn(my_method = TRUE),
-#'                     tempfn(my_method = mymethodParams())))
+#' stopifnot(identical(FALSE, tempfn(mymethod = FALSE)))
+#' stopifnot(identical(tempfn(mymethod = TRUE),
+#'                     tempfn(mymethod = mymethodParams())))
 #' new_y = 1:5
-#' stopifnot(identical(tempfn(my_method = .(y = new_y)),
-#'                     tempfn(my_method = mymethodParams(y = new_y))))
-argumentDeparser <- function(arg, replace_dot, transform_true = TRUE,
+#' stopifnot(identical(tempfn(mymethod = .(y = new_y)),
+#'                     tempfn(mymethod = mymethodParams(y = new_y))))
+argumentDeparser <- function(arg, replace_dot, 
+                             transform_true = TRUE,
                              null_params = NULL) {
-    txt <- sub("^\\.\\(", paste0(replace_dot, "("), deparse(arg))
-    out <- eval(parse(text = txt), parent.frame())
-    if (transform_true && !is.null(out) && is.logical(out) && out) {
-        out <- eval.parent(parse(text = paste0(replace_dot, "()")))
+    if (missing(replace_dot)) {
+        argname <- deparse(substitute(replace_dot))
+        if (is.null(argname)) 
+            stop("Provide the 'replace_dot' argument, its name could not be figured out automagically")
+        replace_dot <- paste0(argname, "Params")
     }
+    out <- 
+        if (transform_true && identical(arg, TRUE)) {
+            do.call(replace_dot, list())
+        } else {
+            if (identical(arg[[1L]], as.name("."))) {
+                arg[[1L]] <- as.name(replace_dot)
+            }
+            eval(arg, parent.frame())
+        }
     if (is.null(out) && !is.null(null_params)) {
         assertList(null_params, .var.name = "null_params")
         out <- do.call(replace_dot, null_params)

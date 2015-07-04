@@ -33,13 +33,16 @@ is set to TRUE or FALSE depending on the 'gfp_plot' argument.}
 
 \item{subtitle_col}{colour(s) of the subtitles (recycled if necessary)}
 
+\item{xlab}{character string; the title of the x axis (defaults to the
+'xdim' argument)}
+
+\item{ylab}{character string; the title of the y axis (default: "amplitude")}
+
 \item{grid_dim}{integer vector giving the number of rows and columns
 in which the plots are arranged; if set to NULL (default), the arrangement
 of the plot is set up automatically}
 
 \item{...}{additional parameters to be passed to \code{\link{matlines}}}
-
-\item{grid_labels}{character vector; the name of the x and y axes}
 }
 \description{
 \code{plotERParray} is a generalization of \code{\link{matplot}} onto array

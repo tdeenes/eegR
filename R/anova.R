@@ -860,10 +860,9 @@ arrayAnova <- function(.arraydat, factordef, bwdat = NULL, verbose = TRUE,
                        seed = NULL) {
     # deparse tfce and parallel
     mcall <- match.call() 
-    args <- as.list(mcall[-1])
-    tfce <- argumentDeparser(args$tfce, "tfceParams")
+    tfce <- argumentDeparser(substitute(tfce), "tfceParams")
     ob <- getDoBackend()
-    parallel <- argumentDeparser(args$parallel, "parallelParams")
+    parallel <- argumentDeparser(substitute(parallel), "parallelParams")
     if (is.logical(parallel) && !parallel) {
         registerDoSEQ()
     } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {

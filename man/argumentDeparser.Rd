@@ -11,10 +11,12 @@ argumentDeparser(arg, replace_dot, transform_true = TRUE,
 \item{arg}{an unevaluated call, see Details}
 
 \item{replace_dot}{a character string which defines the function to which
-\code{arg} should be passed to}
+\code{arg} should be passed to. If not provided, the name of \code{arg} is
+guessed using \code{deparse} and \code{substitute}, and "Params" is attached
+to call the corresponding parameter setter function.}
 
 \item{transform_true}{logical; if TRUE (default), a single logical
-\code{arg} argument is treated specially (see Details)}
+\code{arg} argument is treated in a special way (see Details)}
 
 \item{null_params}{a list of parameters which is passed to the parameter
 setter function (see 'replace_dot') if \code{argumentDeparser} would return
@@ -36,17 +38,16 @@ thereby it returns the default parameter setting.
 mymethodParams <- function(x = 3, y = 4) {
     list(x = x, y = y)
 }
-tempfn <- function(my_method = NULL) {
-    args <- as.list(match.call()[-1])
-    argumentDeparser(args$my_method, "mymethodParams")
+tempfn <- function(mymethod = NULL) {
+    argumentDeparser(substitute(mymethod), "mymethodParams")
 }
 stopifnot(is.null(tempfn()))
-stopifnot(identical(FALSE, tempfn(my_method = FALSE)))
-stopifnot(identical(tempfn(my_method = TRUE),
-                    tempfn(my_method = mymethodParams())))
+stopifnot(identical(FALSE, tempfn(mymethod = FALSE)))
+stopifnot(identical(tempfn(mymethod = TRUE),
+                    tempfn(mymethod = mymethodParams())))
 new_y = 1:5
-stopifnot(identical(tempfn(my_method = .(y = new_y)),
-                    tempfn(my_method = mymethodParams(y = new_y))))
+stopifnot(identical(tempfn(mymethod = .(y = new_y)),
+                    tempfn(mymethod = mymethodParams(y = new_y))))
 }
 \keyword{internal}
 

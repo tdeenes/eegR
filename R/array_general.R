@@ -253,9 +253,8 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
         }    
     }
     # parallel setting
-    args <- as.list(match.call()[-1])
     ob <- getDoBackend()
-    parallel <- argumentDeparser(args$parallel, "parallelParams")
+    parallel <- argumentDeparser(substitute(parallel), "parallelParams")
     if (is.logical(parallel) && !parallel) {
         registerDoSEQ()
     } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {
