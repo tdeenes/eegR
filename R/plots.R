@@ -20,7 +20,9 @@
 #' is set to TRUE or FALSE depending on the 'gfp_plot' argument. 
 #' @param title character string; the title of the plot
 #' @param subtitle_col colour(s) of the subtitles (recycled if necessary)
-#' @param grid_labels character vector; the name of the x and y axes
+#' @param xlab character string; the title of the x axis (defaults to the 
+#' 'xdim' argument)
+#' @param ylab character string; the title of the y axis (default: "amplitude")
 #' @param grid_dim integer vector giving the number of rows and columns
 #' in which the plots are arranged; if set to NULL (default), the arrangement 
 #' of the plot is set up automatically
