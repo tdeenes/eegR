@@ -127,6 +127,7 @@ tfceParams <- function(ChN = NULL, EH = NULL, auto = TRUE, steps = 50L) {
 #' rangeColumns <- function(x, parallel = FALSE) {
 #'     # 
 #'     stopifnot(require(doParallel))
+#'     ob <- getDoBackend() # store active backend
 #'     #
 #'     # parallel argument can be a logical or a direct call to parallelParams
 #'     # or a .(key = value)-type call
@@ -134,10 +135,7 @@ tfceParams <- function(ChN = NULL, EH = NULL, auto = TRUE, steps = 50L) {
 #'                                  null_params = list(ncores = 0L))
 #'     #
 #'     # stop cluster on exit if it was created by parallelParams
-#'     ob <- getDoBackend()
-#'     if (is.logical(parallel) && !parallel) {
-#'         registerDoSEQ()
-#'     } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {
+#'     if (parallel$cl_new) {
 #'         on.exit(stopCluster(parallel$cl))
 #'     }
 #'     on.exit(setDoBackend(ob), add = TRUE)
@@ -168,7 +166,7 @@ tfceParams <- function(ChN = NULL, EH = NULL, auto = TRUE, steps = 50L) {
 #'                     unname(ranges_single)))
 #' 
 parallelParams <- function(cl = NULL, method = c("auto", "snow", "multicore"),
-                           ncores = parallel::detectCores()-1, ...) {
+                           ncores = parallel::detectCores()-1L, ...) {
     method <- match.arg(method)
     opts <- list(...)
     if (length(opts) == 0L) opts <- NULL
@@ -193,4 +191,22 @@ parallelParams <- function(cl = NULL, method = c("auto", "snow", "multicore"),
     # return
     list(cl = cl, cl_new = cl_new, 
          snow_options = snow_options, mc_options = mc_options)
+}
+
+
+#' Setting the parameters for parallel computation
+#' 
+#' \code{permParams} sets the parameters for permutations (randomizations)
+#' used for example in \code{arrayAnova} or \code{tanova}.
+#' @param n integer number of randomization runs
+#' @param type character string which defines if model residuals ("residuals",
+#' the default), or the raw observations ("observations") should be permuted
+#' @export
+#' @return \code{parallelParams} returns a list with two elements corresponding
+#' to the arguments ('n' and 'type')
+#' 
+permParams <- function(n = 999L, type = c("residuals", "observations")) {
+    assertIntegerish(n, len = 1L, any.missing = FALSE, .var.name = "n")
+    type <- match.arg(type)
+    list(n = n, type = type)
 }

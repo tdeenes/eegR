@@ -4,8 +4,8 @@
 \alias{arrayAnova}
 \title{Perform ANOVA (potentially with TFCE correction) on arrays}
 \usage{
-arrayAnova(.arraydat, factordef, bwdat = NULL, verbose = TRUE, nperm = 0L,
-  tfce = NULL, parallel = NULL, seed = NULL)
+arrayAnova(.arraydat, factordef, bwdat = NULL, verbose = TRUE,
+  perm = NULL, tfce = NULL, parallel = NULL, seed = NULL)
 }
 \arguments{
 \item{.arraydat}{a numeric array with named dimnames containing the EEG (or
@@ -29,8 +29,14 @@ variables (default: NULL). Only used for effect-size calculations.}
 \item{verbose}{logical value indicating if p-values and effect sizes should
 be computed for the traditional ANOVA results}
 
-\item{nperm}{integer value giving the number of permutations (default: 0L) to
-compute permuted p-values. If \code{nperm < 2}, no permutation is performed.}
+\item{perm}{either 1) NULL (the default) or FALSE (the same as NULL),
+both of which mean no permutation, or 2) TRUE, which means
+permutation with default parameters, or 3) an object as returned by
+\code{\link{permParams}} with custom parameters (see Examples and also
+\code{\link{permParams}}).\cr
+Custom parameters can be also provided by \code{perm = .(key = value)} to
+save typing (this works by calling \code{\link{permParams}} with the
+given parameters).}
 
 \item{tfce}{either 1) NULL (the default) or FALSE (the same as NULL), both of
 which mean no TFCE correction, or 2) TRUE, which means TFCE correction with
@@ -184,7 +190,7 @@ ChN <- chanNb(chan_pos, alpha = 0.7)
 
 # now analyze the data by collapsing the pairtypes, and apply TFCE correction
 # (note: this will take a couple of seconds); use more randomization
-# runs (nperm should be several thousand) in serious analyses
+# runs (n should be several thousand instead of 499L) in serious analyses
 tempdat <- avgDims(tempdat, "pairtype")
 result_tfce <- arrayAnova(tempdat,
                           list(between = "group",
@@ -192,7 +198,7 @@ result_tfce <- arrayAnova(tempdat,
                                w_id = "id",
                                observed = "group"),
                           bwdat = dat_id,
-                          nperm = 499L,
+                          perm = .(n = 499L),
                           tfce = .(ChN = ChN),
                           parallel = .(ncores = 2))
 

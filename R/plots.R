@@ -936,6 +936,13 @@ plotTanova <- function(results,
             hpvals[ind] <- pcrit[i] 
         }
     }
+    shiftEdges <- function(x) {
+        dx <- diff(x)
+        dx[dx < 0] <- 0
+        x[-nrow(x), ] <- x[-nrow(x), ] + dx
+        x
+    }
+    hpvals <- fnDims(hpvals, "time", shiftEdges, vectorized = TRUE)
     dat$pcrit <- factor(hpvals, 
                         levels = as.character(pcrit), 
                         labels = c(as.character(pcrit[-length(pcrit)]), 
@@ -947,12 +954,14 @@ plotTanova <- function(results,
     legendtitle <- "p-value"
     #
     if (only_p) {
+        scales = "fixed"
         qp <- ggplot(dat[order(dat$time),], 
                      aes_string(x = "time", y = "pvalue", col = "pcrit", 
                                 group = NA)) + 
             geom_hline(yintercept = -log(pcrit), lty = 3) + 
             ylab("-log(P-value)")
     } else {
+        scales = "free_y"
         qp <- ggplot(dat[order(dat$time),], 
                      aes_string(x = "time", y = "effect", col = "pcrit", 
                                 group = NA)) + 
@@ -968,10 +977,10 @@ plotTanova <- function(results,
         if (length(griddims) > 0) {
             if (length(griddims) > 1) {
                 grid <- paste(griddims, collapse = "~")  
-                qp <- qp + facet_grid( as.formula(grid) )
+                qp <- qp + facet_grid( as.formula(grid), scales = scales )
             } else {
                 grid <- paste0("~", griddims)
-                qp <- qp + facet_wrap( as.formula(grid) )
+                qp <- qp + facet_wrap( as.formula(grid), scales = scales )
             }
         }
     }

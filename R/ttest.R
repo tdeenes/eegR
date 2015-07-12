@@ -530,13 +530,13 @@ arrayTtest <- function(.arraydat, .arraydat2 = NULL, paired = FALSE,
                        verbose = TRUE, nperm = 0L, tfce = NULL, parallel = NULL, 
                        seed = NULL) {
     # deparse tfce and parallel
-    mcall <- match.call() 
+    mcall <- match.call()
+    perm <- permParams(n = nperm)
     tfce <- argumentDeparser(substitute(tfce), "tfceParams")
     ob <- getDoBackend()
-    parallel <- argumentDeparser(substitute(parallel), "parallelParams")
-    if (is.logical(parallel) && !parallel) {
-        registerDoSEQ()
-    } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {
+    parallel <- argumentDeparser(substitute(parallel), "parallelParams",
+                                 null_params = list(ncores = 0L))
+    if (parallel$cl_new) {
         on.exit(stopCluster(parallel$cl))
     }
     on.exit(setDoBackend(ob), add = TRUE)
@@ -546,7 +546,7 @@ arrayTtest <- function(.arraydat, .arraydat2 = NULL, paired = FALSE,
         "T_TEST", .arraydat, .arraydat2,
         paired = paired, groups = groups, 
         mu = mu, var_equal = var_equal, id_dim = id_dim, 
-        verbose = verbose, nperm = nperm, 
+        verbose = verbose, perm = perm, 
         tfce = tfce, parallel = parallel, seed = seed)
     #
     # replace call to the original

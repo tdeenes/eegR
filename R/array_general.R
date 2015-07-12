@@ -254,10 +254,9 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
     }
     # parallel setting
     ob <- getDoBackend()
-    parallel <- argumentDeparser(substitute(parallel), "parallelParams")
-    if (is.logical(parallel) && !parallel) {
-        registerDoSEQ()
-    } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {
+    parallel <- argumentDeparser(substitute(parallel), "parallelParams",
+                                 null_params = list(ncores = 0L))
+    if (parallel$cl_new) {
         on.exit(stopCluster(parallel$cl))
     }
     on.exit(setDoBackend(ob), add = TRUE)

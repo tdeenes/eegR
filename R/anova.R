@@ -182,8 +182,14 @@ preSumSq <- function(form, form_data,
     term_factors <- attr(term_object, "factors")
     vars <- rownames(term_factors)
     if (!scaled) {
-        form_data[vars] <- lapply(form_data[vars], function(x)
-            if (is.numeric(x)) scale(x) else x)
+        scfn <- function(x) {
+            if (is.numeric(x) && is.null(attr(x, "scaled:scale"))) {
+                scale(x) 
+            } else {
+                x
+            }
+        }
+        form_data[vars] <- lapply(form_data[vars], scfn)
     }
     mm <- model.matrix(term_object, data = form_data)
     # check orthogonality
@@ -674,8 +680,14 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #' 'factordef$between'. Missing values are not allowed.
 #' @param verbose logical value indicating if p-values and effect sizes should 
 #' be computed for the traditional ANOVA results
-#' @param nperm integer value giving the number of permutations (default: 0L) to
-#' compute permuted p-values. If \code{nperm < 2}, no permutation is performed.
+#' @param perm either 1) NULL (the default) or FALSE (the same as NULL), 
+#' both of which mean no permutation, or 2) TRUE, which means 
+#' permutation with default parameters, or 3) an object as returned by 
+#' \code{\link{permParams}} with custom parameters (see Examples and also 
+#' \code{\link{permParams}}).\cr 
+#' Custom parameters can be also provided by \code{perm = .(key = value)} to 
+#' save typing (this works by calling \code{\link{permParams}} with the 
+#' given parameters).
 #' @param tfce either 1) NULL (the default) or FALSE (the same as NULL), both of 
 #' which mean no TFCE correction, or 2) TRUE, which means TFCE correction with 
 #' default parameters, or 3) an object as returned by \code{\link{tfceParams}} 
@@ -830,7 +842,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #' 
 #' # now analyze the data by collapsing the pairtypes, and apply TFCE correction 
 #' # (note: this will take a couple of seconds); use more randomization 
-#' # runs (nperm should be several thousand) in serious analyses
+#' # runs (n should be several thousand instead of 499L) in serious analyses
 #' tempdat <- avgDims(tempdat, "pairtype")
 #' result_tfce <- arrayAnova(tempdat, 
 #'                           list(between = "group",
@@ -838,7 +850,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #'                                w_id = "id",
 #'                                observed = "group"),
 #'                           bwdat = dat_id,
-#'                           nperm = 499L, 
+#'                           perm = .(n = 499L), 
 #'                           tfce = .(ChN = ChN),
 #'                           parallel = .(ncores = 2))
 #' 
@@ -856,16 +868,17 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #' imagePvalues(p_all, pcrit = c(0.01, 0.05, 0.1))
 #'
 arrayAnova <- function(.arraydat, factordef, bwdat = NULL, verbose = TRUE, 
-                       nperm = 0L, tfce = NULL, parallel = NULL, 
+                       perm = NULL, tfce = NULL, parallel = NULL, 
                        seed = NULL) {
     # deparse tfce and parallel
     mcall <- match.call() 
+    perm <- argumentDeparser(substitute(perm), "permParams",
+                             null_params = list(n = 0L))
     tfce <- argumentDeparser(substitute(tfce), "tfceParams")
     ob <- getDoBackend()
-    parallel <- argumentDeparser(substitute(parallel), "parallelParams")
-    if (is.logical(parallel) && !parallel) {
-        registerDoSEQ()
-    } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {
+    parallel <- argumentDeparser(substitute(parallel), "parallelParams",
+                                 null_params = list(ncores = 0L))
+    if (parallel$cl_new) {
         on.exit(stopCluster(parallel$cl))
     }
     on.exit(setDoBackend(ob), add = TRUE)
@@ -874,7 +887,7 @@ arrayAnova <- function(.arraydat, factordef, bwdat = NULL, verbose = TRUE,
     out <- arrayTtestAnova(
         "ANOVA", .arraydat, 
         factordef = factordef, bwdat = bwdat, verbose = verbose,
-        nperm = nperm, tfce = tfce, parallel = parallel, seed = seed)
+        perm = perm, tfce = tfce, parallel = parallel, seed = seed)
     #
     # replace call to the original
     out$call <- mcall
@@ -891,7 +904,7 @@ arrayTtestAnova <- function(test,
                             factordef = NULL, bwdat = NULL, 
                             paired = FALSE, groups = NULL, 
                             mu = 0, var_equal = FALSE, id_dim = "id", 
-                            verbose = TRUE, nperm = 0L, 
+                            verbose = TRUE, perm = permParams(n = 0L), 
                             tfce = NULL, parallel = NULL, seed = NULL) {
     # helper function for back-transform to original
     backFn <- function(x, obj) {
@@ -903,7 +916,7 @@ arrayTtestAnova <- function(test,
     x <- NULL; i <- NULL
     rm(x, i)
     # prepare arguments
-    nperm <- as.integer(nperm)
+    nperm <- as.integer(perm$n)
     use_tfce <- !is.null(tfce)
     #
     if (test == "ANOVA") {
@@ -1073,20 +1086,27 @@ extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
 #' permutation-based analyses.
 #' @param attribs a logical value if dimension attributes should be attached to 
 #' the resulting array (default: FALSE)
+#' @param extra_attribs a character vector of extra attributes which should be 
+#' attached to the resulting array (currently only "residuals" is supported).
+#' The attribute names can be abbreviated.
 #' @return This function returns a numeric matrix of effects if 'attribs' is 
 #' FALSE, and an array of effects if 'attribs' is TRUE.
 #' @keywords internal
-compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
+compTanovaEffect <- function(obj, new_indices = NULL, 
+                             attribs = FALSE, extra_attribs = character()) {
     model <- obj$pre_sumsq[[1]]
     mm <- model$model_matrix
+    y <- obj$.arraydat
     if (!is.null(new_indices)) {
-        mm <- mm[new_indices, ]
+        if (!is.null(obj$residuals)) {
+            y <- obj$residuals[new_indices,]
+        } else {
+            mm <- mm[new_indices, ]
+        }
     }
     mm_labels <- model$model_matrix_labels
     xpx <- model$xpx
     unc <- model$unique_contrasts
-    #
-    y <- obj$.arraydat
     #
     gfp <- !"chan" %in% obj$teststat_dimid
     #
@@ -1095,7 +1115,7 @@ compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
                    obj$full_dims["modelterm"])
     #
     coeff <- solve(xpx, crossprod(mm, y))
-    setattr(coeff, "dimnames", list(mm_labels, NULL)) 
+    setattr(coeff, "dimnames", list(mm_labels, NULL))
     if (gfp) {
         for (i in seq_along(unc)) {
             fmeans <- unc[[i]] %*% coeff[colnames(unc[[i]]), , drop = FALSE]
@@ -1108,10 +1128,17 @@ compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
             out[, i] <- colMeans(compGfp(fmeans, channel_dim = 2L))
         }
     }
-    if (attribs) {
+    if (attribs || length(extra_attribs) > 0L) {
         setattributes(out, obj, "Effect (generalized GFP)", outdimn)
         dimn <-  setNames(vector("list", length(outdimn)), outdimn)
         setattr(out, "dimnames", dimn)
+        if (length(extra_attribs) > 0L) {
+            extra_attribs <- match.arg(extra_attribs, c("residuals"))
+            if ("residuals" %in% extra_attribs) {
+                pred <- mm %*% coeff
+                setattr(out, "residuals", y - pred)
+            }
+        }
     }
     #
     out
@@ -1194,9 +1221,14 @@ compPvalueTanova <- function(effect_perm, pcrit, obj) {
 #' @param type a character value of "tanova" (default), "dissimilarity", or 
 #' "gfp"
 #' @param verbose logical value indicating if p-values should be computed
-#' @param nperm integer value giving the number of permutations (default: 999L) 
-#' to compute permuted p-values. If \code{nperm < 2}, no permutation is 
-#' performed.
+#' @param perm either 1) NULL or FALSE (the same as NULL), 
+#' both of which mean no permutation, or 2) TRUE, which means 
+#' permutation with default parameters (the default), or 3) an object as 
+#' returned by \code{\link{permParams}} with custom parameters (see Examples 
+#' and also \code{\link{permParams}}).\cr 
+#' Custom parameters can be also provided by \code{perm = .(key = value)} to 
+#' save typing (this works by calling \code{\link{permParams}} with the 
+#' given parameters).
 #' @param parallel either 1) NULL (the default) or FALSE (the same as NULL), 
 #' both of which mean single-core computation, or 2) TRUE, which means 
 #' parallelization with default parameters, or 3) an object as returned by 
@@ -1258,7 +1290,7 @@ compPvalueTanova <- function(effect_perm, pcrit, obj) {
 #' plotTanova(result_tanova, only_p = TRUE)
 tanova <- function(.arraydat, factordef, bwdat = NULL, 
                    type = c("tanova", "dissimilarity", "gfp"), 
-                   verbose = TRUE, nperm = 999L, parallel = NULL,
+                   verbose = TRUE, perm = TRUE, parallel = NULL,
                    seed = NULL, pcrit = 0.05) {
     # helper function for back-transform to original
     backFn <- function(x, obj) {
@@ -1271,22 +1303,21 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
     x <- i <- NULL
     rm(x, i)
     # some arguments must be pre-checked (e.g. deparse parallel)
-    assertIntegerish(nperm, len = 1L, any.missing = FALSE,
-                     .var.name = "nperm")
     type <- match.arg(type)
     mcall <- match.call() 
     ob <- getDoBackend()
-    parallel <- argumentDeparser(substitute(parallel), "parallelParams")
-    if (is.logical(parallel) && !parallel) {
-        registerDoSEQ()
-    } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {
+    perm <- argumentDeparser(substitute(perm), "permParams",
+                             null_params = list(n = 0L))
+    parallel <- argumentDeparser(substitute(parallel), "parallelParams",
+                                 null_params = list(ncores = 0L))
+    if (parallel$cl_new) {
         on.exit(stopCluster(parallel$cl))
     }
     on.exit(setDoBackend(ob), add = TRUE)
     #
     # prepare data
     input <- preAnova(.arraydat, factordef, bwdat, verbose,
-                      tfce = FALSE, perm = nperm > 1L,
+                      tfce = FALSE, perm = perm$n > 1L,
                       tanova_type = type)
     rm(.arraydat)
     #
@@ -1294,7 +1325,13 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
     out <- list(call = mcall)
     #
     # calculate effect
-    es_obs <- compTanovaEffect(input, attribs = TRUE)
+    if (perm$type == "residuals") {
+        es_obs <- compTanovaEffect(input, attribs = TRUE, extra_attribs = "r")
+        input$residuals <- attr(es_obs, "residuals")
+        setattr(es_obs, "residuals", NULL)
+    } else {
+        es_obs <- compTanovaEffect(input, attribs = TRUE)
+    }
 #     if (verbose) {
 #         factor_means <- marginalMeans(input$mean_formula, 
 #                                       input$dat, input$.arraydat, 
@@ -1303,11 +1340,11 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
 #                                       residualmean = FALSE)
 #         out$factor_means <- factor_means
 #     }
-    if (nperm > 1L) {
+    if (perm$n > 1L) {
         # generate random orders (dim(randind) = nrow(dat) x nperm)
-        randind <- anovaRandomIndices(input, nperm, seed)
+        randind <- anovaRandomIndices(input, perm$n, seed)
         # run calculations
-        chunks <- min(10L, ceiling(nperm/max(1L, length(parallel$cl))))
+        chunks <- min(10L, ceiling(perm$n/max(1L, length(parallel$cl))))
         es_perm <- 
             foreach(x = iter(randind, by = "col", chunksize = chunks), 
                     .combine = c, .inorder = FALSE,
@@ -1319,7 +1356,7 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
                     }
         # reshape permuted tanova values
         es_perm <- c(es_obs, unlist(es_perm, use.names = FALSE))
-        setattr(es_perm, "dim", c(dim(es_obs), nperm + 1L))
+        setattr(es_perm, "dim", c(dim(es_obs), perm$n + 1L))
         dimn <-  c(dimnames(es_obs), list(perm = NULL))
         setattr(es_perm, "dimnames", dimn)
         # p-values
@@ -1328,7 +1365,7 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
     # back-transform to original dimorder
     out$stat <- backFn(es_obs, input)
     rm(es_obs)
-    if (nperm > 1L) {
+    if (perm$n > 1L) {
         pvals <- lapply(pvals, backFn, obj = input)
         setattr(out$stat, "p_value", pvals[["p"]])
         if (!is.null(pvals[["p_corr"]])) 

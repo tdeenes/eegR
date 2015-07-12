@@ -4,7 +4,7 @@
 \alias{argumentDeparser}
 \title{Pass \code{arg = .(key1 = value1, key2 = value2)} function arguments}
 \usage{
-argumentDeparser(arg, replace_dot, transform_true = TRUE,
+argumentDeparser(arg, replace_dot, transform_logical = TRUE,
   null_params = NULL)
 }
 \arguments{
@@ -15,7 +15,7 @@ argumentDeparser(arg, replace_dot, transform_true = TRUE,
 guessed using \code{deparse} and \code{substitute}, and "Params" is attached
 to call the corresponding parameter setter function.}
 
-\item{transform_true}{logical; if TRUE (default), a single logical
+\item{transform_logical}{logical; if TRUE (default), a single logical
 \code{arg} argument is treated in a special way (see Details)}
 
 \item{null_params}{a list of parameters which is passed to the parameter
@@ -30,19 +30,23 @@ function arguments to the appropriate function
 This function is not intended for direct use. It allows
 \code{method = .(key = value)} argument definition in high-level functions
 by substituting \code{.} to the appriopriate \code{methodParams}
-function. If \code{transform_true} is TRUE, the call
+function. If \code{transform_logical} is TRUE, the call
 \code{method = TRUE} is transformed to \code{method = methodParams()},
-thereby it returns the default parameter setting.
+thereby it returns the default parameter setting. Similarily,
+\code{method = FALSE} is treated as \code{method = NULL}.
 }
 \examples{
 mymethodParams <- function(x = 3, y = 4) {
     list(x = x, y = y)
 }
-tempfn <- function(mymethod = NULL) {
-    argumentDeparser(substitute(mymethod), "mymethodParams")
+tempfn <- function(mymethod = NULL, ...) {
+    argumentDeparser(substitute(mymethod), "mymethodParams", ...)
 }
 stopifnot(is.null(tempfn()))
-stopifnot(identical(FALSE, tempfn(mymethod = FALSE)))
+stopifnot(identical(tempfn(null_params = list(x = 1)),
+                    list(x = 1, y = 4)))
+stopifnot(identical(FALSE,
+                    tempfn(mymethod = FALSE, transform_logical = FALSE)))
 stopifnot(identical(tempfn(mymethod = TRUE),
                     tempfn(mymethod = mymethodParams())))
 new_y = 1:5

@@ -5,7 +5,7 @@
 \title{Setting the parameters for parallel computation}
 \usage{
 parallelParams(cl = NULL, method = c("auto", "snow", "multicore"),
-  ncores = parallel::detectCores() - 1, ...)
+  ncores = parallel::detectCores() - 1L, ...)
 }
 \arguments{
 \item{cl}{an object of class "cluster" (default: NULL)}
@@ -46,6 +46,7 @@ computations (see Examples).
 rangeColumns <- function(x, parallel = FALSE) {
     #
     stopifnot(require(doParallel))
+    ob <- getDoBackend() # store active backend
     #
     # parallel argument can be a logical or a direct call to parallelParams
     # or a .(key = value)-type call
@@ -53,10 +54,7 @@ rangeColumns <- function(x, parallel = FALSE) {
                                  null_params = list(ncores = 0L))
     #
     # stop cluster on exit if it was created by parallelParams
-    ob <- getDoBackend()
-    if (is.logical(parallel) && !parallel) {
-        registerDoSEQ()
-    } else if (inherits(parallel, "parallelParams") && parallel$cl_new) {
+    if (parallel$cl_new) {
         on.exit(stopCluster(parallel$cl))
     }
     on.exit(setDoBackend(ob), add = TRUE)

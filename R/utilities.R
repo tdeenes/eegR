@@ -221,7 +221,7 @@ do <- function(what, ..., arg_list = list()) {
 #' \code{arg} should be passed to. If not provided, the name of \code{arg} is
 #' guessed using \code{deparse} and \code{substitute}, and "Params" is attached
 #' to call the corresponding parameter setter function.
-#' @param transform_true logical; if TRUE (default), a single logical 
+#' @param transform_logical logical; if TRUE (default), a single logical 
 #' \code{arg} argument is treated in a special way (see Details)
 #' @param null_params a list of parameters which is passed to the parameter
 #' setter function (see 'replace_dot') if \code{argumentDeparser} would return
@@ -229,27 +229,31 @@ do <- function(what, ..., arg_list = list()) {
 #' @details This function is not intended for direct use. It allows  
 #' \code{method = .(key = value)} argument definition in high-level functions 
 #' by substituting \code{.} to the appriopriate \code{methodParams}
-#' function. If \code{transform_true} is TRUE, the call 
+#' function. If \code{transform_logical} is TRUE, the call 
 #' \code{method = TRUE} is transformed to \code{method = methodParams()}, 
-#' thereby it returns the default parameter setting.
+#' thereby it returns the default parameter setting. Similarily, 
+#' \code{method = FALSE} is treated as \code{method = NULL}.
 #' @export
 #' @keywords internal
 #' @examples
 #' mymethodParams <- function(x = 3, y = 4) {
 #'     list(x = x, y = y)
 #' }
-#' tempfn <- function(mymethod = NULL) {
-#'     argumentDeparser(substitute(mymethod), "mymethodParams")
+#' tempfn <- function(mymethod = NULL, ...) {
+#'     argumentDeparser(substitute(mymethod), "mymethodParams", ...)
 #' }
 #' stopifnot(is.null(tempfn()))
-#' stopifnot(identical(FALSE, tempfn(mymethod = FALSE)))
+#' stopifnot(identical(tempfn(null_params = list(x = 1)),
+#'                     list(x = 1, y = 4)))
+#' stopifnot(identical(FALSE, 
+#'                     tempfn(mymethod = FALSE, transform_logical = FALSE)))
 #' stopifnot(identical(tempfn(mymethod = TRUE),
 #'                     tempfn(mymethod = mymethodParams())))
 #' new_y = 1:5
 #' stopifnot(identical(tempfn(mymethod = .(y = new_y)),
 #'                     tempfn(mymethod = mymethodParams(y = new_y))))
 argumentDeparser <- function(arg, replace_dot, 
-                             transform_true = TRUE,
+                             transform_logical = TRUE,
                              null_params = NULL) {
     if (missing(replace_dot)) {
         argname <- deparse(substitute(replace_dot))
@@ -258,8 +262,10 @@ argumentDeparser <- function(arg, replace_dot,
         replace_dot <- paste0(argname, "Params")
     }
     out <- 
-        if (transform_true && identical(arg, TRUE)) {
+        if (transform_logical && identical(arg, TRUE)) {
             do.call(replace_dot, list())
+        } else if (transform_logical && identical(arg, FALSE)) {
+            NULL
         } else {
             if (identical(arg[[1L]], as.name("."))) {
                 arg[[1L]] <- as.name(replace_dot)

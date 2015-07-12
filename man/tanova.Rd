@@ -5,7 +5,7 @@
 \title{Topographical ANOVA (TANOVA) and related methods}
 \usage{
 tanova(.arraydat, factordef, bwdat = NULL, type = c("tanova",
-  "dissimilarity", "gfp"), verbose = TRUE, nperm = 999L, parallel = NULL,
+  "dissimilarity", "gfp"), verbose = TRUE, perm = TRUE, parallel = NULL,
   seed = NULL, pcrit = 0.05)
 }
 \arguments{
@@ -30,9 +30,14 @@ elements:
 
 \item{verbose}{logical value indicating if p-values should be computed}
 
-\item{nperm}{integer value giving the number of permutations (default: 999L)
-to compute permuted p-values. If \code{nperm < 2}, no permutation is
-performed.}
+\item{perm}{either 1) NULL or FALSE (the same as NULL),
+both of which mean no permutation, or 2) TRUE, which means
+permutation with default parameters (the default), or 3) an object as
+returned by \code{\link{permParams}} with custom parameters (see Examples
+and also \code{\link{permParams}}).\cr
+Custom parameters can be also provided by \code{perm = .(key = value)} to
+save typing (this works by calling \code{\link{permParams}} with the
+given parameters).}
 
 \item{parallel}{either 1) NULL (the default) or FALSE (the same as NULL),
 both of which mean single-core computation, or 2) TRUE, which means

@@ -146,7 +146,7 @@ results <- arrayAnova(
                      within = c("stimclass", "pairtype"),
                      observed = "group"),
     bwdat = id_dat, 
-    nperm = 99, 
+    perm = .(n = 99), 
     tfce = .(ChN = ChN),
     parallel = .(ncores = 2))
 
