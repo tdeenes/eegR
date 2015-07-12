@@ -942,7 +942,8 @@ plotTanova <- function(results,
         x[-nrow(x), ] <- x[-nrow(x), ] + dx
         x
     }
-    hpvals <- fnDims(hpvals, "time", shiftEdges, vectorized = TRUE)
+    hpvals <- fnDims(hpvals, "time", shiftEdges, vectorized = TRUE,
+                     keep_dimorder = TRUE)
     dat$pcrit <- factor(hpvals, 
                         levels = as.character(pcrit), 
                         labels = c(as.character(pcrit[-length(pcrit)]), 
@@ -974,6 +975,9 @@ plotTanova <- function(results,
     } else {
         griddims <- names(fillMissingDimnames(results$dimnames, results$dim))
         griddims <- setdiff(griddims, "time")
+        if ("modelterm" %in% griddims) {
+            griddims <- c("modelterm", setdiff(griddims, "modelterm"))
+        }
         if (length(griddims) > 0) {
             if (length(griddims) > 1) {
                 grid <- paste(griddims, collapse = "~")  
