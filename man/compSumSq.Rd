@@ -4,7 +4,7 @@
 \alias{compSumSq}
 \title{Compute sum of squares}
 \usage{
-compSumSq(obj, new_indices = NULL, to_compF = FALSE)
+compSumSq(obj, new_indices = NULL)
 }
 \arguments{
 \item{obj}{a list object as returned by \code{\link{preAnova}}}
@@ -12,9 +12,6 @@ compSumSq(obj, new_indices = NULL, to_compF = FALSE)
 \item{new_indices}{if not NULL (default), it must be a vector of numeric
 indices to be passed to the model matrix. This parameter is used for
 permutation-based analyses.}
-
-\item{to_compF}{a logical value if the result should be a list as needed in
-\code{compF}}
 }
 \value{
 a numeric matrix of the sum-of-squares with an extra attribute for

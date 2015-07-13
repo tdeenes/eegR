@@ -248,17 +248,15 @@ preSumSq <- function(form, form_data,
 #' @param new_indices if not NULL (default), it must be a vector of numeric
 #' indices to be passed to the model matrix. This parameter is used for 
 #' permutation-based analyses.
-#' @param to_compF a logical value if the result should be a list as needed in
-#' \code{compF}
 #' @return a numeric matrix of the sum-of-squares with an extra attribute for 
 #' the degrees of freedom ('Df'), or a list of such matrices
 #' @keywords internal
-compSumSq <- function(obj, new_indices = NULL, to_compF = FALSE) {
-    ssqFn <- function(x, y, new_indices) {
+compSumSq <- function(obj, new_indices = NULL) {
+    ssqFn <- function(x, y, r, new_indices) {
         mm <- x$model_matrix
         if (!is.null(new_indices)) {
-            if (!is.null(x$residuals)) {
-                y <- x$residuals[new_indices, ]
+            if (!is.null(r)) {
+                y <- r[new_indices, ]
             } else {
                 mm <- mm[new_indices, ]
             }
@@ -282,13 +280,12 @@ compSumSq <- function(obj, new_indices = NULL, to_compF = FALSE) {
         #
         ssq
     }
+    #
+    input <- obj$pre_sumsq
     y <- obj$.arraydat
+    residuals <- input[[1]]$residuals
     # return
-    if (!to_compF) {
-        ssqFn(obj$pre_sumsq[[1]], y, new_indices)
-    } else {
-        lapply(obj$pre_sumsq, ssqFn, y = y, new_indices = new_indices)
-    }
+    lapply(input, ssqFn, y = y, r = residuals, new_indices = new_indices)
 }
 
 #' Random permutations for \code{\link{arrayAnova}} and \code{\link{tanova}}
@@ -337,7 +334,7 @@ compF <- function(obj, new_indices = NULL, attribs = FALSE, verbose = FALSE) {
     if (!attribs) verbose <- FALSE
     type <- obj$type
     f_def <- obj$factordef
-    ssq <- compSumSq(obj, new_indices = new_indices, to_compF = TRUE)
+    ssq <- compSumSq(obj, new_indices = new_indices)
     Df <- lapply(ssq, attr, "Df")
     if (type == "between") {
         model_ssq <- ssq[[1]]
@@ -632,8 +629,6 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
     model_formula <- 
         if (type == "between" | tanova) {
             list(mean_formula)
-        } else if (type == "within") {
-            list(mean_formula, within_formula)
         } else {
             list(mean_formula, within_formula)
         }
