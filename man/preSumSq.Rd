@@ -4,7 +4,8 @@
 \alias{preSumSq}
 \title{Prepare sum-of-squares computations}
 \usage{
-preSumSq(form, form_data, keep_term_order = FALSE, scaled = FALSE)
+preSumSq(form, form_data, keep_term_order = FALSE, scaled = FALSE,
+  y = NULL)
 }
 \arguments{
 \item{form}{model formula (or character string to \code{as.formula})}
@@ -18,15 +19,19 @@ and so on. Effects of a given order are kept in the order specified.}
 
 \item{scaled}{a logical value indicating if numeric variables in
 'form_data' are already scaled (TRUE) or not (FALSE, the default).}
+
+\item{y}{a numeric matrix of response data if residuals should be computed
+(usually coming from \code{preAnova})}
 }
 \value{
 A list with the following components: model_matrix,
-model_matrix_labels, xpx, unique_contrasts
+model_matrix_labels, xpx, unique_contrasts, residuals (optional).
 }
 \description{
 \code{preSumSq} prepares the objects which are needed by
 \code{\link{compSumSq}}. Thus, it returns the model.matrix (X), the X'X
-matrix, and all unique rows of Xs.
+matrix, and all unique rows of Xs, and also the residuals if residuals are
+permuted instead of raw observations.
 }
 \keyword{internal}
 

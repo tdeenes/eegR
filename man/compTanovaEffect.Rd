@@ -4,8 +4,7 @@
 \alias{compTanovaEffect}
 \title{Compute generalized GFP-effects}
 \usage{
-compTanovaEffect(obj, new_indices = NULL, attribs = FALSE,
-  extra_attribs = character())
+compTanovaEffect(obj, new_indices = NULL, attribs = FALSE)
 }
 \arguments{
 \item{obj}{a list object as returned by \code{\link{preAnova}}}
@@ -16,10 +15,6 @@ permutation-based analyses.}
 
 \item{attribs}{a logical value if dimension attributes should be attached to
 the resulting array (default: FALSE)}
-
-\item{extra_attribs}{a character vector of extra attributes which should be
-attached to the resulting array (currently only "residuals" is supported).
-The attribute names can be abbreviated.}
 }
 \value{
 This function returns a numeric matrix of effects if 'attribs' is

@@ -7,7 +7,7 @@
 permPvalues(obj, nperm, seed, stat_obs, tfce = NULL)
 }
 \arguments{
-\item{obj}{a list returned by \code{arrayAnova} or \code{arrayTtest}}
+\item{obj}{a list returned by \code{preAnova}}
 
 \item{nperm}{an integer value indicating the number of permutations}
 

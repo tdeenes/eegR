@@ -4,25 +4,25 @@
 \alias{compSumSq}
 \title{Compute sum of squares}
 \usage{
-compSumSq(obj, y, new_indices = NULL)
+compSumSq(obj, new_indices = NULL, to_compF = FALSE)
 }
 \arguments{
-\item{obj}{a list object as returned by \code{\link{preSumSq}}}
-
-\item{y}{a numeric matrix of response data, usually returned by
-\code{\link{preAnova}}}
+\item{obj}{a list object as returned by \code{\link{preAnova}}}
 
 \item{new_indices}{if not NULL (default), it must be a vector of numeric
 indices to be passed to the model matrix. This parameter is used for
 permutation-based analyses.}
+
+\item{to_compF}{a logical value if the result should be a list as needed in
+\code{compF}}
 }
 \value{
 a numeric matrix of the sum-of-squares with an extra attribute for
-the degrees of freedom ('Df')
+the degrees of freedom ('Df'), or a list of such matrices
 }
 \description{
 \code{compSumSq} computes sum of squares which are needed by
-\code{\link{compF}}.
+\code{\link{compF}} and \code{\link{permPvalues}}.
 }
 \keyword{internal}
 

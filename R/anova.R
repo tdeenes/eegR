@@ -29,7 +29,7 @@ anovaTfce <- function(x, target_dim, has_neg, nr_chan, nr_time, tfce) {
 #' 
 #' \code{permPvalues} is called internally by \code{arrayAnova} and 
 #' \code{arrayTtest} and performs permutation analysis.
-#' @param obj a list returned by \code{arrayAnova} or \code{arrayTtest}
+#' @param obj a list returned by \code{preAnova}
 #' @param nperm an integer value indicating the number of permutations
 #' @param seed an integer value which specifies a seed (default: NULL), or a 
 #' list of arguments passed to \code{\link{set.seed}}
@@ -43,7 +43,7 @@ permPvalues <- function(obj, nperm, seed, stat_obs, tfce = NULL) {
     # helper function
     permfn <- function(obj, perm_vec, tfce, 
                        stat_fun, abs_stat_obs, has_neg) {
-        stat_perm <- stat_fun(obj, perm_vec)
+        stat_perm <- stat_fun(obj, new = perm_vec)
         setattr(stat_perm, "dim", 
                 c(obj$nr_chanXtime, obj$otherdims$size))
         if (!is.null(tfce)) 
@@ -53,9 +53,9 @@ permPvalues <- function(obj, nperm, seed, stat_obs, tfce = NULL) {
         stat_perm <- colMaxs(stat_perm)
         # return
         if (length(stat_perm) > 1L) {
-            sweep(stat_obs, obj$otherdims$index, stat_perm, "<")
+            sweep(abs_stat_obs, obj$otherdims$index, stat_perm, "<")
         } else {
-            stat_obs < stat_perm
+            abs_stat_obs < stat_perm
         }
     }
     # TFCE yes / no
@@ -76,7 +76,7 @@ permPvalues <- function(obj, nperm, seed, stat_obs, tfce = NULL) {
     } else {
         stop("Wrong 'type' node in 'obj'")
     }
-    # take the absolute of stat_obs if it might have negative values
+    # take the absolute values of the observed statistic
     if (has_neg) stat_obs <- abs(stat_obs)
     # create larger chunks
     chunks <- min(10L, ceiling(nperm/max(1L, getDoParWorkers())))
@@ -162,7 +162,8 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
 #' 
 #' \code{preSumSq} prepares the objects which are needed by 
 #' \code{\link{compSumSq}}. Thus, it returns the model.matrix (X), the X'X 
-#' matrix, and all unique rows of Xs.
+#' matrix, and all unique rows of Xs, and also the residuals if residuals are
+#' permuted instead of raw observations.
 #' @param form model formula (or character string to \code{as.formula})
 #' @param form_data a data.frame containing all variables of the formula
 #' @param keep_term_order a logical value indicating whether the terms should 
@@ -171,12 +172,14 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
 #' and so on. Effects of a given order are kept in the order specified.
 #' @param scaled a logical value indicating if numeric variables in
 #' 'form_data' are already scaled (TRUE) or not (FALSE, the default).
+#' @param y a numeric matrix of response data if residuals should be computed
+#' (usually coming from \code{preAnova})
 #' @return A list with the following components: model_matrix, 
-#' model_matrix_labels, xpx, unique_contrasts
+#' model_matrix_labels, xpx, unique_contrasts, residuals (optional).
 #' @keywords internal
 preSumSq <- function(form, form_data, 
                      keep_term_order = FALSE,
-                     scaled = FALSE) {
+                     scaled = FALSE, y = NULL) {
     term_object <- terms(as.formula(form), keep.order = keep_term_order)
     term_labels <- attr(term_object, "term.labels")
     term_factors <- attr(term_object, "factors")
@@ -223,47 +226,69 @@ preSumSq <- function(form, form_data,
     setattr(mm, "dimnames", NULL)
     setattr(mm, "assign", NULL)
     setattr(mm, "contrasts", NULL)
-    # return
-    list(model_matrix = mm, model_matrix_labels = mm_labels, xpx = xpx, 
-         unique_contrasts = unique_contrasts)
+    #
+    out <- list(
+        model_matrix = mm, model_matrix_labels = mm_labels, xpx = xpx, 
+        unique_contrasts = unique_contrasts)
+    #
+    if (!is.null(y)) {
+        coeff <- solve(xpx, crossprod(mm, y))
+        pred <- mm %*% coeff
+        out$residuals <- y - pred
     }
+    # return
+    out
+}
 
 #' Compute sum of squares
 #' 
 #' \code{compSumSq} computes sum of squares which are needed by 
-#' \code{\link{compF}}. 
-#' @param obj a list object as returned by \code{\link{preSumSq}}
-#' @param y a numeric matrix of response data, usually returned by 
-#' \code{\link{preAnova}}
+#' \code{\link{compF}} and \code{\link{permPvalues}}. 
+#' @param obj a list object as returned by \code{\link{preAnova}}
 #' @param new_indices if not NULL (default), it must be a vector of numeric
 #' indices to be passed to the model matrix. This parameter is used for 
 #' permutation-based analyses.
+#' @param to_compF a logical value if the result should be a list as needed in
+#' \code{compF}
 #' @return a numeric matrix of the sum-of-squares with an extra attribute for 
-#' the degrees of freedom ('Df')
+#' the degrees of freedom ('Df'), or a list of such matrices
 #' @keywords internal
-compSumSq <- function(obj, y, new_indices = NULL) {
-    mm <- obj$model_matrix
-    if (!is.null(new_indices)) {
-        mm <- mm[new_indices, ]
+compSumSq <- function(obj, new_indices = NULL, to_compF = FALSE) {
+    ssqFn <- function(x, y, new_indices) {
+        mm <- x$model_matrix
+        if (!is.null(new_indices)) {
+            if (!is.null(x$residuals)) {
+                y <- x$residuals[new_indices, ]
+            } else {
+                mm <- mm[new_indices, ]
+            }
+        } 
+        mm_labels <- x$model_matrix_labels
+        xpx <- x$xpx
+        unc <- x$unique_contrasts
+        ssq <- matrix_(0, ncol(y), length(unc),
+                       dimnames = list(NULL, modelterm = names(unc)))
+        df <- rep.int(0L, length(unc))
+        setattr(df, "names", names(unc))
+        coeff <- solve(xpx, crossprod(mm, y))
+        setattr(coeff, "dimnames", list(mm_labels, NULL)) 
+        for (i in seq_along(unc)) {
+            freq <- attr(unc[[i]], "freq")
+            fmeans <- unc[[i]] %*% coeff[colnames(unc[[i]]), , drop = FALSE]   
+            ssq[, i] <- colSums(fmeans^2 * freq)
+            df[i] <- ncol(unc[[i]])
+        }
+        setattr(ssq, "Df", df)
+        #
+        ssq
     }
-    mm_labels <- obj$model_matrix_labels
-    xpx <- obj$xpx
-    unc <- obj$unique_contrasts
-    ssq <- matrix_(0, ncol(y), length(unc),
-                   dimnames = list(NULL, modelterm = names(unc)))
-    df <- rep.int(0L, length(unc))
-    setattr(df, "names", names(unc))
-    coeff <- solve(xpx, crossprod(mm, y))
-    setattr(coeff, "dimnames", list(mm_labels, NULL)) 
-    for (i in seq_along(unc)) {
-        freq <- attr(unc[[i]], "freq")
-        fmeans <- unc[[i]] %*% coeff[colnames(unc[[i]]), , drop = FALSE]   
-        ssq[, i] <- colSums(fmeans^2 * freq)
-        df[i] <- ncol(unc[[i]])
+    y <- obj$.arraydat
+    # return
+    if (!to_compF) {
+        ssqFn(obj$pre_sumsq[[1]], y, new_indices)
+    } else {
+        lapply(obj$pre_sumsq, ssqFn, y = y, new_indices = new_indices)
     }
-    setattr(ssq, "Df", df)
-    #
-    ssq
 }
 
 #' Random permutations for \code{\link{arrayAnova}} and \code{\link{tanova}}
@@ -312,12 +337,11 @@ compF <- function(obj, new_indices = NULL, attribs = FALSE, verbose = FALSE) {
     if (!attribs) verbose <- FALSE
     type <- obj$type
     f_def <- obj$factordef
-    ssq <- lapply(obj$pre_sumsq, compSumSq,
-                  y = obj$.arraydat, new_indices = new_indices)
+    ssq <- compSumSq(obj, new_indices = new_indices, to_compF = TRUE)
     Df <- lapply(ssq, attr, "Df")
-    model_ssq <- ssq[[1]]
-    model_df <- Df[[1]]
     if (type == "between") {
+        model_ssq <- ssq[[1]]
+        model_df <- Df[[1]]
         resid_ssq <- obj$pre_sumsq[[1]]$ssq_total - rowSums(model_ssq)
         resid_df <- attr(resid_ssq, "Df") - sum(model_df)
         Fvals <- sweepMatrix(model_ssq, 2, model_df/resid_df, "/", 
@@ -336,6 +360,8 @@ compF <- function(obj, new_indices = NULL, attribs = FALSE, verbose = FALSE) {
             }
         }
     } else if (type == "within") {
+        model_ssq <- ssq[[2]]
+        model_df <- Df[[2]]
         modnames <- dimnames(model_ssq)$modelterm
         m_ind <- !grepl(f_def$w_id, modnames)
         err_ind <- match(
@@ -352,6 +378,8 @@ compF <- function(obj, new_indices = NULL, attribs = FALSE, verbose = FALSE) {
             ges <- model_ssq / (model_ssq + SSr)
         }
     } else if (type == "mixed") {
+        model_ssq <- ssq[[1]]
+        model_df <- Df[[1]]
         bwind <- grepl(paste(f_def$between, collapse = "|"),
                        colnames(model_ssq))
         residnames <- paste(f_def$w_id, 
@@ -485,7 +513,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
         nr_chan <- length(full_dimnames$chan)
         nr_time <- length(full_dimnames$time)
         nr_chanXtime <- nr_chan * nr_time
-    } else if (perm) {
+    } else if (perm$n > 1L) {
         nr_chanXtime <- c(length(full_dimnames$chan),
                           length(full_dimnames$time))
         nr_chanXtime[nr_chanXtime == 0L] <- 1L
@@ -605,15 +633,19 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
         if (type == "between" | tanova) {
             list(mean_formula)
         } else if (type == "within") {
-            list(within_formula)
+            list(mean_formula, within_formula)
         } else {
             list(mean_formula, within_formula)
         }
     #
     # model matrix and others
     #
-    pre_sumsq <- lapply(
-        model_formula, preSumSq, form_data = dat, scaled = TRUE)
+    pre_sumsq <- vector("list", length(model_formula))
+    for (i in seq_along(model_formula)) {
+        tempy <- if (i == 1L && perm$type == "residuals") .arraydat else NULL
+        pre_sumsq[[i]] <- preSumSq(model_formula[[i]], form_data = dat, 
+                                   scaled = TRUE, y = tempy)
+    }
     if (type == "between" && !tanova) {
         pre_sumsq[[1]]$ssq_total <- colSums(
             sweepMatrix(.arraydat, 2, colMeans(.arraydat), "-", has_NA = FALSE)^2)
@@ -923,7 +955,7 @@ arrayTtestAnova <- function(test,
         #
         # prepare data
         input <- preAnova(.arraydat, factordef, bwdat, verbose = verbose,
-                          tfce = use_tfce, perm = nperm > 1L)
+                          tfce = use_tfce, perm = perm)
         rm(.arraydat)
         #
         # observed test statistic
@@ -1086,23 +1118,20 @@ extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
 #' permutation-based analyses.
 #' @param attribs a logical value if dimension attributes should be attached to 
 #' the resulting array (default: FALSE)
-#' @param extra_attribs a character vector of extra attributes which should be 
-#' attached to the resulting array (currently only "residuals" is supported).
-#' The attribute names can be abbreviated.
 #' @return This function returns a numeric matrix of effects if 'attribs' is 
 #' FALSE, and an array of effects if 'attribs' is TRUE.
 #' @keywords internal
-compTanovaEffect <- function(obj, new_indices = NULL, 
-                             attribs = FALSE, extra_attribs = character()) {
+compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
     model <- obj$pre_sumsq[[1]]
     mm <- model$model_matrix
-    y <- obj$.arraydat
     if (!is.null(new_indices)) {
-        if (!is.null(obj$residuals)) {
-            y <- obj$residuals[new_indices,]
+        if (!is.null(model$residuals)) {
+            y <- model$residuals[new_indices,]
         } else {
             mm <- mm[new_indices, ]
         }
+    } else {
+        y <- obj$.arraydat
     }
     mm_labels <- model$model_matrix_labels
     xpx <- model$xpx
@@ -1128,17 +1157,10 @@ compTanovaEffect <- function(obj, new_indices = NULL,
             out[, i] <- colMeans(compGfp(fmeans, channel_dim = 2L))
         }
     }
-    if (attribs || length(extra_attribs) > 0L) {
+    if (attribs) {
         setattributes(out, obj, "Effect (generalized GFP)", outdimn)
         dimn <-  setNames(vector("list", length(outdimn)), outdimn)
         setattr(out, "dimnames", dimn)
-        if (length(extra_attribs) > 0L) {
-            extra_attribs <- match.arg(extra_attribs, c("residuals"))
-            if ("residuals" %in% extra_attribs) {
-                pred <- mm %*% coeff
-                setattr(out, "residuals", y - pred)
-            }
-        }
     }
     #
     out
@@ -1317,7 +1339,7 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
     #
     # prepare data
     input <- preAnova(.arraydat, factordef, bwdat, verbose,
-                      tfce = FALSE, perm = perm$n > 1L,
+                      tfce = FALSE, perm = perm,
                       tanova_type = type)
     rm(.arraydat)
     #
@@ -1325,13 +1347,7 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
     out <- list(call = mcall)
     #
     # calculate effect
-    if (perm$type == "residuals") {
-        es_obs <- compTanovaEffect(input, attribs = TRUE, extra_attribs = "r")
-        input$residuals <- attr(es_obs, "residuals")
-        setattr(es_obs, "residuals", NULL)
-    } else {
-        es_obs <- compTanovaEffect(input, attribs = TRUE)
-    }
+    es_obs <- compTanovaEffect(input, attribs = TRUE)
 #     if (verbose) {
 #         factor_means <- marginalMeans(input$mean_formula, 
 #                                       input$dat, input$.arraydat, 
