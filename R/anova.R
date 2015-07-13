@@ -43,7 +43,7 @@ permPvalues <- function(obj, nperm, seed, stat_obs, tfce = NULL) {
     # helper function
     permfn <- function(obj, perm_vec, tfce, 
                        stat_fun, abs_stat_obs, has_neg) {
-        stat_perm <- stat_fun(obj, new = perm_vec)
+        stat_perm <- stat_fun(obj, new = as.vector(perm_vec))
         setattr(stat_perm, "dim", 
                 c(obj$nr_chanXtime, obj$otherdims$size))
         if (!is.null(tfce)) 

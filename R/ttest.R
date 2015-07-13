@@ -103,10 +103,10 @@ osTtest <- function(obj, new_sign = NULL, attribs = FALSE) {
         n1 <- nrow(dat)
     }
     es <- (m1 - obj$mu)/sd1
-    out <- es/sqrt(n1)
+    out <- es * sqrt(n1)
     if (attribs) {
         setattributes(
-            out, obj$teststat_dims, 
+            out, obj, 
             if (obj$type == "paired_samples") "Paired samples t-statistic"
             else "One sample t-statistic")
         if (verbose) {
@@ -115,9 +115,9 @@ osTtest <- function(obj, new_sign = NULL, attribs = FALSE) {
                           if (length(Df) > 1L) obj else NULL,
                           "Degrees of freedom")
             pvalues <- 2 * pt(-abs(out), Df)
-            setattributes(pvalues, obj$teststat_dims, "Traditional P-value")
+            setattributes(pvalues, obj, "Traditional P-value")
             es <- abs(es)
-            setattributes(es, obj$teststat_dims, "Cohen's D")
+            setattributes(es, obj, "Cohen's D")
             setattr(out, "p_value", pvalues)
             setattr(out, "effect_size", es)
             setattr(out, "Df", Df)
@@ -325,7 +325,7 @@ preTtest <- function(.arraydat, .arraydat2, paired, groups,
                 !identical(dim(.arraydat), dim(.arraydat2))) {
                 stop("Input array dimensions must be identical")
             }
-            .arraydat <- .arraydat2 - .arraydat
+            .arraydat <- .arraydat - .arraydat2
             groups <- NULL
             type <- "paired_samples"
         } else {
@@ -483,8 +483,8 @@ preTtest <- function(.arraydat, .arraydat2, paired, groups,
 #'     result_eegr <- arrayTtest(erps, groups = dat_id$group)
 #' )
 #' 
-#' # the built-in R function (t.test) provides the same result, but running it on
-#' # the full dataset would take much more time; 
+#' # the built-in R function (stats::t.test) provides the same result, but 
+#' # running it on the full dataset would take much more time; 
 #' # here we take a subsample of the data
 #' sub <- list(chan = "F4", time = "200", stimclass = "B", pairtype = "ident")
 #' result_ttest <- t.test(subsetArray(erps, sub) ~ dat_id$group)
@@ -521,6 +521,35 @@ preTtest <- function(.arraydat, .arraydat2, paired, groups,
 #' # note how the sporadic effects disappear after TFCE correction
 #' p_plot <- imageValues(-log(p_all))  # returns a ggplot object
 #' p_plot
+#' 
+#' # Finally, here is an example for two versions of a paired-samples t-test
+#' # 0) Compare level A nd level B of the "stimclass" dimension
+#' datA <- subsetArray(erps, list(stimclass = "A"))
+#' datB <- subsetArray(erps, list(stimclass = "B"))
+#' 
+#' # 1) Provide two arrays, and set 'paired' to TRUE
+#' result1 <- arrayTtest(datA, datB, paired = TRUE)
+#' 
+#' # 2) Compute the difference of the two arrays, and run a one-sample t-test
+#' result2 <- arrayTtest(datA - datB)
+#' 
+#' # 3) Check the results
+#' stopifnot(identical(as.vector(extract(result1, "stat")), 
+#'                     as.vector(extract(result2, "stat"))))
+#' 
+#' # 4) Compare to the results of the built-in t.test (stats::t.test);
+#' # here we take a subsample of the data
+#' sub <- list(chan = "F4", time = "200", pairtype = "ident")
+#' result_ttest <- t.test(subsetArray(datA, sub), subsetArray(datB, sub),
+#'                        paired = TRUE)
+#' 
+#' # to check that they are equivalent, we have to remove the attributes
+#' eegr_t <- as.vector(subsetArray(extract(result1, "stat"), sub))
+#' eegr_p <- as.vector(subsetArray(extract(result1, "p"), sub))
+#' stopifnot(
+#'     all.equal(as.vector(result_ttest$statistic), eegr_t),
+#'     all.equal(as.vector(result_ttest$p.value), eegr_p)
+#' )
 #
 # TODO: compute also effect sizes + make it general for any arrays without chan
 # and time dimensions + clear redundancies in the code for the two types of 
