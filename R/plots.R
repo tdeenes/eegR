@@ -63,10 +63,13 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
     if (length(dim(dat)) > 3L) {
         wrapdim <- setdiff(names(dimnames(dat)), c(xdim, sepdim))
         dat <- mergeDims(dat, list(xdim, sepdim, wrapdim))
-    } else {
-        wrapdim <- ""
+    } else if (length(dim(dat)) < 3L) {
+        dimn <- dimnames(dat)
         dim(dat) <- c(dim(dat), 1L)
-        dimnames(dat) <- c(dimnames(dat), list(""))
+        dimnames(dat) <- c(dimn, list(""))
+        dat <- apermArray(dat, first = c(xdim, sepdim))
+    } else {
+        dat <- apermArray(dat, first = c(xdim, sepdim))
     }
     subtitle_col <- rep(subtitle_col, length_out = dim(dat)[3])
     if (gfp_plot) gfpdat <- compGfp(dat)
