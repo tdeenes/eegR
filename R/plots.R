@@ -80,8 +80,13 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
     xrange <- if (is.null(plot_args$xlim)) range(x) else plot_args$xlim 
     if (is.null(plot_args$ylim)) {
         yr <- range(dat)
-        yrange <- mean(yr) + c(-1, 1)*(yr[2]-mean(yr))*1.02
-        if (minus_up) yrange <- -yrange
+        yrange <- mean(yr) + c(-1, 1)*(yr[2]-mean(yr))*1.1
+        if (minus_up) {
+            if (yrange[1] > -.Machine$double.eps ^ 0.5) {
+                yrange[1] <- -.Machine$double.eps ^ 0.5
+            }
+            yrange <- rev(yrange)
+        }
     } else {
         yrange <- plot_args$ylim
     } 
