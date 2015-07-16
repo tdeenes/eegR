@@ -261,6 +261,7 @@ argumentDeparser <- function(arg, replace_dot,
             stop("Provide the 'replace_dot' argument, its name could not be figured out automagically")
         replace_dot <- paste0(argname, "Params")
     }
+    if (is.symbol(arg)) arg <- eval(arg, parent.frame())
     out <- 
         if (transform_logical && identical(arg, TRUE)) {
             do.call(replace_dot, list())
