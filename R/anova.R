@@ -1124,6 +1124,7 @@ compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
             y <- model$residuals[new_indices,]
         } else {
             mm <- mm[new_indices, ]
+            y <- obj$.arraydat
         }
     } else {
         y <- obj$.arraydat
