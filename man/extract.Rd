@@ -39,7 +39,7 @@ the slots to extract are found by partial matching to the following choices:
 \code{arrayAnova}, or consecutive length correction in \code{tanova})}
 \item{es: }{Effect size statistic (e.g. Generalized Eta Squared in
 \code{arrayAnova})}
-\item{means: }{Marginal means for each model term}
+\item{means: }{Marginal means for each model term} (TODO! Temporarily removed...)
 }}
 
 \item{time_window}{numeric vector of length two indicating the time window
@@ -71,9 +71,6 @@ objects, each produced by the corresponding function.
 
 \item \code{tanova}: 
 }}
-\note{
-Only \code{arrayAnova} is implemented at the moment.
-}
 \seealso{
 See the examples of \code{\link{arrayAnova}}
 }

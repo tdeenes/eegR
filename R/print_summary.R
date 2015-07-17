@@ -22,7 +22,7 @@
 #' \code{arrayAnova}, or consecutive length correction in \code{tanova})}
 #' \item{es: }{Effect size statistic (e.g. Generalized Eta Squared in 
 #' \code{arrayAnova})}
-#' \item{means: }{Marginal means for each model term}
+#' \item{means: }{Marginal means for each model term} (TODO! Temporarily removed...)
 #' }
 #' @param time_window numeric vector of length two indicating the time window
 #' which should be extracted. If NULL (default), all time points are returned.
@@ -33,7 +33,6 @@
 #' @param drop logical value; if TRUE, singleton dimensions are dropped from
 #' the arrays after subsetting on time, term, and/or chan (default: FALSE)
 #' @param ... not used yet
-#' @note Only \code{arrayAnova} is implemented at the moment.
 #' @export
 #' @return The function returns an array of the requested component or a named 
 #' list of arrays if multiple components were requested.

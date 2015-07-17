@@ -98,8 +98,8 @@ result_tanova <- tanova(tempdat,
                         bwdat = dat_id,
                         parallel = .(ncores = 2))
 
-# plot results (for now, only p-values)
-plotTanova(result_tanova, only_p = TRUE)
+# plot results (for now, only p-values and only for time > 0)
+modelplot(result_tanova, what = "p", time_window = c(0, Inf))
 }
 \references{
 Koenig, T., Melie-Garcia, L. (2009) Statistical analysis of
@@ -115,6 +115,6 @@ See also
 \seealso{
 See also the related methods to explore the results, e.g.
 \code{\link{extract.tanova}}, \code{\link{summary.tanova}}, and the plotting
-function \code{\link{plotTanova}}.
+function \code{\link{modelplot.tanova}}.
 }
 

@@ -755,7 +755,8 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #' }
 #' @seealso See also the related methods to explore the results, e.g. 
 #' \code{\link{extract.arrayAnova}}, \code{\link{summary.arrayAnova}}, and the
-#' plotting functtions \code{\link{imageValues}}, \code{\link{imagePvalues}}.
+#' plotting functions \code{\link{modelplot}}, or the lower-level 
+#' \code{\link{imageValues}} and \code{\link{imagePvalues}}.
 #' @references The TFCE correction follows:\cr
 #' Mensen, A. and Khatami, R. (2013)
 #' Advanced EEG analysis using threshold-free cluster-enhancement and 
@@ -881,6 +882,10 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #'                           tfce = .(ChN = ChN),
 #'                           parallel = .(ncores = 2))
 #' 
+#' # plot the corrected and uncorrected results
+#' modelplot(result_tfce)
+#' modelplot(result_tfce, type = "unc")
+#' 
 #' # compare traditional and TFCE p-values
 #' p_all <- extract(result_tfce, c("p", "p_corr"))
 #' p_all <- bindArrays(trad = p_all$p, tfce = p_all$p_corr, 
@@ -890,9 +895,6 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #' # note how the sporadic effects disappear
 #' p_plot <- imageValues(-log(p_all)) # returns a ggplot object
 #' p_plot
-#' 
-#' # you can also use the imagePvalues function to plot discretized p-values
-#' imagePvalues(p_all, pcrit = c(0.01, 0.05, 0.1))
 #'
 arrayAnova <- function(.arraydat, factordef, bwdat = NULL, verbose = TRUE, 
                        perm = NULL, tfce = NULL, parallel = NULL, 
@@ -1272,7 +1274,7 @@ compPvalueTanova <- function(effect_perm, pcrit, obj) {
 #' two types of corrected p-values: length correction or global correction
 #' @seealso See also the related methods to explore the results, e.g. 
 #' \code{\link{extract.tanova}}, \code{\link{summary.tanova}}, and the plotting
-#' function \code{\link{plotTanova}}.
+#' function \code{\link{modelplot.tanova}}.
 #' @references Koenig, T., Melie-Garcia, L. (2009) Statistical analysis of 
 #' multichannel scalp field data. In: Michel, C.M., Koenig, T., Brandeis, D.,
 #' Gianotti, L.R.R., Wackermann, J. (eds) Electrical neuroimaging. Cambridge
@@ -1304,8 +1306,8 @@ compPvalueTanova <- function(effect_perm, pcrit, obj) {
 #'                         bwdat = dat_id,
 #'                         parallel = .(ncores = 2))
 #' 
-#' # plot results (for now, only p-values)
-#' plotTanova(result_tanova, only_p = TRUE)
+#' # plot results (for now, only p-values and only for time > 0)
+#' modelplot(result_tanova, what = "p", time_window = c(0, Inf))
 tanova <- function(.arraydat, factordef, bwdat = NULL, 
                    type = c("tanova", "dissimilarity", "gfp"), 
                    verbose = TRUE, perm = TRUE, parallel = NULL,

@@ -121,13 +121,15 @@ result_tfce <- arrayTtest(tempdat, groups = dat_id$group,
                           parallel = .(ncores = 2L),
                           tfce = .(ChN = ChN))
 
-# 4) compare the traditional and TFCE-corrected p-values
-p_trad <- extract(result_tfce, "p")
-p_tfce <- extract(result_tfce, "p_corr")
-p_all <- bindArrays(trad = p_trad, tfce = p_tfce, along_name = "method")
+# 4) compare the traditional and TFCE-corrected results
+modelplot(result_tfce, type = "unc")
+modelplot(result_tfce)
 
 # 5) plot p-values after -log transform for better discriminability
 # note how the sporadic effects disappear after TFCE correction
+p_trad <- extract(result_tfce, "p")
+p_tfce <- extract(result_tfce, "p_corr")
+p_all <- bindArrays(trad = p_trad, tfce = p_tfce, along_name = "method")
 p_plot <- imageValues(-log(p_all))  # returns a ggplot object
 p_plot
 

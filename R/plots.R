@@ -534,127 +534,6 @@ complexplot2dview <- function(dat, ch_pos, timepoint,
     }
 }
 
-# plot p-values with across-country similarity matrices 
-reprPlot <- function(p, e, title = "Reproducibility", plim = c(0.05, 0.01), 
-                     plim_shading = TRUE, plim_outline = 0.05,
-                     corr_range = c(-0.99, 0.99), 
-                     corr_method = c("pearson", "spearman")) {
-    #
-    emptyplot <- function() {
-        plot(0, 0, xlim = c(-1, 1), type = "n", 
-             axes = FALSE, frame.plot = FALSE, xlab = "", ylab = "")
-    }
-    pPolygon <- function(x, y, direction = "h") {
-        plim <- sort(unique(c(0, plim, 1)))
-        y_cat <- findInterval(y, plim)
-        y_phase <- c(1, cumsum(abs(diff(y_cat))) + 1)
-        yy <- 0.04 + -log(y) / (-log(p_min)) * 0.15
-        cols <- grey(c(seq(0.4, 0.6, 
-                           length.out = (length(plim)-2)), 0.95))
-        if (direction == "h") {
-            for (i in unique(y_phase)) {
-                ind <- y_phase == i
-                polygon(c(x[ind], rev(x[ind])), 
-                        c(-yy[ind], rep(-0.04, sum(ind))),
-                        col = cols[y_cat[ind][1]], border = "grey20")
-                if (plim_shading && y_cat[ind]<(length(plim)-1)) {
-                    acol <- col2rgb(cols[y_cat[ind][1]], TRUE) / 255
-                    acol[4] <- 0.2
-                    rect(x[min(which(ind))], 0,
-                         x[max(which(ind))], 1,
-                         col = rgb(acol[1], acol[2], acol[3], acol[4]), 
-                         border = rgb(0, 1, 0, acol[4]), lty = "1F")
-                }
-            }
-            if (!is.na(plim_outline)) {
-                sig <- rep(NA_integer_, length(x))
-                sig[y <= plim_outline] <- 1L
-                lines(x, sig, col = "green", lwd = 3)
-            }
-        } else {
-            for (i in unique(y_phase)) {
-                ind <- y_phase == i
-                polygon(c(-yy[ind], rep(-0.04, sum(ind))), 
-                        c(x[ind], rev(x[ind])),
-                        col = cols[y_cat[ind][1]], border = "grey20")
-                if (plim_shading && y_cat[ind]<(length(plim)-1)) {
-                    acol <- col2rgb(cols[y_cat[ind][1]], TRUE) / 255
-                    acol[4] <- 0.2
-                    rect(0, x[min(which(ind))],
-                         1, x[max(which(ind))],
-                         col = rgb(acol[1], acol[2], acol[3], acol[4]), 
-                         border = rgb(0, 1, 0, acol[4]), lty = "1F")
-                }
-            }
-            if (!is.na(plim_outline)) {
-                sig <- rep(NA_integer_, length(x))
-                sig[y <= plim_outline] <- 1L
-                lines(sig, x, col = "green", lwd = 3)
-            }
-        }
-    }                     
-    implot <- function(corrmat, pp) {
-        zlim <- atanh(corr_range)
-        mat <- atanh(corrmat)
-        mat[mat < zlim[1]] <- zlim[1]
-        mat[mat > zlim[2]] <- zlim[2]
-        image(mat, zlim = zlim, xlim = c(-0.2, 1), ylim = c(-0.2, 1),
-              axes = FALSE, xlab = "", ylab = "", col = bluered(1000))
-        lines(c(0, 1), c(0, 1), col = "grey70")
-        tpoints <- as.numeric(rownames(corrmat))
-        seqtpoints <- tpoints[seq(1, length(tpoints), 25)]
-        at <- (seqtpoints - min(tpoints)) / (max(tpoints) - min(tpoints))
-        x <- (tpoints - min(tpoints)) / (max(tpoints) - min(tpoints))
-        for (ii in 1:2) {
-            axis(ii + 2, at = at, labels = tpoints[tpoints %in% seqtpoints],
-                 cex.axis = 0.8)
-            y <- pp[, ii]
-            pPolygon(x, y, c("h", "v")[ii])
-        }
-    }
-    plim <- sort(unique(c(0, plim, 1)))
-    corr_method <- match.arg(corr_method)
-    e <- aperm(e, c("chan", "time", "nation"))
-    p <- aperm(p, c("time", "nation"))
-    p_min <- min(p)
-    natnum <- ncol(p)
-    nations <- colnames(p)
-    imlayout <- matrix_((2 * natnum + 1), natnum, natnum)
-    diagpos <- diag(matrix_(1:natnum^2, natnum, natnum))
-    for (i in 1:length(imlayout)) {
-        imlayout[i] <- 
-            if (i %in% diagpos) 0 
-        else max(imlayout)+1
-    }
-    layout_matrix <- 
-        rbind(c(0, rep(1, natnum)),
-              c(0, rep(2:(natnum + 1))),
-              cbind((natnum + 2):(2 * natnum + 1),
-                    imlayout))
-    layout(layout_matrix, 
-           widths = c(0.4, rep(1, natnum)),
-           heights = c(0.2, 0.1, rep(1, natnum)))
-    par(mar = rep(0, 4))
-    emptyplot(); text(0, 0, title, cex = 1.5)
-    for (i in 1:(2*natnum)) {
-        emptyplot()
-        if (i < 5) { 
-            text(0, 0, nations[i], cex = 1.2)
-        } else {
-            text(-1, 0, nations[i-4], cex = 1.2, pos = 4)
-        }
-    }
-    par(mar = c(1, 1, 3, 3))
-    for (nat in 1:natnum) {
-        for (i in 1:natnum) {
-            if (nat != i) {
-                corrs <- cor(e[,,nat], e[,,i], method = corr_method)
-                implot(corrs, p[, c(nat, i)])
-            }
-        }
-    }
-}
-
 #' Image plot of p-values
 #' 
 #' \code{imagePvalues} creates an image plot from a matrix or array of p-values
@@ -789,7 +668,8 @@ imageValues <- function(dat, grid = NULL, wrap = NULL, bar_title = "effect",
         {if (raster) geom_raster(aes_string(fill = "effect")) else 
             geom_tile(aes_string(fill = "effect"), size = 0)} + 
         scale_fill_gradient2(name = bar_title, 
-                             low = low, mid = mid, high = high, ...) +               
+                             low = low, mid = mid, high = high, 
+                             midpoint = midpoint, ...) +               
         scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
                          name = channel_label) + 
         scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1),
@@ -831,138 +711,153 @@ colorize <- function(obj, low=scales::muted("blue"), mid="white",
         obj + scale_fill_gradient2(low = low, mid = mid, high = high, ...))
 }
 
+###
 
-# simple function to plot TFCE effects
-tfce.plot <- function(arraydat, breaks = c(0, 0.001, 0.01, 0.05), 
-                      colors = rev(RColorBrewer::brewer.pal(length(breaks), "Reds")[-1]), title = "",
-                      gridlines_step = 50) {
-    extradim <- setdiff(names(dimnames(arraydat)), 
-                        c("chan", "time", "modelterm", "nation"))
-    if (!is.null(extradim)) arraydat <- avgDims(arraydat, extradim)
-    arraydat <- aperm(arraydat, c("chan", "time", "modelterm", "nation"))
-    dimnms <- dimnames(arraydat)
-    tpoints <- as.numeric(dimnms$time)
-    gridlines <- seq(
-        min(tpoints) %/% gridlines_step * gridlines_step,
-        max(tpoints) %/% gridlines_step * gridlines_step,
-        gridlines_step)
-    dims <- vapply(dimnms, length, 0L)
-    emptyplot <- function() {
-        plot(0, 0, xlim = c(-1, 1), 
-             type = "n", axes = FALSE, frame.plot = FALSE, xlab = "", ylab = "")
+#' Plot results of t-test, ANOVA or TANOVA modeling functions
+#' 
+#' \code{modelplot} is a generic function for plotting
+#' \code{\link{arrayTtest}}, \code{\link{arrayAnova}}, or \code{\link{tanova}}
+#' objects, each produced by the corresponding function.
+#' @inheritParams imageValues
+#' @param results a list; the return value of the corresponding modeling 
+#' functions
+#' @param what a character string or vector indicating what should be plotted:
+#' only the test statistics ("statistic"), only the p-values ("p-values"), or 
+#' both (default). The names can be abbreviated.
+#' @param type display "corrected" (default) or "uncorrected" statistics or
+#' p-values. The names can be abbreviated.
+#' @param pcrit numeric vector of significancy limits 
+#' (default: 0.001, 0.01, 0.05) for highlighting significant areas
+#' @param ... arguments passed to \code{\link{extract}}; e.g. use 
+#' arguments 'time_window' and 'term' to display only a subset of the results
+#' @export
+#' @return A ggplot object
+#' @seealso See the examples for \code{\link{arrayAnova}} and 
+#' \code{\link{tanova}}
+modelplot <- function(...) UseMethod("modelplot")
+
+#' Plot arrayTtest or arrayAnova results
+#' 
+#' \code{modelplot.default} plots the result of the \code{\link{arrayTtest}} or
+#' \code{\link{arrayAnova}} function.
+#' @export
+#' @describeIn modelplot
+modelplot.default <- function(results, 
+                              what = c("statistic", "p-value"), 
+                              type = c("corrected", "uncorrected"),
+                              pcrit = c(0.001, 0.01, 0.05),
+                              grid = NULL, wrap = NULL, 
+                              bar_title = "Test statistic", 
+                              time_label = "Time (ms)", 
+                              channel_label = "Channels", 
+                              raster = TRUE, 
+                              cluster_order = FALSE, 
+                              low = scales::muted("blue"), mid = "white", 
+                              high = scales::muted("red"), midpoint = 0, ...) {
+    #
+    if (!inherits(results, c("arrayTtest", "arrayAnova")))
+        stop("'results' does not have class 'arrayTest' or 'arrayAnova' or 'tanova'")
+    what <- match.arg(what, several.ok = TRUE)
+    type <- match.arg(type)
+    which_stat <- if (type == "corrected") "stat_corr" else "stat"
+    which_p <- if (type == "corrected") "p_corr" else "p"
+    out <- vector("list", 2)
+    if ("statistic" %in% what) {
+        out[[1L]] <- imageValues(
+            extract(results, which_stat, ...), 
+            grid = grid, wrap = wrap, bar_title = bar_title,
+            time_label = time_label, channel_label = channel_label,
+            raster = raster, cluster_order = cluster_order,
+            low = low, mid = mid, high = high, midpoint = midpoint)
+        i <- 1L
     }
-    layoutmat <- rbind(
-        c(0, rep(1, dims[3])),
-        c(0, (1:dims[3]) + dims[4] + 1),
-        cbind(1:dims[4] + 1,
-              matrix((1:prod(dims[3:4])) + sum(dims[3:4]) + 1, 
-                     dims[4], dims[3], TRUE)))
-    layout(layoutmat, 
-           widths = c(0.3, rep(1, dims[3])),
-           heights = c(0.5, 0.3, rep(1, dims[4])))
-    par(mar = c(0, 0, 0, 0))
-    # row and column labels
-    emptyplot()
-    text(0, 0, title, cex = 1.3)
-    for (i in 1:dims[4]) {
-        emptyplot()
-        text(0, 0, dimnms[[4]][i], srt = 90)
-    }
-    for (i in 1:dims[3]) {
-        emptyplot()
-        text(0, 0, dimnms[[3]][i])
-    }
-    par(mar = c(2, 2, 0, 0.5))
-    # plot images
-    for (i in 1:dims[4]) {
-        for (ii in 1:dims[3]) {
-            temp <- aperm(arraydat[,,ii,i], c("time", "chan"))
-            plot(0, 0,
-                 xlim = range(tpoints), ylim = range(1:dims["chan"]),  
-                 type = "n", 
-                 xlab = "", ylab = "", yaxt = "n")
-            abline(v = gridlines, lty = 1, col = "grey95")
-            image(tpoints, 1:dims["chan"], temp, 
-                  breaks = breaks, col = colors, add = TRUE,
-                  xlab = "", ylab = "", yaxt = "n")
-            axis(2, at = 1:dims["chan"], labels = FALSE, tick = FALSE)
-            text(par("usr")[1] - 21, 1:dims["chan"], cex = 0.6, pos = 2,
-                 labels = dimnms$chan, xpd = TRUE)
-            abline(v = 0, col = "grey40")
-        }
+    if ("p-value" %in% what) {
+        out[[2L]] <- imagePvalues(
+            extract(results, which_p, ...), 
+            pcrit = pcrit, grid = grid, wrap = wrap,
+            time_label = time_label, channel_label = channel_label,
+            raster = raster, cluster_order = cluster_order)
+        i <- 2L
+    } 
+    # return
+    if (length(what) == 2) {
+        out[[1L]] <- out[[1L]] + ggtitle("Test statistic")
+        out[[2L]] <- out[[2L]] + ggtitle("Significant effects")
+        multiplot(plot_list = out, cols = 2)
+        return(out)
+    } else {
+        out[[i]]
     }
 }
 
-###
 
 #' Plot TANOVA results
 #' 
-#' \code{plotTanova} plots the result of the \code{\link{tanova}} function
-#' @param results a list; the return value of the \code{\link{tanova}} function
-#' @param grid character vector or formula defining the layout of panels
-#' @param wrap character vector or formula defining the dimension which 
-#' separates panels (only considered if grid is NULL)
-#' @param plot_title character string; the title of the plot
-#' @param time_label character string; the label of the x (time) axis 
-#' (default: "Time (ms)")
-#' @param highlight_p highlight significant phases based on the corrected
-#' ("p_corr", the default) or uncorrected ("p") p-values
-#' @param only_p logical; if TRUE, p-values are plotted instead of combined 
-#' (effect + p-value) plots (default: FALSE)
+#' \code{modelplot.tanova} plots the result of the \code{\link{tanova}} function.
 #' @export
-#' @return A ggplot object
-plotTanova <- function(results, 
-                       grid = NULL, wrap = NULL, 
-                       plot_title = "", time_label = "Time (ms)", 
-                       highlight_p = c("p_corr", "p"), only_p = FALSE) {
+#' @keywords internal
+#' @describeIn modelplot
+modelplot.tanova <- function(results, 
+                             what = c("statistic", "p-value"),
+                             type = c("corrected", "uncorrected"), 
+                             grid = NULL, wrap = NULL, 
+                             time_label = "Time (ms)", 
+                             ...) {
     #
     if (!inherits(results, "tanova"))
         stop("'results' does not have class 'tanova'")
-    highlight_p <- match.arg(highlight_p)
-    pcrit <- try(eval(as.list(results$call)$pcrit), silent = TRUE)
-    if (is.null(pcrit)) {
-        pcrit <- formals(tanova)$pcrit
-    }
-    if (!is.numeric(pcrit) || is.na(pcrit)) {
-        pcrit <- 
-            if (identical(highlight_p, "p_corr")) {
-                unique(as.vector(extract(results, "p_corr")))
-            } else {
-                0.05
-            }
-    }
-    pcrit <- union(sort(pcrit), 1)
-    #
-    dat <- transformArray(effect ~ ., extract(results, "stat"))
-    dat$pvalue <- -log(as.vector(extract(results, "p")))
-    hpvals <- extract(results, highlight_p)
-    if (identical(highlight_p, "p")) {
-        ind <- hpvals <= pcrit[1L]
-        hpvals[ind] <- pcrit[1L] 
-        for (i in 2:length(pcrit)) {
-            ind <- !ind & hpvals <= pcrit[i]
-            hpvals[ind] <- pcrit[i] 
+    what <- match.arg(what, several.ok = TRUE)
+    dat <- transformArray(effect ~ ., extract(results, "stat", ...))
+    if (identical(what, "statistic")) {
+        dat$pcrit <- factor(1, labels = "ns")
+        colour_pcrit <- "grey60"
+    } else {
+        type <- match.arg(type)
+        highlight_p <- if (type == "corrected") "p_corr" else "p"
+        pcrit <- try(eval(as.list(results$call)$pcrit), silent = TRUE)
+        if (is.null(pcrit)) {
+            pcrit <- formals(tanova)$pcrit
         }
+        if (!is.numeric(pcrit) || is.na(pcrit)) {
+            pcrit <- 
+                if (identical(highlight_p, "p_corr")) {
+                    unique(as.vector(extract(results, "p_corr", ...)))
+                } else {
+                    0.05
+                }
+        }
+        pcrit <- union(sort(pcrit), 1)
+        #
+        dat$pvalue <- -log(as.vector(extract(results, "p", ...)))
+        hpvals <- extract(results, highlight_p, ...)
+        if (identical(highlight_p, "p")) {
+            ind <- hpvals <= pcrit[1L]
+            hpvals[ind] <- pcrit[1L] 
+            for (i in 2:length(pcrit)) {
+                ind <- !ind & hpvals <= pcrit[i]
+                hpvals[ind] <- pcrit[i] 
+            }
+        }
+        shiftEdges <- function(x) {
+            dx <- diff(x)
+            dx[dx < 0] <- 0
+            x[-nrow(x), ] <- x[-nrow(x), ] + dx
+            x
+        }
+        hpvals <- fnDims(hpvals, "time", shiftEdges, vectorized = TRUE,
+                         keep_dimorder = TRUE)
+        dat$pcrit <- factor(hpvals, 
+                            levels = as.character(pcrit), 
+                            labels = c(as.character(pcrit[-length(pcrit)]), 
+                                       "n.s."))
+        final_pcrit <- levels(droplevels(dat)$pcrit)
+        colour_pcrit <- rev(brewer.pal(max(3L, length(final_pcrit)), 
+                                       "Reds"))[seq_along(final_pcrit)]
+        colour_pcrit[final_pcrit == "n.s."] <- "grey60"
+        legendtitle <- "p-value"
     }
-    shiftEdges <- function(x) {
-        dx <- diff(x)
-        dx[dx < 0] <- 0
-        x[-nrow(x), ] <- x[-nrow(x), ] + dx
-        x
-    }
-    hpvals <- fnDims(hpvals, "time", shiftEdges, vectorized = TRUE,
-                     keep_dimorder = TRUE)
-    dat$pcrit <- factor(hpvals, 
-                        levels = as.character(pcrit), 
-                        labels = c(as.character(pcrit[-length(pcrit)]), 
-                                   "n.s."))
-    final_pcrit <- levels(droplevels(dat)$pcrit)
-    colour_pcrit <- rev(brewer.pal(max(3L, length(final_pcrit)), 
-                                   "Reds"))[seq_along(final_pcrit)]
-    colour_pcrit[final_pcrit == "n.s."] <- "grey60"
-    legendtitle <- "p-value"
     #
-    if (only_p) {
+    if (identical(what, "p-value")) {
         scales = "fixed"
         qp <- ggplot(dat[order(dat$time),], 
                      aes_string(x = "time", y = "pvalue", col = "pcrit", 
@@ -997,7 +892,7 @@ plotTanova <- function(results,
         }
     }
     qp <- qp + geom_path() + 
-        xlab(time_label) + ggtitle(plot_title) + 
+        xlab(time_label) +  
         scale_colour_manual(name = legendtitle,
                             values = colour_pcrit) + 
         theme(panel.background = element_rect(fill = "white"),
@@ -1009,99 +904,20 @@ plotTanova <- function(results,
 }
 
 
-# plot neurodys tanova results
-fastplot_tanova <- function(results, plot_title = "", pcrit = 0.05, 
-                            only_p = FALSE) {
-    reshapefn <- function(slot, headername) {
-        x <- lapply(results, "[[", slot)
-        #x <- rearrangeList(x, "nation")
-        if (length(x) > 1) {
-            temp <- matrix(unlist(strsplit(names(x), "-")), 
-                           nrow = length(x), byrow = TRUE)
-            names(x) <- temp[, 2]
-            x <- rearrangeList(x, temp[1, 1])
-        } else {
-            x <- x[[1]]
-        }
-        x <- as.data.frame.table(x, responseName = headername)
-        x$time <- as.numeric(as.character(x$time))
-        return(x)
-    }
-    dimn <- names(results[[1]])
-    dat <- reshapefn(dimn[grep("effect_", dimn)], "effect_size")
-    dat$pvalue <- -log(reshapefn("perm_pvalues", "pvalue")$pvalue)
-    dat$pvalue_consec <- reshapefn("perm_pvalues_consec", "pvalue")$pvalue
-    dat$pcrit <- factor_(dat$pvalue_consec<pcrit)
-    legendtitle <- paste("pvalue <", substitute(pcrit), sep = " ")
-    #
-    if (only_p) {
-        qp <- ggplot(dat[order(dat$time),], 
-                     aes(x = time, y = pvalue, col = pcrit, group = NA)) + 
-            geom_hline(yintercept = -log(pcrit), lty = 3) + 
-            ylab("-log(P-value)")
-    } else {
-        qp <- ggplot(dat[order(dat$time),], 
-                     aes(x = time, y = effect_size, col = pcrit, group = NA)) + 
-            ylab("Effect size")
-    }
-    qp <- qp + geom_line() + facet_grid(nation~modelterm) +
-        ggtitle(plot_title) + 
-        scale_colour_manual(name = legendtitle,
-                            values = c("FALSE"="grey70","TRUE"="red"))
-    print(qp)
-}
-
-
-# plot peak results
-fastplot_peak <- function(results, plot_title = "", 
-                          pcrit = 0.05, only_p = FALSE) {
-    reshapefn <- function(slot, headername, attr_slot = NULL) {
-        if (is.null(attr_slot)) {
-            x <- lapply(results, "[[", slot)
-        } else {
-            x <- lapply(results, 
-                        function(x) attr(x[[slot]], attr_slot))
-        }
-        x <- rearrangeList(x, "nation")
-        x <- as.data.frame.table(x, responseName = headername)
-        x$peak <- factor_(x$peak, levels = rev(levels(x$peak)))
-        return(x)
-    }
-    dat_ampl <- reshapefn("F_obs", "pvalue", attr_slot = "pvalues")
-    dat_ampl <- dat_ampl[with(dat_ampl, order(nation, peak, modelterm)),
-                         c("nation", "peak", "modelterm", "pvalue")]
-    dat_ampl$measure <- "amplitude"
-    dat_lat <- reshapefn("lat_pvalues", "pvalue")
-    dat_lat <- dat_lat[with(dat_lat, order(nation, peak, term)),
-                       c("nation", "peak", "term", "pvalue")]
-    colnames(dat_lat)[3] <- "modelterm"
-    dat_lat$measure <- "latency"
-    dat <- rbind(dat_ampl, dat_lat)
-    dat$pcrit <- factor_(dat$pvalue < pcrit)
-    legendtitle <- paste("pvalue <", substitute(pcrit), sep = " ")
-    qp <- ggplot(dat, aes(x = nation, y = peak, fill = pcrit)) + 
-        geom_tile(col = "white") + facet_grid(modelterm ~ measure) + 
-        ggtitle(plot_title) + 
-        scale_fill_manual(name = legendtitle,
-                          values = c("FALSE"="grey60","TRUE"="red3"))
-    print(qp)
-}
-
-#
-# Multiple plot function
-#
-# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
-# - cols:   Number of columns in layout
-# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
-#
-# If the layout is something like matrix(c(1,2,3,3), nrow = 2, byrow = TRUE),
-# then plot 1 will go in the upper left, 2 will go in the upper right, and
-# 3 will go all the way across the bottom.
-# Author: Winston Chang
-multiplot <- function(..., plotlist = NULL, file, cols = 1, layout = NULL) {
+#' Multiple plot function
+#'
+#' \code{multiplot} plots multiple ggplot objects on one page
+#' @param ... ggplot objects
+#' @param plot_list a list of ggplot objects
+#' @param cols the number of columns in layout
+#' @param a matrix specifying the layout. If present, 'cols' is ignored.
+#' @author Winston Chang
+#' @export
+#' @keywords internal
+multiplot <- function(..., plot_list = NULL, cols = 1L, layout = NULL) {
     require("grid")
     # Make a list from the ... arguments and plotlist
-    plots <- c(list(...), plotlist)
+    plots <- c(list(...), plot_list)
     numPlots = length(plots)
     # If layout is NULL, then use 'cols' to determine layout
     if (is.null(layout)) {

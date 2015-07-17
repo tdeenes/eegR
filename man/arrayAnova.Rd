@@ -202,6 +202,10 @@ result_tfce <- arrayAnova(tempdat,
                           tfce = .(ChN = ChN),
                           parallel = .(ncores = 2))
 
+# plot the corrected and uncorrected results
+modelplot(result_tfce)
+modelplot(result_tfce, type = "unc")
+
 # compare traditional and TFCE p-values
 p_all <- extract(result_tfce, c("p", "p_corr"))
 p_all <- bindArrays(trad = p_all$p, tfce = p_all$p_corr,
@@ -211,9 +215,6 @@ p_all <- bindArrays(trad = p_all$p, tfce = p_all$p_corr,
 # note how the sporadic effects disappear
 p_plot <- imageValues(-log(p_all)) # returns a ggplot object
 p_plot
-
-# you can also use the imagePvalues function to plot discretized p-values
-imagePvalues(p_all, pcrit = c(0.01, 0.05, 0.1))
 }
 \references{
 The TFCE correction follows:\cr
@@ -232,6 +233,7 @@ designs. Behavior Research Methods, 37 (3), 379-384.
 \seealso{
 See also the related methods to explore the results, e.g.
 \code{\link{extract.arrayAnova}}, \code{\link{summary.arrayAnova}}, and the
-plotting functtions \code{\link{imageValues}}, \code{\link{imagePvalues}}.
+plotting functions \code{\link{modelplot}}, or the lower-level
+\code{\link{imageValues}} and \code{\link{imagePvalues}}.
 }
 
