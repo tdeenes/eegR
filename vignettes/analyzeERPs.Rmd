@@ -151,7 +151,7 @@ results <- arrayAnova(
     parallel = .(ncores = 2))
 
 # plot the results (for now, only the p-values of the TFCE method)
-imagePvalues(extract(results, "p_corr"), grid = "modelterm ~ .")
+modelplot(results, "p-value")
 
 # print the summary
 summary(results)
