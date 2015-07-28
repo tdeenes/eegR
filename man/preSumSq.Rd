@@ -5,7 +5,7 @@
 \title{Prepare sum-of-squares computations}
 \usage{
 preSumSq(form, form_data, keep_term_order = FALSE, scaled = FALSE,
-  y = NULL)
+  y = NULL, between = NULL, adjusted = TRUE)
 }
 \arguments{
 \item{form}{model formula (or character string to \code{as.formula})}
@@ -22,6 +22,11 @@ and so on. Effects of a given order are kept in the order specified.}
 
 \item{y}{a numeric matrix of response data if residuals should be computed
 (usually coming from \code{preAnova})}
+
+\item{between}{the names of between-subject factors. Only used for warning
+message in case of unbalanced data.}
+
+\item{adjusted}{adjustment for unbalanced data (default: TRUE)}
 }
 \value{
 A list with the following components: model_matrix,

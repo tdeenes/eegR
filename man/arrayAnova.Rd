@@ -95,6 +95,11 @@ data(erps)
 dat_id <- attr(erps, "id") # to get group memberships
 chan_pos <- attr(erps, "chan") # needed for TFCE correction
 
+# make the dataset unbalanced to illustrate that if there is only one
+# between-subject factor, Type 1 and Type 2 results are identical
+erps <- subsetArray(erps, list(id = 2:20))
+dat_id <- dat_id[2:20, ]
+
 # average the data in each 12 ms time-bin to decrease the computational
 # burden (not needed in serious analyses)
 tempdat <- avgBin(erps, "time", 6)
@@ -120,7 +125,7 @@ if (requireNamespace("ez")) {
     tempdat_ez <- transformArray(y ~ ., tempdat, subset = sub)
     tempdat_ez$group <- factor(dat_id$group[match(tempdat_ez$id, dat_id$id)])
     result_ez <- ez::ezANOVA(tempdat_ez, y, id, .(stimclass, pairtype),
-                             between = group, observed = group, type = 1)
+                             between = group, observed = group, type = 2)
     # compare results
     ez_F <- result_ez$ANOVA$F   # F-values
     ez_p <- result_ez$ANOVA$p   # p-values
@@ -172,7 +177,8 @@ if (requireNamespace("car")) {
                      A.subst, B.subst, C.subst,
                      A.transp, B.transp, C.transp) ~ age,
                data = tempdat_car)
-    maov <- car::Anova(maov, idata = idata, idesign= ~stimclass*pairtype)
+    maov <- car::Anova(maov, idata = idata, idesign= ~stimclass*pairtype,
+                       type = 2)
     maov <- summary(maov, multivariate = FALSE)$univ
     car_F <- maov[names(eegr_F), "F"]
     car_p <- maov[names(eegr_p), "Pr(>F)"]

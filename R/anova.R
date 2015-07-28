@@ -158,6 +158,230 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
     marg_means
 }
 
+#' Compute adjusted or unadjusted cell means in ANOVA designs
+#' 
+#' \code{modelMeans} is a generic function for computing adjusted or unadjusted 
+#' cell means in ANOVA designs.
+#' @param model an object returned by \code{\link{arrayAnova}} or 
+#' \code{\link{tanova}}
+#' @param .arraydat a numeric array with named dimnames containing the EEG (or 
+#' other) data. Missing values are not allowed.
+#' @param factordef a named list of factor definitions, containing the following 
+#' elements:
+#' \itemize{
+#' \item{between: }{character vector of between-subject factors (default: NULL)}
+#' \item{within: }{character vector of within-subject factors (default: NULL)}
+#' \item{w_id: }{name of the dimension which identifies the subjects 
+#' (default: "id")}
+#' }
+#' @param bwdat a data.frame which contains the identification codes 
+#' (factordef$w_id) and all subject-level variables (usually factors) listed in
+#' 'factordef$between'. Missing values are not allowed.
+#' @param term a character vector of model terms; a separate array of cell means
+#' is returned for each term. The default is NULL, in which case all terms
+#' (that is, the means corresponding to all main effects and interactions) are
+#' returned. For custom terms, note that interaction terms must be given as 
+#' "factorA*factorB" and not as "factorA:factorB".
+#' @param adjusted a logical value if the cell means should be adjusted for 
+#' unbalanced data (default: FALSE). See Details.
+#' @param ... not used yet
+#' @details If 'adjusted' is set to FALSE (the default), \code{modelMeans} fits 
+#' separate models for each model term and computes the model-based predictions 
+#' for a reference grid which contains the mean and the 1SD value for continuous
+#' covariates, and all levels of the factor variables in the design. If 
+#' 'adjusted' is set to TRUE, the means are simply the marginal means of the
+#' predicted means of the highest-order interaction term. This is equivalent to 
+#' the so-called LS means (least-squares means) in the SAS terminology. 
+#' This distinction is only relevant if the design is unbalanced, that is, the 
+#' sample sizes in a between-subject design are unequal (note that the input 
+#' array may not contain missing values, therefore the within subject part of 
+#' the design is always balanced). For such datasets the lower order 
+#' interaction or main effect means can substantially differ from the averages 
+#' of the corresponding higher-order means if 'adjusted' is FALSE. 
+#' @export
+#' @return The function returns a named list of arrays; the names are the model 
+#' terms.
+#' @examples 
+#' # example data
+#' data(erps)
+#' dat_id <- attr(erps, "id") # to get group memberships
+#' 
+#' # make the dataset unbalanced to illustrate the difference between adjusted
+#' # and unadjusted means
+#' erps <- subsetArray(erps, list(id = 2:20))
+#' dat_id <- dat_id[2:20, ]
+#' 
+#' # compute the means for the group*stimclass*pairtype interaction and all
+#' # other lower-order terms
+#' fdef <- list(between = "group", 
+#'              within = c("stimclass", "pairtype"))
+#' means <- modelMeans(erps, fdef, bwdat = dat_id)
+#' 
+#' # the same for the least-squares means
+#' means_adj <- modelMeans(erps, fdef, bwdat = dat_id, adjusted = TRUE)
+#' 
+#' # this is an unbalanced dataset, so the means for the highest order
+#' # interaction are identical, but the marginal means are not
+#' stopifnot(identical(
+#'     TRUE,
+#'     all.equal(means$`group*stimclass*pairtype`,
+#'               means_adj$`group*stimclass*pairtype`))
+#' )
+#' stopifnot(!identical(
+#'     TRUE,
+#'     all.equal(means$`stimclass*pairtype`,
+#'               means_adj$`stimclass*pairtype`))
+#' )
+#' 
+#' # simple means for the Fz channel at time 200, for identical pairs in the
+#' # "A" stimulus class, separately for the two reading groups
+#' simple_means <- sapply(c("control", "dl"), function(g)
+#'     mean(subsetArray(erps, 
+#'                      list(chan = "Fz", time = "200", 
+#'                           stimclass = "A", pairtype = "ident",
+#'                           id = dat_id$group == g)))
+#' )
+#' stopifnot(identical(
+#'     TRUE,
+#'     all.equal(means$`group*stimclass*pairtype`["Fz", "200", , "A", "ident"], 
+#'               simple_means))
+#' )
+#' 
+#' # the same ignoring the groups
+#' simple_mean_nogroup <- mean(subsetArray(erps, 
+#'                                         list(chan = "Fz", time = "200", 
+#'                                         stimclass = "A", pairtype = "ident")))
+#' stopifnot(identical(
+#'     TRUE,
+#'     all.equal(means$`stimclass*pairtype`["Fz", "200", "A", "ident"], 
+#'               simple_mean_nogroup))
+#' )
+#' stopifnot(identical(
+#'     TRUE,
+#'     all.equal(means_adj$`stimclass*pairtype`["Fz", "200", "A", "ident"], 
+#'               mean(simple_means)))
+#' )
+#' 
+modelMeans <- function(...) UseMethod("modelMeans")
+
+#' @export
+#' @describeIn modelMeans
+modelMeans.default <- function(.arraydat, factordef, 
+                               bwdat = NULL, term = NULL, 
+                               adjusted = FALSE, ...) {
+    # workhorse function
+    compute <- function(tm, dat, y, factordef, ydims, 
+                        tm0 = NULL, model0 = NULL) {
+        vars <- strsplit(tm, "\\*")[[1L]]
+        if (is.null(tm0)) {
+            form <- as.formula(paste("~", tm, sep = ""))
+            mod <- preSumSq(form, dat, y = y, between = character(), 
+                            adjusted = FALSE)
+            coeff <- mod$coeff
+            pred_levels <- lapply(dat[vars], function(x) {
+                if (is.numeric(x)) c(0, 1) else levels(x)
+            })
+            pred_grid <- expand.grid(pred_levels, KEEP.OUT.ATTRS = FALSE)
+            pred_mm <- model.matrix(form, pred_grid) 
+            pred <- pred_mm %*% coeff[colnames(pred_mm), , drop = FALSE]
+            setattr(pred, "dim", c(vapply(pred_levels, length, 0L), ydims$dim))
+            setattr(pred, "dimnames", c(pred_levels, ydims$dimn))
+            pred <- aperm(pred, c(ydims$orig_dimid, vars))
+        } else {
+            vars0 <- strsplit(tm0, "\\*")[[1L]]
+            pred <- 
+                if (identical(vars, vars0)) {
+                    model0
+                } else {
+                    avgDims(model0, setdiff(vars0, vars))
+                }
+        }
+        # return
+        pred
+    }
+    # set contrasts
+    opcons <- options("contrasts")
+    options(contrasts = c("contr.helmert", "contr.poly"))
+    on.exit(options(opcons))
+    #
+    input <- preAnova(
+        .arraydat = .arraydat, factordef = factordef, bwdat = bwdat, 
+        verbose = FALSE, tfce = FALSE, perm = permParams(n = 0L))
+    dat <- input$dat
+    y <- input$.arraydat
+    if (is.null(term)) {
+        term <- gsub(":", "*", input$full_dimnames$modelterm)
+    } 
+    #
+    origpos <- attr(input$teststat_dimid, "origpos")
+    names(origpos) <- input$teststat_dimid
+    ydimid <- setdiff(input$teststat_dimid, "modelterm")
+    orig_ydimid <- ydimid[order(origpos[ydimid])]
+    ydimn <- input$full_dimnames[ydimid]
+    ydim <- vapply(ydimn, length, 0L)
+    y_dims <- list(dim = ydim, dimn = ydimn, orig_dimid = orig_ydimid)
+    #
+    out <- 
+        if (!adjusted) {
+            lapply(term, compute, dat = dat, y = y, factordef = factordef,
+                   ydims = y_dims)
+        } else {
+            term0 <- input$full_dimnames$modelterm
+            term0 <- term0[length(term0)]
+            term0 <- gsub(":", "*", term0)
+            model0 <- compute(term0, dat = dat, y = y, factordef = factordef,
+                              ydims = y_dims)
+            lapply(term, compute, dat = dat, y = y, factordef = factordef,
+                   ydims = y_dims, tm0 = term0, model0 = model0)
+        }
+    # return
+    setattr(out, "names", term)
+    out
+}
+
+#' @describeIn modelMeans
+modelMeans.arrayAnova <- function(model = NULL, term = NULL, adjusted = FALSE,
+                                  ...) {
+    mcall <- model$call
+    mcall[[1]] <- as.name("modelMeans.default")
+    mcall$term <- term
+    mcall$adjusted <- adjusted
+    eval(mcall)
+}
+
+#' @describeIn modelMeans
+modelMeans.tanova <- modelMeans.arrayAnova
+
+
+#' Force orthogonality in a model matrix
+#' 
+#' \code{forceOrthogonal} checks if a model matrix is orthogonal and makes
+#' adjustments if it is not.
+#' @param model_matrix the model matrix
+#' @param between the names of between-subject factors
+#' @keywords internal
+forceOrthogonal <- function(model_matrix, between = character()) {
+    if (ncol(model_matrix) > 2L) {
+        orth <- cor(model_matrix[, -1L])
+        orth <- orth[lower.tri(orth)]
+        if (max(abs(orth)) > .Machine$double.eps) {
+            if (length(between) > 1L)
+                warning("The design is unbalanced, and this function calculates 
+                        sequential (type-I) tests. Consider re-running the test
+                        with reordered between-subject factors (see ?arrayAnova).")
+            model_matrix[, 2L] <- model_matrix[, 2L] - mean(model_matrix[, 2L])
+            for (i in 3:ncol(model_matrix)) {
+                mmi <- model_matrix[,1:(i-1L)]
+                coeff <- solve(crossprod(mmi), 
+                               crossprod(mmi, model_matrix[, i, drop=FALSE]))
+                model_matrix[,i] <- model_matrix[,i]- mmi %*% coeff
+            }    
+        }
+    }
+    # return
+    model_matrix
+}
+
 #' Prepare sum-of-squares computations
 #' 
 #' \code{preSumSq} prepares the objects which are needed by 
@@ -174,12 +398,16 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
 #' 'form_data' are already scaled (TRUE) or not (FALSE, the default).
 #' @param y a numeric matrix of response data if residuals should be computed
 #' (usually coming from \code{preAnova})
+#' @param between the names of between-subject factors. Only used for warning
+#' message in case of unbalanced data.
+#' @param adjusted adjustment for unbalanced data (default: TRUE)
 #' @return A list with the following components: model_matrix, 
 #' model_matrix_labels, xpx, unique_contrasts, residuals (optional).
 #' @keywords internal
 preSumSq <- function(form, form_data, 
                      keep_term_order = FALSE,
-                     scaled = FALSE, y = NULL) {
+                     scaled = FALSE, y = NULL, between = NULL,
+                     adjusted = TRUE) {
     term_object <- terms(as.formula(form), keep.order = keep_term_order)
     term_labels <- attr(term_object, "term.labels")
     term_factors <- attr(term_object, "factors")
@@ -196,22 +424,7 @@ preSumSq <- function(form, form_data,
     }
     mm <- model.matrix(term_object, data = form_data)
     # check orthogonality
-    if (ncol(mm) > 2L) {
-        orth <- cor(mm[, -1])
-        orth <- orth[lower.tri(orth)]
-        if (max(abs(orth)) > .Machine$double.eps) {
-            if (length(between) > 1L)
-                warning("The design is unbalanced, and this function calculates 
-                        sequential (type-I) tests. Consider re-running the test
-                        with reordered between-subject factors (see ?arrayAnova).")
-            mm[,2] <- mm[,2] - mean(mm[,2])
-            for (i in 3:ncol(mm)) {
-                mmi <- mm[,1:(i-1)]
-                coeff <- solve(crossprod(mmi), crossprod(mmi, mm[, i, drop=FALSE]))
-                mm[,i] <- mm[,i]- mmi %*% coeff
-            }    
-        }    
-    }
+    if (adjusted) mm <- forceOrthogonal(mm, between)
     #
     xpx <- crossprod(mm)
     mm_labels <- c("(Intercept)", term_labels[attr(mm, "assign")])
@@ -232,8 +445,8 @@ preSumSq <- function(form, form_data,
         unique_contrasts = unique_contrasts)
     #
     if (!is.null(y)) {
-        coeff <- solve(xpx, crossprod(mm, y))
-        pred <- mm %*% coeff
+        out$coeff <- solve(xpx, crossprod(mm, y))
+        pred <- mm %*% out$coeff
         out$residuals <- y - pred
     }
     # return
@@ -639,7 +852,8 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
     for (i in seq_along(model_formula)) {
         tempy <- if (i == 1L && perm$type == "residuals") .arraydat else NULL
         pre_sumsq[[i]] <- preSumSq(model_formula[[i]], form_data = dat, 
-                                   scaled = TRUE, y = tempy)
+                                   scaled = TRUE, y = tempy, 
+                                   between = factordef$between)
     }
     if (type == "between" && !tanova) {
         pre_sumsq[[1]]$ssq_total <- colSums(
@@ -775,6 +989,11 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #' dat_id <- attr(erps, "id") # to get group memberships
 #' chan_pos <- attr(erps, "chan") # needed for TFCE correction
 #' 
+#' # make the dataset unbalanced to illustrate that if there is only one 
+#' # between-subject factor, Type 1 and Type 2 results are identical
+#' erps <- subsetArray(erps, list(id = 2:20))
+#' dat_id <- dat_id[2:20, ]
+#' 
 #' # average the data in each 12 ms time-bin to decrease the computational 
 #' # burden (not needed in serious analyses)
 #' tempdat <- avgBin(erps, "time", 6)
@@ -800,7 +1019,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #'     tempdat_ez <- transformArray(y ~ ., tempdat, subset = sub)
 #'     tempdat_ez$group <- factor(dat_id$group[match(tempdat_ez$id, dat_id$id)])
 #'     result_ez <- ez::ezANOVA(tempdat_ez, y, id, .(stimclass, pairtype),
-#'                              between = group, observed = group, type = 1)
+#'                              between = group, observed = group, type = 2)
 #'     # compare results
 #'     ez_F <- result_ez$ANOVA$F   # F-values
 #'     ez_p <- result_ez$ANOVA$p   # p-values
@@ -852,7 +1071,8 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #'                      A.subst, B.subst, C.subst,
 #'                      A.transp, B.transp, C.transp) ~ age,
 #'                data = tempdat_car)
-#'     maov <- car::Anova(maov, idata = idata, idesign= ~stimclass*pairtype)
+#'     maov <- car::Anova(maov, idata = idata, idesign= ~stimclass*pairtype,
+#'                        type = 2)
 #'     maov <- summary(maov, multivariate = FALSE)$univ
 #'     car_F <- maov[names(eegr_F), "F"]
 #'     car_p <- maov[names(eegr_p), "Pr(>F)"]
@@ -895,7 +1115,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
 #' # note how the sporadic effects disappear
 #' p_plot <- imageValues(-log(p_all)) # returns a ggplot object
 #' p_plot
-#'
+#' 
 arrayAnova <- function(.arraydat, factordef, bwdat = NULL, verbose = TRUE, 
                        perm = NULL, tfce = NULL, parallel = NULL, 
                        seed = NULL) {
