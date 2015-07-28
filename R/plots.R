@@ -784,7 +784,7 @@ modelplot.default <- function(results,
         out[[1L]] <- out[[1L]] + ggtitle("Test statistic")
         out[[2L]] <- out[[2L]] + ggtitle("Significant effects")
         multiplot(plot_list = out, cols = 2)
-        return(out)
+        invisible(out)
     } else {
         out[[i]]
     }
