@@ -339,6 +339,7 @@ modelMeans.default <- function(.arraydat, factordef,
     out
 }
 
+#' @export
 #' @describeIn modelMeans
 modelMeans.arrayAnova <- function(model = NULL, term = NULL, adjusted = FALSE,
                                   ...) {
@@ -349,6 +350,7 @@ modelMeans.arrayAnova <- function(model = NULL, term = NULL, adjusted = FALSE,
     eval(mcall)
 }
 
+#' @export
 #' @describeIn modelMeans
 modelMeans.tanova <- modelMeans.arrayAnova
 
