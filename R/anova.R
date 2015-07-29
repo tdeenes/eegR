@@ -812,14 +812,22 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
     dat[,factordef$between] <- bwdat[,factordef$between]
     # transform characters to factors, and scale numeric variables
     dat[] <- lapply(
-        dat, function(x) 
+        names(dat), function(n) {
+            x <- dat[[n]]
             if (storage.mode(x) == "character") {
-                factor_(x)
+                level <- 
+                    if (n %in% factordef$between) {
+                        levels(bwdat[[n]])
+                    } else {
+                        full_dimnames[[n]]
+                    }
+                factor_(x, levels = level)
             } else if (is.numeric(x)) {
                 scale(x)
             } else {
                 x
-            })
+            }
+        })
     #
     # formulas
     #
