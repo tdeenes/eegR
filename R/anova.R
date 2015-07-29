@@ -855,7 +855,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
         tempy <- if (i == 1L && perm$type == "residuals") .arraydat else NULL
         pre_sumsq[[i]] <- preSumSq(model_formula[[i]], form_data = dat, 
                                    scaled = TRUE, y = tempy, 
-                                   between = factordef$between)
+                                   between = character())
     }
     if (type == "between" && !tanova) {
         pre_sumsq[[1]]$ssq_total <- colSums(
