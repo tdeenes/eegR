@@ -21,6 +21,7 @@
 #' @importFrom checkmate assertDataFrame assertList assertClass
 #' @importFrom checkmate assertLogical assertCharacter assertNumeric assertIntegerish checkIntegerish
 #' @importFrom checkmate assertString assertNumber
+#' @importFrom checkmate testVector
 #' @importFrom Rcpp evalCpp
 #' @importFrom Kmisc factor_ counts
 #' @importFrom orthopolynom polynomial.values legendre.polynomials

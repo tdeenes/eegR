@@ -117,6 +117,187 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
     out
 }
 
+#' Compare dimension levels
+#' 
+#' \code{compareLevels} compares dimension levels based on arbitrary contrast
+#' schemes. This is usually not only more convenient but also faster than
+#' compare various subsets of the data 'by hand'.
+#' @param dat an atomic vector, matrix or array
+#' @param which_dim numeric indices of dimensions or character vector of 
+#' dimension identifiers (names of dimnames) whose levels should be contrasted
+#' (default: 1L)
+#' @param contr either 1) NULL (the default), which means that all levels
+#' within each dimension are contrasted in a pairwise fashion, or 2) a matrix
+#' or a list of matrices which directly define the contrast schemes (they are 
+#' recycled if necessary to match the length of \code{which_dim}), or 3) a
+#' function or a list of functions whose first argument is the number of levels,
+#' and they create a contrast matrix accordingly
+#' @param ... further arguments passed to \code{contr} if it is a function
+#' @export
+#' @return The function returns the same type of object as its input object
+#' (a vector, matrix or array). The names (in case of a vector) or the dimension
+#' names of the returned object reflect the contrast which resulted the
+#' given level (see Examples).
+#' @examples
+#' # load example data
+#' data(erps)
+#' 
+#' # pairwise comparisons between identical, substituted and transposed pairs
+#' res <- compareLevels(erps, "pairtype")
+#' str(res)
+#' 
+#' # the same with a contrast matrix
+#' cmat <- matrix(c(-1,-1, 0,
+#'                   1, 0,-1,
+#'                   0, 1, 1), 3, 3, byrow = TRUE)
+#' res_cmat <- compareLevels(erps, "pairtype", cmat)
+#' stopifnot(identical(res, res_cmat))
+#' 
+#' # the same with a contrast function, which also accepts custom rownames
+#' cfn <- function(n, rowname_base = NULL) {
+#'     contr <- matrix(0L, n, choose(n, 2L))
+#'     combs <- combn(n, 2)
+#'     for (i in 1:ncol(combs)) {
+#'         contr[combs[1L, i], i] <- -1L
+#'         contr[combs[2L, i], i] <- 1L
+#'     }
+#'     if (!is.null(rowname_base)) {
+#'         rownames(contr) <- paste0(rowname_base[1], seq_len(n))
+#'     }
+#'     contr
+#' }
+#' res_cfn <- compareLevels(erps, "pairtype", cfn)
+#' stopifnot(identical(res, res_cfn))
+#' 
+#' # the same "by hand"
+#' erps_splitted <- splitArray(erps, "pairtype", drop = TRUE)
+#' res_h <- bindArrays(
+#'     `subst-ident` = erps_splitted$subst - erps_splitted$ident,
+#'     `transp-ident` = erps_splitted$transp - erps_splitted$ident,
+#'     `transp-subst` = erps_splitted$transp - erps_splitted$subst,
+#'     along_name = "pairtype"
+#' )
+#' res_h <- aperm(res_h, names(dimnames(res)))
+#' stopifnot(identical(res, res_h))
+#' 
+#' # a complex example with two manipulated dimensions (stimclass and pairtype);
+#' # compare only level A and level B for stimclass, and all levels for 
+#' # pairtype; use custom names ("level1", "level2", etc.) instead of the 
+#' # original dimension names
+#' res_complex <- compareLevels(
+#'     erps, c("stimclass", "pairtype"),
+#'     contr = list(as.matrix(c(-1, 1, 0)), cfn),
+#'     rowname_base = "level")
+#' str(res_complex)
+#' 
+compareLevels <- function(dat, which_dim = 1L, contr = NULL, ...) {
+    #
+    # helper functions
+    #
+    # paste coefficient to dimlevels
+    paster <- function(coeff, name) {
+        coeff <- paste0(rep(" ", length(coeff)), coeff) 
+        out <- paste(paste(coeff, name, sep = "*"), collapse = "+")
+        out <- gsub(" ", "", gsub(" 1\\*", "", out))
+        # return
+        if (length(coeff) == 1L) out else paste0("(", out, ")")
+    }
+    # create names for the contrasts
+    nameContrasts <- function(mat) {
+        dimn <- rownames(mat)
+        out <- character(ncol(mat))
+        for (i in seq_along(out)) {
+            coeff <- mat[, i]
+            coeff_str <- formatC(abs(coeff), digits = 4L, width = 1L, 
+                                 format = "fg")
+            plus <- coeff > 0.5 * .Machine$double.eps
+            minus <- coeff < -0.5 * .Machine$double.eps
+            if (any(plus)) {
+                out[i] <- paster(coeff_str[plus], dimn[plus]) 
+            }
+            if (any(minus)) {
+                out[i] <- paste(out[i], 
+                                paster(coeff_str[minus], dimn[minus]),
+                                sep = "-")
+            }
+        }
+        # return
+        out
+    }
+    # create contrasts
+    createContrasts <- function(n, contr = NULL, .names = NULL, ...) {
+        contr <- 
+            if (is.matrix(contr)) {
+                assertMatrix(contr, mode = "numeric", nrows = n, 
+                             .var.name = "the contrast matrix")
+                # return
+                contr
+            } else if (is.null(contr)) {
+                out <- matrix(0L, n, choose(n, 2L))
+                combs <- combn(n, 2)
+                for (i in 1:ncol(combs)) {
+                    out[combs[1L, i], i] <- -1L
+                    out[combs[2L, i], i] <- 1L
+                }
+                # return
+                out
+            } else {
+                contr <- match.fun(contr)
+                # return
+                do(contr, n = n, ...)
+            }
+        if (is.null(rownames(contr))) rownames(contr) <- .names
+        colnames(contr) <- nameContrasts(contr)
+        # return
+        contr
+    }
+    #
+    # check data argument
+    assertAtomic(dat, .var.name = "dat")
+    vec <- testVector(dat, strict = TRUE)
+    if (vec) dat <- as.matrix(dat)
+    assertArray(dat, mode = "numeric", min.d = 2L, .var.name = "dat")
+    out <- copy(dat)
+    decorateDims_(out, .dimnames = FALSE)
+    dims <- dim(out)
+    dimn <- dimnames(out)
+    dimid <- names(dimn)
+    names(dims) <- dimid
+    dimn[dimid] <- fillMissingDimnames(dimn[dimid], dims[dimid], .names = FALSE)
+    if (is.character(which_dim)) {
+        good <- which_dim %in% dimid
+        if (!all(good)) {
+            stop(paste0("'dat' does not have the following dimension identifiers: ",
+                        paste(which_dim[!good], collapse = ", ")))
+        }
+    } else {
+        which_dim <- dimid[which_dim]
+    }
+    #
+    if (!is.list(contr)) contr <- list(contr)
+    contr <- rep_len(contr, length(which_dim))
+    contr <- mapply(createContrasts, dims[which_dim], contr, dimn[which_dim], 
+                    MoreArgs = list(...), SIMPLIFY = FALSE)
+    #
+    for (i in seq_along(contr)) {
+        out <- fnDims(out, which_dim[i], 
+                      function(x, y) t(crossprod(x, y)), 
+                      list(y = contr[[i]]),
+                      newdims = setNames(list(colnames(contr[[i]])), 
+                                         which_dim[i]),
+                      vectorized = TRUE)
+    }
+    # return
+    if (vec) {
+        setNames(as.vector(out), dimnames(out)[[1]])
+    } else {
+        out <- apermArray(out, dimid)
+        dimn <- c(dimnames(dat)[setdiff(dimid, which_dim)],
+                  dimnames(out)[which_dim])
+        setattr(out, "dimnames", dimn[dimid])
+    }
+}
+
 
 #' Collapse data in array format across specific dimensions
 #' 
