@@ -6,21 +6,23 @@
 \title{Add dimension names to a matrix or array with (partially) missing dimension
 names}
 \usage{
-decorateDims(dat, names = TRUE, new_names = NULL, new_dimnames = NULL)
+decorateDims(dat, .names = TRUE, .dimnames = TRUE)
 
-decorateDims_(dat, names = TRUE, new_names = NULL, new_dimnames = NULL)
+decorateDims_(dat, .names = TRUE, .dimnames = TRUE)
 }
 \arguments{
 \item{dat}{a matrix or array}
 
-\item{names}{logical; if TRUE (default), named list of dimnames are returned.
-Ignored (or more precisely, considered TRUE) if new_names is provided.}
+\item{.names}{either a logical value whether dimension identifiers (names of
+dimnames) should be checked and corrected (default: TRUE), or a character
+vector of new dimension identifiers for missing, NA or "" dimension
+identifiers}
 
-\item{new_names}{character vector for named dimnames}
-
-\item{new_dimnames}{list of new dimension names. If 'new_names' is not
-provided but 'new_dimnames' is a named list, its names are considered as
-'new_names'.}
+\item{.dimnames}{either a logical value whether dimnames should be checked
+and corrected (default: TRUE), or a list of character vectors of new
+dimnames for dimensions with missing, NA or "" dimnames. If '.names' is not
+explicitly provided but '.dimnames' is a named list, its names are considered
+as '.names'.}
 }
 \value{
 \code{decorateDims} returns a \emph{copy} of the original matrix or
@@ -41,13 +43,12 @@ all objects which 'dat' refers to.
 }
 \examples{
 # create a matrix without dimension names
-mat <- matrix(rnorm(1:10), 2, 5)
+( mat <- matrix(rnorm(1:10), 2, 5) )
 
 # add default dimension names
-mat2 <- decorateDims(mat)
-str(mat2)
+( mat2 <- decorateDims(mat) )
 
-# remove names from the 'dimnames' attribute
+# remove dimension identifiers (names of the 'dimnames' attribute)
 names(dimnames(mat2)) <- NULL
 
 # create a new variable which is referenced to 'mat2'
@@ -55,14 +56,20 @@ mat3 <- mat2
 
 # modify the names of dimnames in place
 new_names <- c("Row dimension", "Column dimension")
-decorateDims_(mat3, new_names = new_names)
-str(mat3)
+decorateDims_(mat3, .names = new_names)
+mat3
 stopifnot(identical(names(dimnames(mat3)),
                     new_names))
 
 # NOTE that the attributes of 'mat2' has been also changed!
-str(mat2)
+mat2
 stopifnot(identical(dimnames(mat2), dimnames(mat3)))
+
+# decorate only with dimension identifiers, but no dimension names
+( mat4 <- decorateDims(mat,
+                       .names = c("rows", "columns"),
+                       .dimnames = FALSE) )
+stopifnot(identical(dimnames(mat4), list(rows = NULL, columns = NULL)))
 }
 \seealso{
 \code{\link{provideDimnames}} for a slightly different solution

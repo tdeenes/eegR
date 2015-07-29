@@ -157,12 +157,15 @@ apermArray <- function(a, perm = NULL, resize = TRUE, first = perm,
 #' (without creating even a shallow copy).
 #' @name decorateDims
 #' @param dat a matrix or array
-#' @param names logical; if TRUE (default), named list of dimnames are returned. 
-#' Ignored (or more precisely, considered TRUE) if new_names is provided.
-#' @param new_names character vector for named dimnames
-#' @param new_dimnames list of new dimension names. If 'new_names' is not 
-#' provided but 'new_dimnames' is a named list, its names are considered as
-#' 'new_names'.
+#' @param .names either a logical value whether dimension identifiers (names of 
+#' dimnames) should be checked and corrected (default: TRUE), or a character 
+#' vector of new dimension identifiers for missing, NA or "" dimension 
+#' identifiers
+#' @param .dimnames either a logical value whether dimnames should be checked 
+#' and corrected (default: TRUE), or a list of character vectors of new 
+#' dimnames for dimensions with missing, NA or "" dimnames. If '.names' is not 
+#' explicitly provided but '.dimnames' is a named list, its names are considered
+#' as '.names'.
 #' @note Use \code{decorateDims_} with extra care because it modifies in place 
 #' all objects which 'dat' refers to.
 #' @return \code{decorateDims} returns a \emph{copy} of the original matrix or 
@@ -172,13 +175,12 @@ apermArray <- function(a, perm = NULL, resize = TRUE, first = perm,
 #' @seealso \code{\link{provideDimnames}} for a slightly different solution
 #' @examples
 #' # create a matrix without dimension names
-#' mat <- matrix(rnorm(1:10), 2, 5)
+#' ( mat <- matrix(rnorm(1:10), 2, 5) )
 #' 
 #' # add default dimension names
-#' mat2 <- decorateDims(mat)
-#' str(mat2)
+#' ( mat2 <- decorateDims(mat) )
 #' 
-#' # remove names from the 'dimnames' attribute
+#' # remove dimension identifiers (names of the 'dimnames' attribute)
 #' names(dimnames(mat2)) <- NULL
 #' 
 #' # create a new variable which is referenced to 'mat2'
@@ -186,22 +188,25 @@ apermArray <- function(a, perm = NULL, resize = TRUE, first = perm,
 #' 
 #' # modify the names of dimnames in place
 #' new_names <- c("Row dimension", "Column dimension")
-#' decorateDims_(mat3, new_names = new_names)
-#' str(mat3)
+#' decorateDims_(mat3, .names = new_names)
+#' mat3
 #' stopifnot(identical(names(dimnames(mat3)),
 #'                     new_names))
 #' 
 #' # NOTE that the attributes of 'mat2' has been also changed!
-#' str(mat2)
+#' mat2
 #' stopifnot(identical(dimnames(mat2), dimnames(mat3)))
 #' 
-decorateDims <- function(dat, names = TRUE, 
-                         new_names = NULL, new_dimnames = NULL) {
+#' # decorate only with dimension identifiers, but no dimension names
+#' ( mat4 <- decorateDims(mat, 
+#'                        .names = c("rows", "columns"), 
+#'                        .dimnames = FALSE) )
+#' stopifnot(identical(dimnames(mat4), list(rows = NULL, columns = NULL)))
+#' 
+decorateDims <- function(dat, .names = TRUE, .dimnames = TRUE) {
     assertArray(dat, min.d = 2L, .var.name = "dat")
     new_dimn <- fillMissingDimnames(dimnames(dat), dim(dat),
-                                    names = names, 
-                                    new_names = new_names,
-                                    new_dimnames = new_dimnames)
+                                    .names, .dimnames)
     # return
     if (identical(new_dimn, dimnames(dat))) {
         dat
@@ -213,13 +218,10 @@ decorateDims <- function(dat, names = TRUE,
 
 #' @rdname decorateDims
 #' @export
-decorateDims_ <- function(dat, names = TRUE, 
-                         new_names = NULL, new_dimnames = NULL) {
+decorateDims_ <- function(dat, .names = TRUE, .dimnames = TRUE) {
     assertArray(dat, min.d = 2L, .var.name = "dat")
     new_dimn <- fillMissingDimnames(dimnames(dat), dim(dat),
-                                    names = names, 
-                                    new_names = new_names,
-                                    new_dimnames = new_dimnames)
+                                    .names, .dimnames)
     setattr(dat, "dimnames", new_dimn)
     # return
     invisible(dat)
@@ -235,24 +237,38 @@ decorateDims_ <- function(dat, names = TRUE,
 #' @param .dim an integer vector of dimensions
 #' @inheritParams decorateDims
 #' @keywords internal
-fillMissingDimnames <- function(dimn, .dim, names = TRUE, 
-                                new_names = NULL, new_dimnames = NULL) {
+fillMissingDimnames <- function(dimn, .dim, .names = TRUE, .dimnames = TRUE) {
     # helper function
     checkForMissing <- function(x) {
         is.null(x) || anyNA(x) || any(x == "")
     }
     # argument checks and fast return if no missings are found
-    assertLogical(names, any.missing = FALSE, len = 1L, .var.name = "names")
-    if (!any(vapply(dimn, checkForMissing, FALSE))) {
-        if (!names || !checkForMissing(names(dimn))) {
-            return(dimn)
-        } 
+    check_names <- if (!identical(.names, FALSE)) TRUE else FALSE
+    check_dimnames <- if (!identical(.dimnames, FALSE)) TRUE else FALSE
+    check <- FALSE
+    if (check_names && checkForMissing(names(dimn))) {
+        check <- TRUE
     }
+    if (!check && check_dimnames && any(vapply(dimn, checkForMissing, TRUE))) {
+        check <- TRUE
+    }
+    if (!check) return(dimn)
+    #
+    new_names <- if (identical(.names, TRUE)) NULL else .names
+    new_dimnames <- 
+        if (check_names && !check_dimnames) {
+            vector("list", length(.dim))
+        } else if (identical(.dimnames, TRUE)) {
+            NULL
+        } else {
+            .dimnames
+        }
+    #
     if (!is.null(new_names))
         assertCharacter(new_names, any.missing = FALSE, .var.name = "new_names")
     if (!is.null(new_dimnames))
-        assertList(new_dimnames, types = "character", any.missing = FALSE,
-                   .var.name = "new_names")
+        assertList(new_dimnames, types = c("null", "character"), 
+                   any.missing = FALSE, .var.name = "new_dimnames")
     # main part
     if (is.null(dimn)) dimn <- vector("list", length(.dim))
     if (!is.null(new_dimnames) && !is.list(new_dimnames)) {
@@ -267,16 +283,20 @@ fillMissingDimnames <- function(dimn, .dim, names = TRUE,
             function(i) as.character(seq_len(.dim[i]))
         } else {
             function(i) {
-                out <- rep_len(new_dimnames[[counter]], .dim[i])
-                make.unique(as.character(out), "__")
+                if (is.null(new_dimnames[[counter]])) {
+                    NULL
+                } else {
+                    out <- rep_len(new_dimnames[[counter]], .dim[i])
+                    make.unique(as.character(out), "__")
+                }
             }
         }
     for (i in which(vapply(dimn, is.null, FALSE))) {
-        dimn[[i]] <- tempfn(i)
+        dimn[i] <- list(tempfn(i))
         counter <- counter + 1L
     }
     dimn.n <- names(dimn)
-    if (names || !is.null(new_names)) {
+    if (check_names || !is.null(new_names)) {
         if (is.null(dimn.n)) dimn.n <- rep("", length(dimn))
         ind <- dimn.n == "" | is.na(dimn.n)
         dimn.n[ind] <- 

@@ -4,22 +4,23 @@
 \alias{fillMissingDimnames}
 \title{Find and fill missing dimension names and identifiers}
 \usage{
-fillMissingDimnames(dimn, .dim, names = TRUE, new_names = NULL,
-  new_dimnames = NULL)
+fillMissingDimnames(dimn, .dim, .names = TRUE, .dimnames = TRUE)
 }
 \arguments{
 \item{dimn}{a list of the original dimension names}
 
 \item{.dim}{an integer vector of dimensions}
 
-\item{names}{logical; if TRUE (default), named list of dimnames are returned.
-Ignored (or more precisely, considered TRUE) if new_names is provided.}
+\item{.names}{either a logical value whether dimension identifiers (names of
+dimnames) should be checked and corrected (default: TRUE), or a character
+vector of new dimension identifiers for missing, NA or "" dimension
+identifiers}
 
-\item{new_names}{character vector for named dimnames}
-
-\item{new_dimnames}{list of new dimension names. If 'new_names' is not
-provided but 'new_dimnames' is a named list, its names are considered as
-'new_names'.}
+\item{.dimnames}{either a logical value whether dimnames should be checked
+and corrected (default: TRUE), or a list of character vectors of new
+dimnames for dimensions with missing, NA or "" dimnames. If '.names' is not
+explicitly provided but '.dimnames' is a named list, its names are considered
+as '.names'.}
 }
 \description{
 \code{fillMissingDimnames} is the workhorse function for
