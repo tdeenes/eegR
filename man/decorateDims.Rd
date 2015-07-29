@@ -13,16 +13,18 @@ decorateDims_(dat, .names = TRUE, .dimnames = TRUE)
 \arguments{
 \item{dat}{a matrix or array}
 
-\item{.names}{either a logical value whether dimension identifiers (names of
-dimnames) should be checked and corrected (default: TRUE), or a character
-vector of new dimension identifiers for missing, NA or "" dimension
-identifiers}
+\item{.names}{either 1) a logical value whether dimension identifiers (names
+of dimnames) should be checked and corrected (default: TRUE), or 2) a
+character vector of new dimension identifiers for missing, NA or "" dimension
+identifiers, or 3) a single character value after which 1, 2, ... is
+appended to create unique identifiers (see Examples)}
 
-\item{.dimnames}{either a logical value whether dimnames should be checked
-and corrected (default: TRUE), or a list of character vectors of new
-dimnames for dimensions with missing, NA or "" dimnames. If '.names' is not
-explicitly provided but '.dimnames' is a named list, its names are considered
-as '.names'.}
+\item{.dimnames}{either 1) a logical value whether dimnames should be checked
+and corrected (default: TRUE), or 2) a list of character vectors of new
+dimnames for dimensions with missing, NA or "" dimnames, or 3) a single
+character value after which 1, 2, ... is appended to create unique dimension
+levels (see Examples). If '.names' is not explicitly provided but '.dimnames'
+is a named list, its names are considered as '.names'.}
 }
 \value{
 \code{decorateDims} returns a \emph{copy} of the original matrix or
@@ -43,23 +45,23 @@ all objects which 'dat' refers to.
 }
 \examples{
 # create a matrix without dimension names
-( mat <- matrix(rnorm(1:10), 2, 5) )
+( mat <- matrix(letters[1:8], 2, 4) )
 
 # add default dimension names
 ( mat2 <- decorateDims(mat) )
 
-# remove dimension identifiers (names of the 'dimnames' attribute)
-names(dimnames(mat2)) <- NULL
+# remove the second dimension identifier (name of the 'dimnames' attribute)
+names(dimnames(mat2))[2] <- ""
+mat2
 
 # create a new variable which is referenced to 'mat2'
 mat3 <- mat2
 
 # modify the names of dimnames in place
-new_names <- c("Row dimension", "Column dimension")
-decorateDims_(mat3, .names = new_names)
+decorateDims_(mat3, .names = "Dimension")
 mat3
 stopifnot(identical(names(dimnames(mat3)),
-                    new_names))
+                    c("_Dim1", "Dimension2")))
 
 # NOTE that the attributes of 'mat2' has been also changed!
 mat2
