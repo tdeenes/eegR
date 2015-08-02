@@ -324,6 +324,168 @@ fillMissingDimnames <- function(dimn, .dim, .names = TRUE, .dimnames = TRUE) {
     dimn
 }
 
+#' Drop singleton dimensions of an array
+#' 
+#' \code{dropDims} drops singleton dimensions (whose lengths is 1) of a
+#' multidimensional array. Compared to \code{\link[base]{drop}} and 
+#' \code{\link[abind]{adrop}} this function gives more control over which 
+#' singleton dimensions to drop.
+#' @param x an array (or a matrix, or a list with \code{dim} attribute)
+#' @param drop 1) either a single logical whether all singleton dimensions 
+#' should be dropped (default: TRUE); or 2) a logical, integer or character 
+#' vector indicating which dimensions to drop (if character, \code{x} must have 
+#' named dimensions). If \code{drop} is a vector (case 2), the referred 
+#' dimensions must be present in x. 
+#' @param keep an integer or character vector indicating those dimensions which
+#' must remain in the returned value even if they are singletons (if character, 
+#' \code{x} must have named dimensions). Note that \code{keep} has a higher 
+#' priority than \code{drop}. Also note that to-be-kept dimensions which are 
+#' actually not present in \code{x} are simply ignored (instead of resulting in
+#' error).
+#' @param return_array logical value whether \code{dropDims} should return a 
+#' one-dimensional array instead of a vector even if all or all but one 
+#' dimension of \code{x} is dropped (default: TRUE)
+#' @param named_vector logical value whether a vector result should be named
+#' (TRUE, the default). Ignored if \code{return_array} is TRUE.
+#' @param stop_if_missing logical value whether dropping or keeping 
+#' non-existent dimensions should result in error (TRUE, default), or should
+#' be ignored (FALSE)
+#' @export
+#' @examples
+#' # create example data
+#' x <- array(1:4, c(2, 1, 2, 1),
+#'            dimnames = list(dimA = letters[1:2],
+#'                            dimB = "a",
+#'                            dimC = LETTERS[1:2],
+#'                            dimD = "z"))
+#' 
+#' # drop all singleton dimensions
+#' x0 <- dropDims(x)
+#' stopifnot(identical(dim(x0), c(2L, 2L)))
+#' 
+#' # drop all singleton dimensions but always keep dimD
+#' x1 <- dropDims(x, keep = "dimD")
+#' stopifnot(identical(dim(x1), c(2L, 2L, 1L)))
+#' 
+#' # create a new example; a list with dim attribute
+#' ( x <- array(list(1:2, letters[1:2]), c(2, 1, 1),
+#'              dimnames = list(type = c("numeric", "character"),
+#'                              single1 = "a",
+#'                              single2 = "b")) )
+#' 
+#' # drop the single1 dimension
+#' x0 <- dropDims(x, "single1")
+#' stopifnot(identical(dim(x0), c(2L, 1L)))
+#' 
+#' # wrong dimension in drop: by default, it results in an error
+#' # (note that x has only 3 dimensions, not 4)
+#' x1 <- try(dropDims(x, drop = 1:4), silent = TRUE)
+#' stopifnot(inherits(x1, "try-error"))
+#' 
+#' # however, you can also ask for skipping those missing dimensions in 'drop'
+#' # and 'keep'
+#' x2 <- dropDims(x, drop = 1:4, stop_if_missing = FALSE)
+#' stopifnot(identical(dim(x2), 2L))
+#' 
+#' # by default, dropDims returns an array, even if it has only one dimension
+#' ( x <- array(1:3, c(3, 1), list(dimA = letters[1:3], dimB = "A")) )
+#' ( x0 <- dropDims(x) )
+#' stopifnot(is.array(x0))
+#' 
+#' # you can change this behaviour
+#' ( x1 <- dropDims(x, return_array = FALSE) )
+#' stopifnot(!is.array(x1))
+#' 
+#' # vector results are named by default...
+#' stopifnot(identical(names(x1), letters[1:3]))
+#' 
+#' # ...but not necessarily
+#' ( x2 <- dropDims(x, return_array = FALSE, named_vector = FALSE) )
+#' stopifnot(is.null(names(x2)))
+#' stopifnot(identical(unname(x1), x2))
+#' 
+dropDims <- function(x, drop = TRUE, keep = NULL, 
+                     return_array = TRUE, named_vector = TRUE,
+                     stop_if_missing = TRUE) {
+    # helper function
+    checkStop <- function(subset, fullset, dropkeep = c("drop", "keep"), 
+                          st = stop_if_missing) {
+        if (is.logical(subset)) {
+            if (length(subset) != length(fullset)) {
+                stop(sprintf("if '%s' is a logical vector, its length must be equal to the number of dimensions in 'x'",
+                             dropkeep))
+            } else {
+                return(rep_len(subset, length(fullset)))
+            }
+        } else {
+            ind <- subset %in% fullset
+            if (st && !all(ind)) {
+                stop(sprintf("the dimensions of 'x' and the ones listed in '%s' do not match",
+                             dropkeep))
+            }
+            fullset %in% subset
+        }
+    }
+    # check if array
+    assertArray(x, .var.name = "x")
+    # return if drop is FALSE
+    if (identical(drop, "FALSE")) return(x)
+    # dimensions
+    dims <- dim(x)
+    dimn <- dimnames(x)
+    dimid <- names(dimn)
+    # check drop
+    singleton <- dims == 1L
+    drop <- 
+        if (isTRUE(drop)) {
+            singleton
+        } else if (is.character(drop)) {
+            if (is.null(dimid)) {
+                stop("x must have named dimensions if 'drop' is a character vector")
+            }
+            singleton & checkStop(drop, dimid, "drop")
+        } else if (is.numeric(drop)) {
+            singleton & checkStop(as.integer(drop), seq_along(dims), "drop")
+        } else if (is.logical(drop)) {
+            singleton & checkStop(drop, logical(length(dims)), "drop")
+        } else {
+            stop("x is of wrong type. Must be a single logical, or a logical/integer/character vector")
+        }
+    keep <- 
+        if (is.null(keep)) {
+            !drop
+        } else if (is.character(keep)) {
+            if (is.null(dimid)) {
+                stop("x must have named dimensions if 'keep' is a character vector")
+            }
+            !drop | checkStop(keep, dimid, "keep")
+        } else if (is.numeric(keep)) {
+            !drop | checkStop(keep, seq_along(dims), "keep")
+        } else if (is.logical(keep)) {
+            !drop | checkStop(keep, logical(length(dims)), "keep")
+        }
+    # return
+    nrkeep <- sum(keep)
+    asvec <- if (nrkeep <= 1L & !return_array) TRUE else FALSE
+    if (asvec) {
+        out <- copy(x)
+        setattr(out, "dim", NULL)
+        if (named_vector && nrkeep > 0L) {
+            setattr(out, "names", dimn[[which(keep)]])
+        } else {
+            out
+        }
+    } else if (nrkeep == length(dims)) {
+        x
+    } else {
+        out <- copy(x)
+        dims <- dims[keep]
+        dimn <- dimn[keep]
+        setattr(out, "dim", dims)
+        setattr(out, "dimnames", dimn)
+    }
+}
+
 #' Fast in-place transformation to a matrix (without copy)
 #' 
 #' \code{matrix_} transforms its data argument to a matrix by reference. If the 
@@ -1550,8 +1712,7 @@ transformArray <- function(formula, data, group = NULL, subset = NULL,
                 if (length(splitdims) == 1L) {
                     group <- list(group)
                 } else {
-                    stop("The group argument must be a list if there are more
-                         than one splitting dimensions")
+                    stop("The group argument must be a list if there are more than one splitting dimensions")
                 }
                 } 
             ind <- 

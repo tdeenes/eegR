@@ -369,8 +369,8 @@ forceOrthogonal <- function(model_matrix, between = character()) {
         if (max(abs(orth)) > .Machine$double.eps) {
             if (length(between) > 1L)
                 warning("The design is unbalanced, and this function calculates 
-                        sequential (type-I) tests. Consider re-running the test
-                        with reordered between-subject factors (see ?arrayAnova).")
+sequential (type-I) tests. Consider re-running the test
+with reordered between-subject factors (see ?arrayAnova).")
             model_matrix[, 2L] <- model_matrix[, 2L] - mean(model_matrix[, 2L])
             for (i in 3:ncol(model_matrix)) {
                 mmi <- model_matrix[,1:(i-1L)]
