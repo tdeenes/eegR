@@ -1403,7 +1403,7 @@ compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
 #' @param pcrit a vector of p-value limits for consecutive length correction
 #' @return a list of two arrays: the p-values and the corrected p-values
 #' @keywords internal
-compPvalueTanova <- function(effect_perm, pcrit, obj) {
+compPvalueTanova <- function(effect_perm, pcrit) {
     # helper function
     consecLimit <- function(sigvec, .dim, alpha) {
         out <- matrixRle(matrix_(sigvec, .dim))
