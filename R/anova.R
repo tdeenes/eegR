@@ -1399,7 +1399,7 @@ compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
 #' \code{compPvalueTanova} is a helper function to compute p-values and 
 #' length-corrected p-values in the high-level \code{\link{tanova}} function.
 #' @param effect_perm an array of permuted effects (including the observed 
-#' effect)
+#' effect as the first level of the 'perm' dimension)
 #' @param pcrit a vector of p-value limits for consecutive length correction
 #' @return a list of two arrays: the p-values and the corrected p-values
 #' @keywords internal
