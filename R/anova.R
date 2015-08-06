@@ -1604,7 +1604,7 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
         dimn <-  c(dimnames(es_obs), list(perm = NULL))
         setattr(es_perm, "dimnames", dimn)
         # p-values
-        pvals <- compPvalueTanova(es_perm, pcrit, input)
+        pvals <- compPvalueTanova(es_perm, pcrit)
     }
     # back-transform to original dimorder
     out$stat <- backFn(es_obs, input)

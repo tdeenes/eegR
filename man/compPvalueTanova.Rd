@@ -4,11 +4,11 @@
 \alias{compPvalueTanova}
 \title{Compute p-values and length-corrected p-values in TANOVA}
 \usage{
-compPvalueTanova(effect_perm, pcrit, obj)
+compPvalueTanova(effect_perm, pcrit)
 }
 \arguments{
 \item{effect_perm}{an array of permuted effects (including the observed
-effect)}
+effect as the first level of the 'perm' dimension)}
 
 \item{pcrit}{a vector of p-value limits for consecutive length correction}
 }
