@@ -1588,7 +1588,7 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
         # generate random orders (dim(randind) = nrow(dat) x nperm)
         randind <- anovaRandomIndices(input, perm$n, seed)
         # run calculations
-        chunks <- min(10L, ceiling(perm$n/max(1L, length(parallel$cl))))
+        chunks <- min(10L, ceiling(perm$n/max(1L, getDoParWorkers())))
         es_perm <- 
             foreach(x = iter(randind, by = "col", chunksize = chunks), 
                     .combine = c, .inorder = FALSE,
