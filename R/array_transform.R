@@ -1259,14 +1259,14 @@ bindArrays <- function(..., along = NULL, rev.along = NULL, new.names = NULL,
         alldimn <- unique(unlist(dimn, use.names = FALSE))
         dat <- lapply(dat, function(x) {
             if (length(dim(x)) < length(alldimn)) {
-                if (all.equal(names(dimnames(x)), 
+                if (identical(names(dimnames(x)), 
                               setdiff(alldimn, along_name))) {
                     x
                 } else {
                     aperm(x, setdiff(alldimn, along_name))    
                 }
             } else {
-                if (all.equal(names(dimnames(x)), alldimn)) {
+                if (identical(names(dimnames(x)), alldimn)) {
                     x
                 } else {
                     aperm(x, alldimn)
