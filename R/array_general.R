@@ -416,7 +416,7 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
         # check if dat is a data.frame
         if (is.data.frame(dat)) dat <- as.matrix(dat)
         # check array
-        assertArray(dat, mode = "atomic", min.d = 2L)
+        assertArray(dat, mode = "atomic", min.d = 2L, .var.name = "dat")
         # check target_dim
         if (is.character(target_dim)) {
             target_dim_num <- match(target_dim, names(dimnames(dat)))
@@ -485,7 +485,7 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
             dims.n <- dims.n[seq_along(target_dim)]
         }
     } else if (length(out) != orig_length || length(newdims) > 0) {
-        if (length(newdims) == 0)
+        if (length(newdims) == 0L)
             newdims <- list(function.values = 1:nrow(out))
         if (columnwise) {
             dims <- c(vapply(newdims, length, 0L), 
@@ -500,10 +500,9 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
         }
     } 
     array_(out, dims, dims.n)
-    if (keep_dimorder && 
-        identical(sort(names(dimnames(out))),
-                  sort(names(orig_dimn)))) {
-        out <- apermArray(out, names(orig_dimn),
+    if (keep_dimorder && length(dims) == length(orig_dim) &&
+        is.null(setdiff(names(dims.n), names(orig_dimn)))) {
+        out <- apermArray(out, order(dimord),
                           keep_attributes = TRUE)
     }
     # return
