@@ -2,17 +2,22 @@
 % Please edit documentation in R/matstat.R
 \name{findExtrema}
 \alias{findExtrema}
-\title{Find local peaks (maxima) and valleys (minima) of a vector}
+\title{Find local/global peaks (maxima) and valleys (minima) of a vector}
 \usage{
-findExtrema(x, n = 1L, along_dim = 1L, tail = c("if_plateau", "never",
-  "do_not_care"), has_NA = NULL)
+findExtrema(x, n = 1L, global = FALSE, along_dim = 1L,
+  tail = c("if_plateau", "never", "do_not_care"), topN = NULL,
+  has_NA = NULL)
 }
 \arguments{
 \item{x}{an integer or numeric vector, matrix, or array}
 
 \item{n}{the number of neighbouring points (default: 1L) to the left and to
 the right of each data point; a data point is a local minimum/maximum if it
-is below/above all data points in its neighbourhood. See Details.}
+is below/above all data points in its neighbourhood. See also Details.}
+
+\item{global}{logical value whether global extrema should be identified
+instead of local extrema (default: FALSE). If TRUE, \code{n} is ignored.
+See Note.}
 
 \item{along_dim}{the dimension of \code{x} which defines the vectors that
 should be tested for local extrema. If \code{along_dim} is of type character,
@@ -23,6 +28,9 @@ abbreviated): "if_plateau" (the default) means extrema at the tails of the
 vector are only valid if they are part of a plateau; "never" means no
 extrema at the tails; "do_not_care" means no special treatment of extrema
 at the tails}
+
+\item{topN}{a positive integer scalar; if not NULL (the default), the local
+extrema must be among the top N highest/lowest extrema to be marked as such.}
 
 \item{has_NA}{if FALSE, x is not checked for missing values, thereby speeding
 up the computations; if has_NA is NULL (default), a fast check is performed
@@ -35,8 +43,8 @@ as \code{x}, recoding the original values in \code{x} to integer values 1
 NA (not available).
 }
 \description{
-\code{findExtrema} identifies local peaks and valleys of a vector (or
-subviews of a matrix or array)
+\code{findExtrema} identifies local (or global) peaks and valleys of a
+vector (or subviews of a matrix or array).
 }
 \details{
 There are three special features of \code{findExtrema}. First,
@@ -55,6 +63,10 @@ Third, neighbours of a missing value are returned as missing values because
 if a given data window has at least one missing value, no minimum or
 maximum can be computed.
 }
+\note{
+Instead of setting 'global' to TRUE, you can also set 'n' large
+enough (e.g. length(x)) to achieve the same effect.
+}
 \examples{
 # create a vector with two local minima and one local maximum
 x <- c(10, 3, 1, 2, -1, 0, 4, 5)
@@ -65,6 +77,9 @@ x <- c(10, 3, 1, 2, -1, 0, 4, 5)
 # the same with a more stringent criterion
 (x_extr2 <- findExtrema(x, 2L))
 
+# return only the top 1 extrema
+(x_extr3 <- findExtrema(x, topN = 1L))
+
 # note that findExtrema always returns an integer vector or matrix
 stopifnot(is.integer(x_extr))
 
@@ -72,6 +87,15 @@ stopifnot(is.integer(x_extr))
 stopifnot(identical(x[x_extr < 0L], c(1, -1)))
 stopifnot(identical(x[x_extr > 0L], 2))
 stopifnot(identical(x[x_extr2 != 0L], -1))
+stopifnot(identical(x[x_extr3 != 0L], c(2, -1)))
+
+# look for global extrema
+(x_global <- findExtrema(x, global = TRUE))
+stopifnot(identical(x[x_global != 0L], -1))
+
+# the same with large 'n'
+(x_global2 <- findExtrema(x, length(x)))
+stopifnot(identical(x_global, x_global2))
 
 # modify the vector to have a plateau at the start, and a missing value at
 # the position 7; consider only the nearest neighbours
@@ -90,7 +114,7 @@ stopifnot(all(is.na(x_extr[6:8])))
 plot(x, type = "l", lty = 3)
 points(x, pch = 16, col = c("blue", "grey", "red")[findExtrema(x) + 2L])
 
-#' # however, if 'tail' is set to "never", the first two elements are not
+# however, if 'tail' is set to "never", the first two elements are not
 # extrema
 (x_extr <- findExtrema(x, tail = "n"))
 stopifnot(all(x_extr[1:2] == 0L))
@@ -100,10 +124,8 @@ x <- cbind(sin(seq(0, 3*pi, pi/4)), cos(seq(0, 3*pi, pi/4)))
 (x_extr <- findExtrema(x))
 matplot(x, type = "l", lty = 3, col = 1)
 points(x[, 1L], pch = 16,
-       col = c("blue", "grey", "red")[findExtrema(x[, 1L]) + 2L])
+       col = c("blue", "grey", "red")[x_extr[, 1L] + 2L])
 points(x[, 2L], pch = 16,
-       col = c("blue", "grey", "red")[findExtrema(x[, 2L]) + 2L])
-
-# use the
+       col = c("blue", "grey", "red")[x_extr[, 2L] + 2L])
 }
 

@@ -2,14 +2,17 @@
 # <<< statistics on matrices >>> --------
 #
 
-#' Find local peaks (maxima) and valleys (minima) of a vector
+#' Find local/global peaks (maxima) and valleys (minima) of a vector
 #' 
-#' \code{findExtrema} identifies local peaks and valleys of a vector (or
-#' subviews of a matrix or array)
+#' \code{findExtrema} identifies local (or global) peaks and valleys of a 
+#' vector (or subviews of a matrix or array).
 #' @param x an integer or numeric vector, matrix, or array
 #' @param n the number of neighbouring points (default: 1L) to the left and to 
 #' the right of each data point; a data point is a local minimum/maximum if it 
-#' is below/above all data points in its neighbourhood. See Details.
+#' is below/above all data points in its neighbourhood. See also Details.
+#' @param global logical value whether global extrema should be identified
+#' instead of local extrema (default: FALSE). If TRUE, \code{n} is ignored.
+#' See Note.
 #' @param along_dim the dimension of \code{x} which defines the vectors that
 #' should be tested for local extrema. If \code{along_dim} is of type character,
 #' \code{x} must have named dimnames.
@@ -18,6 +21,8 @@
 #' vector are only valid if they are part of a plateau; "never" means no 
 #' extrema at the tails; "do_not_care" means no special treatment of extrema 
 #' at the tails
+#' @param topN a positive integer scalar; if not NULL (the default), the local 
+#' extrema must be among the top N highest/lowest extrema to be marked as such. 
 #' @param has_NA if FALSE, x is not checked for missing values, thereby speeding
 #' up the computations; if has_NA is NULL (default), a fast check is performed 
 #' and if x has missing values, special corrections are applied (see Details).
@@ -36,6 +41,8 @@
 #' Third, neighbours of a missing value are returned as missing values because 
 #' if a given data window has at least one missing value, no minimum or 
 #' maximum can be computed.
+#' @note Instead of setting 'global' to TRUE, you can also set 'n' large 
+#' enough (e.g. length(x)) to achieve the same effect.
 #' @export
 #' @return \code{findExtrema} returns an object of the same shape and length 
 #' as \code{x}, recoding the original values in \code{x} to integer values 1 
@@ -51,6 +58,9 @@
 #' # the same with a more stringent criterion
 #' (x_extr2 <- findExtrema(x, 2L))
 #' 
+#' # return only the top 1 extrema
+#' (x_extr3 <- findExtrema(x, topN = 1L))
+#' 
 #' # note that findExtrema always returns an integer vector or matrix
 #' stopifnot(is.integer(x_extr))
 #' 
@@ -58,6 +68,15 @@
 #' stopifnot(identical(x[x_extr < 0L], c(1, -1)))
 #' stopifnot(identical(x[x_extr > 0L], 2))
 #' stopifnot(identical(x[x_extr2 != 0L], -1))
+#' stopifnot(identical(x[x_extr3 != 0L], c(2, -1)))
+#' 
+#' # look for global extrema
+#' (x_global <- findExtrema(x, global = TRUE))
+#' stopifnot(identical(x[x_global != 0L], -1))
+#' 
+#' # the same with large 'n'
+#' (x_global2 <- findExtrema(x, length(x)))
+#' stopifnot(identical(x_global, x_global2))
 #' 
 #' # modify the vector to have a plateau at the start, and a missing value at
 #' # the position 7; consider only the nearest neighbours
@@ -76,7 +95,7 @@
 #' plot(x, type = "l", lty = 3)
 #' points(x, pch = 16, col = c("blue", "grey", "red")[findExtrema(x) + 2L])
 #' 
-#' #' # however, if 'tail' is set to "never", the first two elements are not
+#' # however, if 'tail' is set to "never", the first two elements are not
 #' # extrema
 #' (x_extr <- findExtrema(x, tail = "n"))
 #' stopifnot(all(x_extr[1:2] == 0L))
@@ -86,16 +105,79 @@
 #' (x_extr <- findExtrema(x))
 #' matplot(x, type = "l", lty = 3, col = 1)
 #' points(x[, 1L], pch = 16, 
-#'        col = c("blue", "grey", "red")[findExtrema(x[, 1L]) + 2L])
+#'        col = c("blue", "grey", "red")[x_extr[, 1L] + 2L])
 #' points(x[, 2L], pch = 16, 
-#'        col = c("blue", "grey", "red")[findExtrema(x[, 2L]) + 2L])
+#'        col = c("blue", "grey", "red")[x_extr[, 2L] + 2L])
 #'        
-#' # use the 
-findExtrema <- function(x, n = 1L, along_dim = 1L, 
+findExtrema <- function(x, n = 1L, global = FALSE, along_dim = 1L, 
                         tail = c("if_plateau", "never", "do_not_care"), 
-                        has_NA = NULL) {
-    # workhorse function
-    mainFn <- function(x, n, tail, has_NA) {
+                        topN = NULL, has_NA = NULL) {
+    #
+    # argument checks
+    assertAtomic(x, .var.name = "x")
+    assertIntegerish(n, lower = 1,
+                     any.missing = FALSE, len = 1L, .var.name = "n")
+    assertLogical(global, any.missing = FALSE, len = 1L, .var.name = "global")
+    if (global) n <- length(x)
+    tail <- match.arg(tail)
+    if (!is.null(topN) && !identical(topN, Inf)) {
+        assertIntegerish(topN, lower = 1, any.missing = FALSE, len = 1L, 
+                         .var.name = "topN")
+    }
+    if (is.null(has_NA)) {
+        has_NA <- anyNA(x) 
+    } else {
+        assertLogical(has_NA, any.missing = FALSE, 
+                      len = 1L, .var.name = "has_NA")
+    }
+    n <- as.integer(n)
+    # return
+    if (is.vector(x)) {
+        out <- as.vector(
+            findExtremaMatrix(as.matrix(x), n, tail, topN, has_NA))
+        setattr(out, "names", names(x))
+        out
+    } else {
+        fnDims(x, along_dim, findExtremaMatrix, 
+               arg_list = list(n, tail, topN, has_NA),
+               vectorized = TRUE, keep_dimorder = TRUE)
+    }
+}
+
+#' Find local extrema in column vectors
+#' 
+#' \code{findExtremaMatrix} looks for local minima and maxima in the
+#' columns of a matrix. This is an internal function which supports the
+#' exported function \code{\link{findExtrema}}.
+#' @param x a numeric matrix
+#' @inheritParams findExtrema
+#' @seealso \code{\link{findExtrema}}
+findExtremaMatrix <- function(x, n, tail, topN, has_NA) {
+    # helper function to test near equality
+    test_equal <- function(dat, ref) {
+        if (!identical(dim(dat), dim(ref))) {
+            abs(sweepMatrix(dat, 2, ref, "-")) < .Machine$double.eps^0.5
+        } else {
+            abs(dat - ref) < .Machine$double.eps^0.5
+        }
+    }
+    # find local extrema
+    if (n >= (nrow(x) - 1L)) {
+        # if n >= (nrow(x) - 1), rolling statistics are not needed
+        out <- matrix_(0L, nrow(x), ncol(x))
+        stats <- colRanges(x)
+        out[test_equal(x, stats[, 1L])] <- -1L
+        out[test_equal(x, stats[, 2L])] <- 1L
+        # this is needed later to handle external elements
+        if (tail != "do_not_care") {
+            rle_x <- matrixRle(x)
+            ind <- cumsum(c(1L, rle_x$lengths[-length(rle_x$length)]))
+            rle_x$values <- out[ind]
+            # set out to NULL to signal that we want to use rle_x
+            out <- NULL; ind <- NULL
+        }
+    } else {
+        out <- NULL
         # main computation (need run-length encoding to handle repeated values
         # in x)
         rle_x <- matrixRle(x)
@@ -115,64 +197,55 @@ findExtrema <- function(x, n = 1L, along_dim = 1L,
         rle_x_ins <- NULL; ins <- NULL
         # find extrema
         temp_values <- integer(length(values))
-        temp_values[values == rollFun(values, 2 * n + 1L, max)] <- 1L
-        temp_values[values == rollFun(values, 2 * n + 1L, min)] <- -1L
+        temp_values[test_equal(values, rollFun(values, 2 * n + 1L, max))] <- 1L
+        temp_values[test_equal(values, rollFun(values, 2 * n + 1L, min))] <- -1L
         # drop inserted elements
         if (!is.null(ins_ind)) temp_values <- temp_values[-ins_ind]
         # assign the new values
         rle_x$values <- temp_values
         temp_values <- NULL; ins_ind < NULL
-        # handle external elements
-        if (tail != "do_not_care") {
-            border_ind <- c(1L, length(rle_x$values))
-            if (ncol(x) > 1L) {
-                temp_ind <- which(diff(rle_x$matrixcolumn) > 0L)
-                border_ind <- c(border_ind,
-                                outer(0:1, temp_ind, "+"))
-            }
-            if (tail == "if_plateau") {
-                border_ind <- border_ind[rle_x$lengths[border_ind] == 1L]
-            }
-            rle_x$values[border_ind] <- 0L
-        }
-        # reshape to a matrix
-        out <- inverse.matrixRle(rle_x)
-        # handle the neighbourhood of NA values
-        if (has_NA) {
-            naind <- which(is.na(x), arr.ind = TRUE)
-            out[naind] <- NA
-            for (i in 1:n) {
-                ind <- cbind(pmax(1L, naind[, 1L] - i), naind[, 2L])
-                out[ind] <- NA
-                ind <- cbind(pmin(nrow(x), naind[, 1L] + i), naind[, 2L])
-                out[ind] <- NA
-            }
-        }
-        # return
-        out
     }
-    # argument checks
-    assertAtomic(x, .var.name = "x")
-    assertIntegerish(n, lower = 1, upper = length(x), 
-                     any.missing = FALSE, len = 1L, .var.name = "n")
-    tail <- match.arg(tail)
-    if (is.null(has_NA)) {
-        has_NA <- anyNA(x) 
-    } else {
-        assertLogical(has_NA, any.missing = FALSE, 
-                      len = 1L, .var.name = "has_NA")
+    # handle external elements
+    if (tail != "do_not_care") {
+        border_ind <- c(1L, length(rle_x$values))
+        if (ncol(x) > 1L) {
+            temp_ind <- which(diff(rle_x$matrixcolumn) > 0L)
+            border_ind <- c(border_ind,
+                            outer(0:1, temp_ind, "+"))
+        }
+        if (tail == "if_plateau") {
+            border_ind <- border_ind[rle_x$lengths[border_ind] == 1L]
+        }
+        rle_x$values[border_ind] <- 0L
     }
-    n <- as.integer(n)
+    # reshape to a matrix (unless n >= nrow(x), and tail == "do_not_care")
+    if (is.null(out)) out <- inverse.matrixRle(rle_x)
+    #
+    # handle the neighbourhood of NA values
+    if (has_NA) {
+        naind <- which(is.na(x), arr.ind = TRUE)
+        out[naind] <- NA
+        for (i in 1:n) {
+            ind <- cbind(pmax(1L, naind[, 1L] - i), naind[, 2L])
+            out[ind] <- NA
+            ind <- cbind(pmin(nrow(x), naind[, 1L] + i), naind[, 2L])
+            out[ind] <- NA
+        }
+    }
+    # return only the topN extrema
+    if (is.integer(topN)) {
+        temp_x <- x
+        temp_x[out != -1L] <- NA
+        out[which(colRanks(temp_x, preserveShape = TRUE) > topN)] <- 0L
+        temp_x <- -x
+        temp_x[out != 1L] <- NA
+        out[which(colRanks(temp_x, preserveShape = TRUE) > topN)] <- 0L
+    }
     # return
-    if (is.vector(x)) {
-        out <- as.vector(mainFn(as.matrix(x), n, tail, has_NA))
-        setattr(out, "names", names(x))
-        out
-    } else {
-        fnDims(x, along_dim, mainFn, arg_list = list(n, tail, has_NA),
-               vectorized = TRUE, keep_dimorder = TRUE)
-    }
+    out
 }
+
+
 
 #' Compute rolling (a.k.a. moving) window statistics
 #' 
