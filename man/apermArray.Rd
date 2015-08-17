@@ -5,7 +5,7 @@
 \title{Array transposition}
 \usage{
 apermArray(a, perm = NULL, resize = TRUE, first = perm,
-  keep_attributes = FALSE)
+  keep_attributes. = FALSE)
 }
 \arguments{
 \item{a}{the array to be transposed}
@@ -23,7 +23,7 @@ as having its elements reordered (default: TRUE)}
 or if the array has named dimensions, 'first' can be a character vector.
 Ignored if 'perm' is not NULL.}
 
-\item{keep_attributes}{see NOTE (default: FALSE)}
+\item{keep_attributes.}{see NOTE (default: FALSE)}
 }
 \value{
 A transposed version of array \code{a}, with subscripts permuted as
@@ -31,7 +31,7 @@ indicated by the array \code{perm}. If \code{resize} is TRUE, the array is
 reshaped as well as having its elements permuted, the dimnames are also
 permuted; if \code{resize = FALSE} then the returned object has the same
 dimensions as \code{a}, and the dimnames are dropped. In each case other
-attributes are dropped unless \code{keep_attributes = TRUE}. See NOTE!
+attributes are dropped unless \code{keep_attributes. = TRUE}. See NOTE!
 }
 \description{
 Transpose an array by permuting its dimensions and optionally resizing it.
@@ -67,7 +67,7 @@ stopifnot(identical(time_first, time_first_aperm))
 
 # create permutation order by simply replicating the original order;
 # note that in this special case it is more efficient to request
-# keep_attributes = TRUE
+# keep_attributes. = TRUE
 perm <- seq_along(dim(erps))
 
 # timing
@@ -76,7 +76,7 @@ if (require(microbenchmark)) {
         aperm(erps, perm),
         apermArray(erps, perm),
         apermArray(erps, names(dimnames(erps))),
-        apermArray(erps, perm, keep_attributes = TRUE),
+        apermArray(erps, perm, keep_attributes. = TRUE),
         times = 200L
     )
 }
@@ -88,10 +88,10 @@ stopifnot(identical(aperm_orig,
 stopifnot(identical(aperm_orig,
                     apermArray(erps, names(dimnames(erps)))))
 stopifnot(all.equal(aperm_orig,
-                    apermArray(erps, perm, keep_attributes = TRUE),
+                    apermArray(erps, perm, keep_attributes. = TRUE),
                     check.attributes = FALSE))
 stopifnot(identical(erps,
-                    apermArray(erps, perm, keep_attributes = TRUE)))
+                    apermArray(erps, perm, keep_attributes. = TRUE)))
 
 # if resize = FALSE, dimension names are dropped
 noresize <- apermArray(erps, perm, resize = FALSE)

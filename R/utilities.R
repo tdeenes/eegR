@@ -2,6 +2,18 @@
 # <<< simple utility functions >>> --------
 #
 
+#' Address in RAM of a variable
+#' 
+#' \code{address} returns the pointer address of its argument.
+#' @param x anything
+#' @details Sometimes useful in determining whether a value has been copied or 
+#' not, programatically.
+#' @return A character vector length 1.
+#' @note This is just an imported and re-exported function (without any 
+#' modification) from \bold{data.table}.
+#' @export
+address <- data.table::address
+
 #' Check for availability of packages
 #' @keywords internal
 reqFn <- function(packages) {
@@ -329,23 +341,6 @@ matchArg <- function(arg, choices = NULL, several_ok = TRUE) {
         match.arg(arg, choices, several.ok = several_ok)
     }
 }
-
-#' Replace parts of an object without creating an interim copy
-#' @keywords internal
-fill_ <- function(x, index, y, arg_check = TRUE) {
-    if (arg_check) {
-    #     if (!storage.mode(x) %in% c("logical", "character", "integer", "double"))
-    #         stop("Only vectors of logical, character, integer, or double values are accepted")
-        if (!identical(storage.mode(x), storage.mode(y))) {
-            stop("The types of the original and replacement vectors must be identical")
-        }
-        index <- as.integer(index)
-        if (!identical(length(index), length(y)))
-            stop("The length of replacement positions and replacement values must be identical")
-    }
-    .Call('eegR_fillWithoutCopy', PACKAGE = 'eegR', x, index, y)
-}
-
 
 #' Attach dimension and type attributes to test statistics
 #' 

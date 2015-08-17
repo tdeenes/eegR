@@ -19,7 +19,7 @@
 #' @import parallel doParallel foreach iterators
 #' @importFrom checkmate assertAtomic assertVector assertMatrix assertArray
 #' @importFrom checkmate assertDataFrame assertList assertClass
-#' @importFrom checkmate assertLogical assertCharacter assertNumeric assertIntegerish checkIntegerish
+#' @importFrom checkmate assertLogical assertCharacter assertNumeric assertIntegerish testIntegerish
 #' @importFrom checkmate assertString assertNumber
 #' @importFrom checkmate testVector
 #' @importFrom Rcpp evalCpp

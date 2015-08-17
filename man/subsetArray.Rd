@@ -5,28 +5,36 @@
 \alias{subsetArray<-}
 \title{Extract or replace a part of an array}
 \usage{
-subsetArray(dat, subsets, which_dims = NULL, drop = NULL, keep_attributes = TRUE)
+subsetArray(dat, subsets., which_dims. = NULL, drop. = NULL,
+            keep_attributes. = TRUE, ...)
 
-subsetArray(dat, subsets, which_dims = NULL) <- value
+subsetArray(dat, subsets., which_dims. = NULL, ...) <- value
 }
 \arguments{
 \item{dat}{array to be subsetted}
 
-\item{subsets}{a (named) list of character, numeric, or logical vectors
-indicating which levels of which dimensions to subset (see Details). If
-'subsets' is an unnamed list, the argument 'which_dims' must be provided.}
+\item{subsets.}{a (named) list of character, numeric, or logical vectors or
+a subsetting function (see \code{\link[eegR]{is}}) indicating which levels
+of which dimensions to subset (see Details). If 'subsets.' is an unnamed
+list, the argument 'which_dims.' must be provided.}
 
-\item{which_dims}{numeric or character indices of the dimensions which
-should be subsetted. If 'which_dims' is not NULL, 'which_dims' is used and
-the names of 'subsets' is ignored.}
+\item{which_dims.}{numeric or character indices of the dimensions which
+should be subsetted. If 'which_dims.' is not NULL, 'which_dims.' is used and
+the names of 'subsets.' is ignored.}
 
-\item{drop}{either 1) NULL (the default), or 2) a logical value
+\item{drop.}{either 1) NULL (the default), or 2) a logical value
 (TRUE or FALSE), or 3) numeric or character indices of the dimensions which
 should be dropped if they become singleton dimensions (i.e. have only one
 level) after subsetting (see Details)}
 
-\item{keep_attributes}{a logical variable which determines if the result
+\item{keep_attributes.}{a logical variable which determines if the result
 inherits the custom attributes of the input (TRUE, default) or not}
+
+\item{...}{an alternative specification of the subsetting rule; one can
+provide the subsetting vectors as named arguments, where the argument name
+refers to the name of the subsetted dimension. For programmatic use,
+'subsets.' is preferred because the names of dimensions might interfere with
+the default argument names.}
 
 \item{value}{a vector, matrix or array of the new values}
 }
@@ -39,41 +47,60 @@ values.
 part of an array which has dimension names
 }
 \details{
-Names of 'subsets' or the indices of dimensions as given in
-'which_dim' indicate which dimensions are to be subsetted in
+Names of 'subsets.' or the indices of dimensions as given in
+'which_dim.' indicate which dimensions are to be subsetted in
 the input array, and each list element indicates which levels of the given
 dimension will be selected. If a list element is an empty vector, all levels
-of the correspondig dimension will be selected.\cr
-The argument 'drop' defines the procedure if a dimension becomes a singleton
-dimension after subsetting. The default behaviour (\code{drop = NULL}) is to
-drop all subsetting dimensions but no others. If 'drop' is FALSE, all
-dimensions are kept, if TRUE, all singleton dimensions are dropped. If 'drop'
-is a numeric or character vector, its elements define which dimensions to
-drop.
+of the correspondig dimension will be selected. Further possibilities for
+subsetting vectors:
+\itemize{
+\item{function: }{a function which returns a logical vector if called on
+the dimension levels of the given dimension (see Examples for a use case
+of \code{\link{isBetween}} and \code{\link{isPattern}}). Note that 'dat'
+must have non-NULL dimension names for functional subsetting.}
+\item{logical: }{logical vector of the same length as the given dimension,
+denoting whether the given level of the dimension should be included in the
+subset (TRUE) or not (FALSE)}
+\item{integer: }{numeric indices of the dimension levels which should be
+included in the subset}
+\item{character: }{character vector of the dimension levels which should be
+included in the subset. Note that 'dat' must have non-NULL dimension names
+for character subsetting.}
+}
+The argument 'drop.' defines the procedure if a dimension becomes a singleton
+dimension after subsetting. The default behaviour (\code{drop. = NULL}) is to
+drop all subsetting dimensions but no others. If 'drop.' is FALSE, all
+dimensions are kept, if TRUE, all singleton dimensions are dropped. If
+'drop.' is a numeric or character vector, its elements define which
+dimensions to drop.
 }
 \examples{
 # example data (see ?erps)
 data(erps)
 str(erps)
 
-# subsetting without knowing the exact order of dimensions
+# subsetting without knowing the exact order of dimensions and using
+# various subsetting schemes
 sub1 <- subsetArray(erps,
-                    list(time = "0", chan = "Fp2",
-                         stimclass = c(TRUE, FALSE, FALSE)),
-                    keep_attributes = FALSE)
+                    time = isBetween(0, 10),
+                    chan = isPattern("Fp"),
+                    stimclass = c(TRUE, FALSE, FALSE),
+                    keep_attributes. = FALSE)
 
 # traditional subsetting
-sub2 <- erps["A", , "Fp2", "0", ]
+sub2 <- erps["A", , c("Fp1", "Fp2"), c("0", "2", "4", "6", "8", "10"), ]
 
 # the results are identical
 stopifnot(identical(sub1, sub2))
 
 # the same for replacement
-subsetArray(sub1, list(id = 1)) <- NA
-sub2[, 1] <- NA
+subsetArray(sub1, list(id = 1, pairtype = "transp")) <- NA
+sub2["transp", , , 1] <- NA
 stopifnot(identical(sub1, sub2))
 }
 \seealso{
-\code{\link[abind]{asub}}
+See the \code{\link[eegR]{is}} family of functions for subsetting
+dimensions by functional expressions; see also \code{\link[abind]{asub}}
+for a less general approach.
 }
 

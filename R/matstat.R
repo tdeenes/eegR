@@ -266,21 +266,43 @@ findExtremaMatrix <- function(x, n, tail, topN, has_NA) {
 #' \code{zoo::rollapply} is called.
 #' @export
 #' @return An object having the same attributes as dat.
+#' @examples
+#' # either caTools or zoo must be installed before using this function;
+#' # here follows a timing comparison for caTools and zoo, so we need both
+#' if (require(caTools) && require(zoo)) {
+#'     # create a matrix
+#'     x <- matrix_(rnorm(2e4), 1e2, 2e2)
+#' 
+#'     # compute rolling mean for each columns, set the width of the 
+#'     # sliding window to 5
+#'     system.time(roll_mean_catools <- rollFun(x, 5, mean))
+#'     system.time(roll_mean_zoo <- rollFun(x, 5, mean, force_rollapply = TRUE))
+#'     
+#'     # caTools is much faster for the standard statistics, and the results
+#'     # are the same
+#'     stopifnot(all.equal(roll_mean_catools, roll_mean_zoo))
+#' }
+#'
 rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
+    # check arguments and store attributes
     dims <- dim(dat)
     attribs <- attributes(dat)
     if (is.data.frame(dat)) dat <- as.matrix(dat)
     if (is.list(dat)) 
-        stop("Provide a vector, a matrix or a data.frame as input!")
+        stop("Provide a vector, matrix or data.frame as input!")
     if (is.vector(dat)) {
         dat <- matrix(dat, ncol = 1)
         dims <- dim(dat)
     }
-    if ((min(width) < 1) || (max(width) > nrow(dat)))
-        stop("width must be an integer value or vector between 1 and 
-             length(dat) or nrow(dat)")
+    if (length(dims) > 2)
+        stop("dat can not be a multidimensional array. Consider the combination of fnDims and rollFun with vectorized = TRUE")
+    assertIntegerish(width, lower = 1, upper = dims[1], min.len = 1L,
+                     any.missing = FALSE, .var.name = "width")
     width <- as.integer(width)
+    if (length(width) > 1L) width <- rep_len(width, dims[1])
     FUN <- match.fun(FUN)
+    assertLogical(force_rollapply, any.missing = FALSE, len = 1L,
+                  .var.name = "force_rollaply")
     if (!force_rollapply) {
         funlist <- list(min = min, max = max, mean = mean, 
                         sd = sd, mad = mad, quantile = quantile)
@@ -298,19 +320,19 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
                                               list(quantiles = probs))
                     }
                 }
-                if (length(width) == 1) {
+                if (length(width) == 1L) {
                     out <- FUN(dat, width, ...)
                 } else {
                     out <- array_(0, dims)
                     if (identical(FUN, caTools::runquantile)) {
                         for (i in unique(width)) {
                             ind <- width == i
-                            out[ind, , ] <- FUN(dat, i, ...)[ind, , , drop = F]
+                            out[ind, , ] <- FUN(dat, i, ...)[ind, , , drop = FALSE]
                         }
                     } else {
                         for (i in unique(width)) {
                             ind <- width == i
-                            out[ind, ] <- FUN(dat, i, ...)[ind, , drop = F]
+                            out[ind, ] <- FUN(dat, i, ...)[ind, , drop = FALSE]
                         }
                     }
                 }

@@ -34,4 +34,21 @@ calls the corresponding function from the \pkg{caTools} package (e.g.
 \code{caTools::runmin}). Otherwise, or if \code{force_rollapply} is TRUE,
 \code{zoo::rollapply} is called.
 }
+\examples{
+# either caTools or zoo must be installed before using this function;
+# here follows a timing comparison for caTools and zoo, so we need both
+if (require(caTools) && require(zoo)) {
+    # create a matrix
+    x <- matrix_(rnorm(2e4), 1e2, 2e2)
+
+    # compute rolling mean for each columns, set the width of the
+    # sliding window to 5
+    system.time(roll_mean_catools <- rollFun(x, 5, mean))
+    system.time(roll_mean_zoo <- rollFun(x, 5, mean, force_rollapply = TRUE))
+
+    # caTools is much faster for the standard statistics, and the results
+    # are the same
+    stopifnot(all.equal(roll_mean_catools, roll_mean_zoo))
+}
+}
 

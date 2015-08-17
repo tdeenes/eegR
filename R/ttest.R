@@ -295,7 +295,7 @@ preTtest <- function(.arraydat, .arraydat2, paired, groups,
             if (any(!groups_keep)) {
                 .arraydat <- subsetArray(.arraydat, 
                                          listS(.id_dim = groups_keep),
-                                         drop = FALSE)
+                                         drop. = FALSE)
                 groups <- groups[groups_keep]
             }
             # transform to 1s and 2s

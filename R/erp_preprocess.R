@@ -550,7 +550,7 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
             artrej_options$channels
         }
     # run artifact rejection
-    tempdat <- array2mat(subsetArray(dat, list(chan = keepchan), drop = FALSE),
+    tempdat <- array2mat(subsetArray(dat, list(chan = keepchan), drop. = FALSE),
                          "time", keep_dimnames = FALSE)
     badtrials <- aRej(tempdat)
     if (print_result) {
