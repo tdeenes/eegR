@@ -18,7 +18,7 @@ dimension which is not 'time_dim'. See Details.}
 \item{time_dim}{numeric or character index of the time dimension (default:
 "time")}
 
-\item{lambda}{numeric scalar which controls the elasticity (default: 0.1;
+\item{lambda}{numeric scalar which controls the elasticity (default: 0;
 higher lambda means less elastic curves)}
 
 \item{method}{warp and calculate to Karcher Mean ("mean", the default) or
@@ -26,7 +26,7 @@ Karcher Median ("median"). The latter option seems buggy; do not use it
 in serious analyses.}
 
 \item{smooth_data}{logical value whether to smooth data using box filter
-(default: TRUE)}
+(default: FALSE)}
 
 \item{smooth_times}{numeric scalar; number of times to apply box filter if
 'smooth_data' is TRUE (default: 25L)}
@@ -59,7 +59,8 @@ same or an other ERP array in \code{\link{align}}.
 }
 \note{
 The defaults of \code{warp} are not necessarily identical to the
-defaults of the underlying \code{\link[fdasrvf]{time_warping}} function.
+defaults of the underlying \code{\link[fdasrvf]{time_warping}} function and
+are subject to change in the future.
 }
 \seealso{
 \code{\link{align}} for time-aligning transformation and examples,

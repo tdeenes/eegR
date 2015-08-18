@@ -11,13 +11,13 @@
 #' dimension which is not 'time_dim'. See Details.
 #' @param time_dim numeric or character index of the time dimension (default: 
 #' "time")
-#' @param lambda numeric scalar which controls the elasticity (default: 0.1; 
+#' @param lambda numeric scalar which controls the elasticity (default: 0; 
 #' higher lambda means less elastic curves)
 #' @param method warp and calculate to Karcher Mean ("mean", the default) or 
 #' Karcher Median ("median"). The latter option seems buggy; do not use it
 #' in serious analyses.
 #' @param smooth_data logical value whether to smooth data using box filter 
-#' (default: TRUE)
+#' (default: FALSE)
 #' @param smooth_times numeric scalar; number of times to apply box filter if 
 #' 'smooth_data' is TRUE (default: 25L)
 #' @param verbose logical value whether iteration messages should be displayed
@@ -27,7 +27,8 @@
 #' time dimension of the ERP array.
 #' @param ... further arguments passed to \code{\link{fnDims}} (e.g. parallel)
 #' @note The defaults of \code{warp} are not necessarily identical to the 
-#' defaults of the underlying \code{\link[fdasrvf]{time_warping}} function.
+#' defaults of the underlying \code{\link[fdasrvf]{time_warping}} function and
+#' are subject to change in the future.
 #' @details In the standard case, \code{warp} takes a matrix as input which 
 #' represent multiple time series (where the individual time series are either 
 #' the columns or the rows of the matrix). However, \code{warp} also accepts 
