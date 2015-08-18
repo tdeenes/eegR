@@ -20,7 +20,7 @@
 #' @importFrom checkmate assertAtomic assertVector assertMatrix assertArray
 #' @importFrom checkmate assertDataFrame assertList assertClass
 #' @importFrom checkmate assertLogical assertCharacter assertNumeric assertIntegerish testIntegerish
-#' @importFrom checkmate assertString assertNumber
+#' @importFrom checkmate assertString assertNumber assertScalar
 #' @importFrom checkmate testVector
 #' @importFrom Rcpp evalCpp
 #' @importFrom Kmisc factor_ counts
@@ -28,6 +28,7 @@
 #' @importFrom sgeostat in.polygon
 #' @importFrom gplots colorpanel redgreen greenred bluered redblue
 #' @importFrom RColorBrewer brewer.pal
+#' @importFrom fdasrvf time_warping
 NULL
 
 .onAttach <- function(lib, pkg) {

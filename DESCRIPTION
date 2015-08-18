@@ -21,6 +21,7 @@ Imports:
     corpcor,
     data.table,
     doParallel,
+    fdasrvf,
     foreach,
     iterators,
     ggplot2,
