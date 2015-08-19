@@ -898,6 +898,197 @@ subsetArray <- function(dat, subsets. = list(), which_dims. = NULL,
     invisible(dat)
 }
 
+#' Expand array
+#' 
+#' \code{expandInto} expands an array to a larger array (either to an array
+#' with more dimensions or an array with longer dimensions or both).
+#' @param dat an array
+#' @param new_dat an array to expand 'dat' into
+#' @param expand_levels a list of vectors which define the expanding scheme
+#' for each dimension of 'dat' or a named list of vectors where the names refer
+#' to selected dimensions in 'dat' (in this case 'dat' must have named 
+#' dimnames). The length of each vector in 'expand_levels' must match the 
+#' corresponding dimension size in 'new_dat'. The vectors must contain either
+#' numeric or character indices of the levels of the given dimension in 'dat'.
+#' @param safe_mode a logical value whether the expansion of non-singleton 
+#' dimensions is not allowed if the corresponding vectors in 'expand_levels' are
+#' not provided (default: TRUE). If 'safe_mode' is TRUE, and both 'dat' and 
+#' 'new_dat' has dimension names, non-expanded dimensions are checked if the 
+#' order of levels should be adjusted for the given dimension. See Examples. 
+#' @export
+#' @examples
+#' # load example data
+#' data(erps)
+#' 
+#' # -----
+#' # solve the following task: find all data points for which the amplitudes
+#' # in the "Fz" channel are negative, and return TRUE for all corresponding 
+#' # data points in the other channels as well
+#' # -----
+#' 
+#' # subset the data and return TRUE if the values are negative
+#' x_Fz <- subsetArray(erps, chan = "Fz") < 0
+#' str(x_Fz)
+#' 
+#' # expand this array into the original array
+#' result <- expandInto(x_Fz, erps)
+#' str(result)
+#' 
+#' # check on a random channel that the results are really fine
+#' x_Cz <- subsetArray(result, chan = "Cz")
+#' # -->
+#' # all TRUEs in x_Fz are also TRUE in x_Cz, and vica versa
+#' ( tab <- table(x_Fz, x_Cz) )
+#' stopifnot(identical(sum(diag(tab)), length(x_Fz)))
+#' 
+#' # -----
+#' # the function is clever enough to reorder the levels for those 
+#' # dimensions as well, which should not be expanded, but the order 
+#' # of levels is different in 'new_dat'
+#' # -----
+#' # reorder the 'stimclass' dimension in the original ERP array
+#' erps2 <- subsetArray(erps, stimclass = c("C", "B", "A"))
+#' 
+#' # expand x_Fz again
+#' result2 <- expandInto(x_Fz, erps2)
+#' 
+#' # turn 'safe_mode' off
+#' result2_notsafe <- expandInto(x_Fz, erps2, safe_mode = FALSE)
+#' 
+#' # check the results -> result2 is fine
+#' x_Cz_2 <- subsetArray(result2, 
+#'                       chan = "Cz", 
+#'                       stimclass = c("A", "B", "C"))
+#' ( tab <- table(x_Fz, x_Cz_2) )
+#' stopifnot(identical(sum(diag(tab)), length(x_Fz)))
+#' 
+#' # check the results -> result2_notsafe is wrong
+#' x_Cz_2w <- subsetArray(result2_notsafe, 
+#'                        chan = "Cz", 
+#'                        stimclass = c("A", "B", "C"))
+#' ( tab <- table(x_Fz, x_Cz_2w) )
+#' stopifnot(!identical(sum(diag(tab)), length(x_Fz)))
+#' 
+#' # -----
+#' # the safest way is to provide 'expand_levels' explicitly for all
+#' # dimensions where the order or number of levels do not match;
+#' # using this argument it is also possible to copy the values of a given
+#' # level to an other one
+#' # -----
+#' # suppose we want stimclass C to be copied from stimclass B while expanding
+#' # to all channels (on the original ERP array)
+#' result <- expandInto(x_Fz, erps, 
+#'                      expand_levels = list(stimclass = c("A", "B", "B")))
+#' 
+#' # check the results
+#' x_Cz_B <- subsetArray(result, 
+#'                       chan = "Cz", 
+#'                       stimclass = "B")
+#' x_Cz_C <- subsetArray(result, 
+#'                       chan = "Cz", 
+#'                       stimclass = "C")
+#' # --> they are identical:
+#' stopifnot(identical(x_Cz_B, x_Cz_C))
+#' # --> compared to the results on Fz, stimclass B remained the same:
+#' x_Fz_B <- subsetArray(x_Fz, stimclass = "B")                    
+#' ( tab <- table(x_Fz_B, x_Cz_B) )
+#' stopifnot(identical(sum(diag(tab)), length(x_Fz_B)))
+#' 
+expandInto <- function(dat, new_dat, expand_levels = NULL, safe_mode = TRUE) {
+    # check arguments
+    assertArray(dat, min.d = 1L, .var.name = "dat")
+    orig_dim <- dim(dat)
+    orig_dimn <- fillMissingDimnames(dimnames(dat), orig_dim)
+    orig_dimid <- names(orig_dimn)
+    assertArray(new_dat, min.d = length(orig_dim), .var.name = "new_dat")
+    new_dim <- dim(new_dat)
+    new_dimn <- fillMissingDimnames(dimnames(new_dat), new_dim)
+    new_dimid <- names(new_dimn)
+    if (!is.null(new_dimid) && any(!orig_dimid %in% new_dimid)) {
+        stop(paste0("if 'new_dat' has dimension identifiers, ",
+                    "it must contain all dimension identifiers of 'dat'"))
+    }
+    # match dimension order
+    shared_dimid <- intersect(new_dimid, orig_dimid)
+    dat <- 
+        if (identical(shared_dimid, orig_dimid)) {
+            copy(dat)
+        } else {
+            apermArray(dat, shared_dimid) 
+        }
+    # insert new dimensions
+    orig_dimn2 <- setNames(rep(list("1"), length(new_dim)), new_dimid)
+    orig_dimn2[orig_dimid] <- orig_dimn
+    array_(dat, vapply(orig_dimn2, length, integer(1L)), orig_dimn2)
+    # consider expand_levels
+    if (!is.null(expand_levels)) {
+        assertList(expand_levels, types = c("character", "numeric"), 
+                   any.missing = FALSE, 
+                   min.len = 1L, max.len = length(orig_dim), 
+                   .var.name = "expand_levels")
+        if (is.null(names(expand_levels))) {
+            if (length(expand_levels) != length(orig_dim)) {
+                stop(paste0("if the length of 'expand_levels' does not ",
+                            "match the number of dimension of 'dat', ", 
+                            "'expand_levels' must be named"))
+            } else {
+                names(expand_levels) <- orig_dimid
+            }
+        } 
+        expand_levels <- fillMissingDimnames(
+            expand_levels, vapply(expand_levels, length, integer(1L)))
+    }
+    # create subsetting indices
+    sub_indices <- mapply(
+        function(old, new, nam) {
+            if (safe_mode && is.null(expand_levels) && 
+                length(old) > 1L && length(old) != length(new)) {
+                stop(sprintf(
+                    paste0("the '%s' dimension is not a singleton dimension ",
+                           "in 'dat', but it should be expanded to match ",
+                           "the corresponding dimension in 'new_dat'. ", 
+                           "Please provide 'expand_levels' or if you really ",
+                           "know what you are doing, set 'safe_mode' to FALSE."
+                           ), nam))
+            }
+            # return
+            if (is.null(exp <- expand_levels[[nam]])) {
+                if (safe_mode) {
+                    if (all(new %in% old)) {
+                        new
+                    } else if (length(old) == 1L) {
+                        rep_len(old, length(new))
+                    } else {
+                        stop(sprintf(
+                            paste0("the '%s' dimension is neither a singleton ",
+                                   "dimension in 'dat', nor does it contain ",
+                                   "all levels of the corresponding dimension ",
+                                   "in 'new_dat'. Please provide ",
+                                   "'expand_levels' or if you really know ",
+                                   "what you are doing, set 'safe_mode' to ",
+                                   "FALSE."
+                            ), nam))
+                    }
+                } else {
+                    rep_len(old, length(new))
+                }
+            } else if (length(exp) == length(new)) {
+                exp
+            } else {
+                stop(sprintf(
+                    paste0("the size of the '%s' dimension in 'new_dat' ",
+                           "and the length of the corresponding vector in ", 
+                           "'expand_levels' must be equal"), nam))
+            }
+        },
+        orig_dimn2, new_dimn, new_dimid, SIMPLIFY = FALSE
+    )
+    # expand array
+    new_dat[] <- subsetArray(dat, sub_indices)
+    # return
+    new_dat
+}
+
 
 #' Reshape array to matrix with specified row dimension
 #'
