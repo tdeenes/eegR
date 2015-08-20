@@ -107,6 +107,21 @@ asNumeric_ <- function(x) {
     }
 }
 
+#' Negation for the is* family of functions
+#' 
+#' \code{`!.IsFunction`} implements logical negation for \code{is*} function. It
+#' modifies the call by negating its 'negate.' argument.
+#' @name negate
+#' @param fn a function of class IsFunction
+#' @export
+#' @keywords internal
+"!.IsFunction" <- function(fn) {
+    e <- new.env(parent = environment(fn))
+    e$negate. <- !get("negate.", envir = environment(fn))
+    environment(fn) <- e
+    fn
+}
+
 #' Match the length of an object to an other object with warning
 #' 
 #' \code{repLen} is a wrapper around \code{rep_len} to recycle or crop a
@@ -140,23 +155,27 @@ repLen <- function(x, len, x_name = NULL) {
 
 #' Test logical statements on data points
 #' 
-#' \code{is*} are functions which produce functions to test logical statements 
-#' on each data point of an atomic object (vector, matrix, or array). See 
-#' Details for the general idea, Functions for the short function-specific
-#' descriptions and the section Use cases for short examples.
+#' \code{is*} are functions which produce functions of class \code{IsFunction} 
+#' to test logical statements on each data point of an atomic object (vector, 
+#' matrix, or array). See Details for the general idea, Functions for the short 
+#' function-specific descriptions and the section Use cases for short examples.
 #' @name is
 #' @param strict. logical value whether the tested condition is obligatory
 #' (TRUE, the default) or optional (FALSE). Only used for combining multiple
 #' tests (not available at the moment).
+#' @param negate. logical value whether the return value of the function should
+#' be negated (default: FALSE). You can also use the standard \code{\link{!}} 
+#' operator for negation which has a specific method for the \code{IsFunction} 
+#' class (see Examples).
 #' @param ... further arguments passed to the wrapped function (see Functions
 #' for details)
-#' @details All \code{is*} functions return a function which has only one
-#' argument, \code{x} (the data object to test). A second major rule is that 
-#' all functions returned by an \code{is*} function return a logical object
-#' of the same shape as the input object. The third rule is that the function 
-#' returned by any \code{is*} function has an attribute called \code{.MUST}.
-#' This affects the way how the results are combined for joint logical tests
-#' (more on this later). 
+#' @details All \code{is*} functions return a function of the class 
+#' \code{IsFunction} which has only one argument, '\code{x}' (the data object 
+#' to test). A second major rule is that all functions returned by an \code{is*}
+#' function return a logical object of the same shape as the input object. 
+#' The third rule is that the function returned by any \code{is*} function has 
+#' an attribute called \code{.MUST}. This affects the way how the results are 
+#' combined for joint logical tests (more on this later). 
 #' \cr
 #' @section Use cases:
 #' \subsection{\code{is*} as simple pre-defined test}{
@@ -197,23 +216,27 @@ NULL
 #' # note how we pass the 'ignore.case' argument to the internally used
 #' # grepl() function (see ?grepl)
 #' check_start_a <- isPattern("^a", ignore.case = TRUE)
+#' 
+#' # check the results -> note that the class and the attribute has to be 
+#' # removed by calling 'c' (or 'as.vector') to make the results identical
 #' stopifnot(identical(
-#'     check_start_a(c("a", "A", "ba")), 
-#'     structure(c(TRUE, TRUE, FALSE), .MUST = TRUE)
+#'     c(check_start_a(c("a", "A", "ba"))), 
+#'     c(TRUE, TRUE, FALSE)
 #' ))
 #' 
-isPattern <- function(pattern., strict. = TRUE, ...) {
+isPattern <- function(pattern., strict. = TRUE, negate. = FALSE, ...) {
     assertString(pattern., na.ok = FALSE, .var.name = "pattern")
     options <- list(...)
     assertList(options, names = "unique", .var.name = "arguments in '...'")
-    function(x) {
-        assertCharacter(x, .var.name = "x")
-        out <- do("grepl", pattern., as.vector(x), arg_list = options)
-        setattr(out, "dim", dim(x))
-        setattr(out, "dimnames", dimnames(x))
-        setattr(out, ".MUST", strict.)
-        out
-    }
+    structure(
+        function(x) {
+            assertCharacter(x, .var.name = "x")
+            out <- do("grepl", pattern., as.vector(x), arg_list = options)
+            setattr(out, "dim", dim(x))
+            setattr(out, "dimnames", dimnames(x))
+            setattr(out, ".MUST", strict.)
+            if (!negate.) out else !out
+        }, class = "IsFunction")
 }
 
 #' @describeIn is produces a function to test whether the values in an atomic 
@@ -229,8 +252,8 @@ isPattern <- function(pattern., strict. = TRUE, ...) {
 #' # example for isEqual
 #' check_zero <- isEqual(0, tol. = 1e-4)
 #' stopifnot(identical(
-#'     check_zero(c("0", "0.000001", "1")), 
-#'     structure(c(TRUE, TRUE, FALSE), .MUST = TRUE)
+#'     c(check_zero(c("0", "0.000001", "1"))), 
+#'     c(TRUE, TRUE, FALSE)
 #' ))
 #' 
 #' # note that just like for other is* functions, the reference and the 
@@ -239,23 +262,32 @@ isPattern <- function(pattern., strict. = TRUE, ...) {
 #' # of the 'x' object
 #' check_values <- isEqual(c(0, 1, 2), strict. = FALSE)
 #' stopifnot(identical(
-#'     check_values(c(0, 1.1, 2, 1e-9)), 
-#'     structure(c(TRUE, FALSE, TRUE, TRUE), .MUST = FALSE)
+#'     c(check_values(c(0, 1.1, 2, 1e-9))), 
+#'     c(TRUE, FALSE, TRUE, TRUE)
 #' ))
 #' 
+#' # isEqual, just like all other is* functions, can be negated:
+#' check_not_zero <- isEqual(0, negate. = TRUE)
+#' stopifnot(check_not_zero(1))
+#' 
+#' # the same can be achieved by using ! for negation
+#' check_not_zero2 <- !isEqual(0)
+#' stopifnot(identical(check_not_zero(1), check_not_zero2(1)))
+#' 
 isEqual <- function(ref., tol. = .Machine$double.eps^0.5, 
-                     strict. = TRUE, ...) {
+                    strict. = TRUE, negate. = FALSE, ...) {
     ref. <- asNumeric_(ref.)
     tol. <- asNumeric_(tol.)
-    function(x) {
-        len_x <- length(x)
-        ref. <- repLen(ref., len_x, "ref.")
-        tol. <- repLen(tol., len_x, "tol.")
-        x <- asNumeric_(x)
-        out <- abs(x - ref.) <= tol.
-        setattr(out, ".MUST", strict.)
-        out
-    }
+    structure(
+        function(x) {
+            len_x <- length(x)
+            ref. <- repLen(ref., len_x, "ref.")
+            tol. <- repLen(tol., len_x, "tol.")
+            x <- asNumeric_(x)
+            out <- copy(abs(x - ref.) <= tol.)
+            setattr(out, ".MUST", strict.)
+            if (!negate.) out else !out
+        }, class = "IsFunction")
 }
 
 #' @describeIn is produces a function to test whether
@@ -274,13 +306,13 @@ isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
 #' # note that lwr_ and upr_ might be given in reversed order
 #' check_0_100 <- isBetween(100, 0)
 #' stopifnot(identical(
-#'     check_0_100(c(-1, 1, 101)), 
-#'     structure(c(FALSE, TRUE, FALSE), .MUST = TRUE)
+#'     c(check_0_100(c(-1, 1, 101))), 
+#'     c(FALSE, TRUE, FALSE)
 #' ))
 #' 
 isBetween <- function(lwr. = -Inf, upr. = Inf, 
-                       closed. = c("both", "none", "lwr", "upr"),
-                       strict. = TRUE, ...) {
+                      closed. = c("both", "none", "lwr", "upr"),
+                      strict. = TRUE, negate. = FALSE, ...) {
     lwr. <- asNumeric_(lwr.)
     upr. <- asNumeric_(upr.)
     closed. <- match.arg(closed.)
@@ -291,25 +323,26 @@ isBetween <- function(lwr. = -Inf, upr. = Inf,
     upr. <- pmax(lwr, upr)
     lwr <- NULL; upr <- NULL
     #
-    function(x) {
-        x <- asNumeric_(x)
-        len_x <- length(x)
-        out <- rep_len(TRUE, len_x)
-        if (!identical(lwr., -Inf)) {
-            lwr. <- repLen(lwr., len_x, "lwr.")
-            if (closed. %in% c("both", "lwr")) `>` <- `>=`
-            out <- out & x > lwr.
-        }
-        if (!identical(upr., -Inf)) {
-            upr. <- repLen(upr., len_x, "upr.")
-            if (closed. %in% c("both", "upr")) `<` <- `<=`
-            out <- out & x < upr.
-        }
-        setattr(out, "dim", dim(x))
-        setattr(out, "dimnames", dimnames(x))
-        setattr(out, ".MUST", strict.)
-        out
-    }
+    structure(
+        function(x) {
+            x <- asNumeric_(x)
+            len_x <- length(x)
+            out <- rep_len(TRUE, len_x)
+            if (!identical(lwr., -Inf)) {
+                lwr. <- repLen(lwr., len_x, "lwr.")
+                if (closed. %in% c("both", "lwr")) `>` <- `>=`
+                out <- out & x > lwr.
+            }
+            if (!identical(upr., -Inf)) {
+                upr. <- repLen(upr., len_x, "upr.")
+                if (closed. %in% c("both", "upr")) `<` <- `<=`
+                out <- out & x < upr.
+            }
+            setattr(out, "dim", dim(x))
+            setattr(out, "dimnames", dimnames(x))
+            setattr(out, ".MUST", strict.)
+            if (!negate.) out else !out
+        }, class = "IsFunction")
 }
 
 #' @describeIn is produces a function to test whether the values in an atomic 
@@ -317,8 +350,9 @@ isBetween <- function(lwr. = -Inf, upr. = Inf,
 #' objects of any type for which \code{asNumeric} 
 #' does not fail (see the documentation of \code{\link{asNumeric}}).
 #' @export
-isNegative <- function(strict. = TRUE, ...) {
-    isBetween(-Inf, -.Machine$double.eps^0.5, strict. = strict., ...)
+isNegative <- function(strict. = TRUE, negate. = FALSE, ...) {
+    isBetween(-Inf, 0, closed. = "left", strict. = strict., 
+              negate. = FALSE, ...)
 }
 
 #' @describeIn is produces a function to test whether the values in an atomic 
@@ -327,7 +361,8 @@ isNegative <- function(strict. = TRUE, ...) {
 #' does not fail (see the documentation of \code{\link{asNumeric}}).
 #' @export
 isPositive <- function(strict. = TRUE, ...) {
-    isBetween(.Machine$double.eps^0.5, Inf, strict. = strict., ...)
+    isBetween(0, Inf, closed. = "right", strict. = strict.,
+              negate. = FALSE, ...)
 }
 
 #' @describeIn is produces a function to test whether the the values in an 
@@ -345,52 +380,57 @@ isPositive <- function(strict. = TRUE, ...) {
 #' # findExtrema() function (see ?findExtrema)
 #' check_global_extr <- isExtremum(global = TRUE, tail = "do_not_care")
 #' stopifnot(identical(
-#'     check_global_extr(c(-1, 1, 0, 100, 50)), 
-#'     structure(c(TRUE, FALSE, FALSE, TRUE, FALSE), .MUST = TRUE)
+#'     c(check_global_extr(c(-1, 1, 0, 100, 50))), 
+#'     c(TRUE, FALSE, FALSE, TRUE, FALSE)
 #' ))
 #' 
-isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE, ...) {
+isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE, 
+                       negate. = FALSE, ...) {
     what. <- match.arg(what.)
     assertLogical(strict., any.missing = FALSE, len = 1L, .var.name = "strict")
     options <- list(...)
     assertList(options, names = "unique", .var.name = "arguments in '...'")
     # return
-    function(x) {
-        out <- do("findExtrema", x, arg_list = options)
-        out <- switch(what., 
-                      max = out == 1L, 
-                      min = out == -1L, 
-                      both = (out == 1L) | (out == -1L))
-        setattr(out, ".MUST", strict.)
-    }
+    structure(
+        function(x) {
+            out <- do("findExtrema", x, arg_list = options)
+            out <- switch(what., 
+                          max = out == 1L, 
+                          min = out == -1L, 
+                          both = (out == 1L) | (out == -1L))
+            setattr(out, ".MUST", strict.)
+            if (!negate.) out else !out
+        }, class = "IsFunction")
 }
 
 #' @describeIn is a shorthand for \code{isExtremum("max", strict., ...)}. See 
 #' \code{\link{findExtrema}} for additional details and further arguments. 
 #' @export
-isLocalMaximum <- function(strict. = TRUE, ...) {
-    isExtremum("max", strict., ...)
+isLocalMaximum <- function(strict. = TRUE, negate. = FALSE, ...) {
+    isExtremum("max", strict., negate., ...)
 }
 
 #' @describeIn is a shorthand for \code{isExtremum("min", strict., ...)}. See 
 #' \code{\link{findExtrema}} for additional details and further arguments. 
 #' @export
-isLocalMinimum <- function(strict. = TRUE, ...) {
-    isExtremum("min", strict., ...)
+isLocalMinimum <- function(strict. = TRUE, negate. = FALSE, ...) {
+    isExtremum("min", strict., negate., ...)
 }
 
 #' @describeIn is a shorthand for 
 #' \code{isExtremum("max", strict., global = TRUE, ...)}. See 
 #' \code{\link{findExtrema}} for additional details and further arguments. 
 #' @export
-isMaximum <- function(strict. = TRUE, ...) {
-    isExtremum("max", strict., global = TRUE, ...)
+isMaximum <- function(strict. = TRUE, negate. = FALSE, ...) {
+    isExtremum("max", strict., negate., global = TRUE, ...)
 }
 
 #' @describeIn is a shorthand for 
 #' \code{isExtremum("min", strict., global = TRUE, ...)}. See 
 #' \code{\link{findExtrema}} for additional details and further arguments. 
 #' @export
-isMinimum <- function(strict. = TRUE, ...) {
-    isExtremum("min", strict., global = TRUE, ...)
+isMinimum <- function(strict. = TRUE, negate. = FALSE, ...) {
+    isExtremum("min", strict., negate., global = TRUE, ...)
 }
+
+

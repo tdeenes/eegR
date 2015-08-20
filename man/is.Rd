@@ -14,26 +14,28 @@
 \alias{isPositive}
 \title{Test logical statements on data points}
 \usage{
-isPattern(pattern., strict. = TRUE, ...)
+isPattern(pattern., strict. = TRUE, negate. = FALSE, ...)
 
-isEqual(ref., tol. = .Machine$double.eps^0.5, strict. = TRUE, ...)
+isEqual(ref., tol. = .Machine$double.eps^0.5, strict. = TRUE,
+  negate. = FALSE, ...)
 
 isBetween(lwr. = -Inf, upr. = Inf, closed. = c("both", "none", "lwr",
-  "upr"), strict. = TRUE, ...)
+  "upr"), strict. = TRUE, negate. = FALSE, ...)
 
-isNegative(strict. = TRUE, ...)
+isNegative(strict. = TRUE, negate. = FALSE, ...)
 
 isPositive(strict. = TRUE, ...)
 
-isExtremum(what. = c("both", "min", "max"), strict. = TRUE, ...)
+isExtremum(what. = c("both", "min", "max"), strict. = TRUE,
+  negate. = FALSE, ...)
 
-isLocalMaximum(strict. = TRUE, ...)
+isLocalMaximum(strict. = TRUE, negate. = FALSE, ...)
 
-isLocalMinimum(strict. = TRUE, ...)
+isLocalMinimum(strict. = TRUE, negate. = FALSE, ...)
 
-isMaximum(strict. = TRUE, ...)
+isMaximum(strict. = TRUE, negate. = FALSE, ...)
 
-isMinimum(strict. = TRUE, ...)
+isMinimum(strict. = TRUE, negate. = FALSE, ...)
 }
 \arguments{
 \item{pattern.}{a character regexp pattern, see the 'pattern' argument in
@@ -42,6 +44,11 @@ isMinimum(strict. = TRUE, ...)
 \item{strict.}{logical value whether the tested condition is obligatory
 (TRUE, the default) or optional (FALSE). Only used for combining multiple
 tests (not available at the moment).}
+
+\item{negate.}{logical value whether the return value of the function should
+be negated (default: FALSE). You can also use the standard \code{\link{!}}
+operator for negation which has a specific method for the \code{IsFunction}
+class (see Examples).}
 
 \item{...}{further arguments passed to the wrapped function (see Functions
 for details)}
@@ -62,19 +69,19 @@ scalars and vectors as well.}
 extrema ("both", the default) should be tested}
 }
 \description{
-\code{is*} are functions which produce functions to test logical statements
-on each data point of an atomic object (vector, matrix, or array). See
-Details for the general idea, Functions for the short function-specific
-descriptions and the section Use cases for short examples.
+\code{is*} are functions which produce functions of class \code{IsFunction}
+to test logical statements on each data point of an atomic object (vector,
+matrix, or array). See Details for the general idea, Functions for the short
+function-specific descriptions and the section Use cases for short examples.
 }
 \details{
-All \code{is*} functions return a function which has only one
-argument, \code{x} (the data object to test). A second major rule is that
-all functions returned by an \code{is*} function return a logical object
-of the same shape as the input object. The third rule is that the function
-returned by any \code{is*} function has an attribute called \code{.MUST}.
-This affects the way how the results are combined for joint logical tests
-(more on this later).
+All \code{is*} functions return a function of the class
+\code{IsFunction} which has only one argument, '\code{x}' (the data object
+to test). A second major rule is that all functions returned by an \code{is*}
+function return a logical object of the same shape as the input object.
+The third rule is that the function returned by any \code{is*} function has
+an attribute called \code{.MUST}. This affects the way how the results are
+combined for joint logical tests (more on this later).
 \cr
 }
 \section{Functions}{
@@ -155,16 +162,19 @@ the time range may be different).
 # note how we pass the 'ignore.case' argument to the internally used
 # grepl() function (see ?grepl)
 check_start_a <- isPattern("^a", ignore.case = TRUE)
+
+# check the results -> note that the class and the attribute has to be
+# removed by calling 'c' (or 'as.vector') to make the results identical
 stopifnot(identical(
-    check_start_a(c("a", "A", "ba")),
-    structure(c(TRUE, TRUE, FALSE), .MUST = TRUE)
+    c(check_start_a(c("a", "A", "ba"))),
+    c(TRUE, TRUE, FALSE)
 ))
 #
 # example for isEqual
 check_zero <- isEqual(0, tol. = 1e-4)
 stopifnot(identical(
-    check_zero(c("0", "0.000001", "1")),
-    structure(c(TRUE, TRUE, FALSE), .MUST = TRUE)
+    c(check_zero(c("0", "0.000001", "1"))),
+    c(TRUE, TRUE, FALSE)
 ))
 
 # note that just like for other is* functions, the reference and the
@@ -173,16 +183,24 @@ stopifnot(identical(
 # of the 'x' object
 check_values <- isEqual(c(0, 1, 2), strict. = FALSE)
 stopifnot(identical(
-    check_values(c(0, 1.1, 2, 1e-9)),
-    structure(c(TRUE, FALSE, TRUE, TRUE), .MUST = FALSE)
+    c(check_values(c(0, 1.1, 2, 1e-9))),
+    c(TRUE, FALSE, TRUE, TRUE)
 ))
+
+# isEqual, just like all other is* functions, can be negated:
+check_not_zero <- isEqual(0, negate. = TRUE)
+stopifnot(check_not_zero(1))
+
+# the same can be achieved by using ! for negation
+check_not_zero2 <- !isEqual(0)
+stopifnot(identical(check_not_zero(1), check_not_zero2(1)))
 #
 # example for isBetween();
 # note that lwr_ and upr_ might be given in reversed order
 check_0_100 <- isBetween(100, 0)
 stopifnot(identical(
-    check_0_100(c(-1, 1, 101)),
-    structure(c(FALSE, TRUE, FALSE), .MUST = TRUE)
+    c(check_0_100(c(-1, 1, 101))),
+    c(FALSE, TRUE, FALSE)
 ))
 #
 # example for isExtremum
@@ -190,8 +208,8 @@ stopifnot(identical(
 # findExtrema() function (see ?findExtrema)
 check_global_extr <- isExtremum(global = TRUE, tail = "do_not_care")
 stopifnot(identical(
-    check_global_extr(c(-1, 1, 0, 100, 50)),
-    structure(c(TRUE, FALSE, FALSE, TRUE, FALSE), .MUST = TRUE)
+    c(check_global_extr(c(-1, 1, 0, 100, 50))),
+    c(TRUE, FALSE, FALSE, TRUE, FALSE)
 ))
 }
 
