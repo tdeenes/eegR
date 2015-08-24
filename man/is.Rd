@@ -12,15 +12,19 @@
 \alias{isNegative}
 \alias{isPattern}
 \alias{isPositive}
+\alias{isSame}
 \title{Test logical statements on data points}
 \usage{
-isPattern(pattern., strict. = TRUE, negate. = FALSE, ...)
+isPattern(pattern., strict. = TRUE, negate. = FALSE, subset. = list(),
+  ...)
 
 isEqual(ref., tol. = .Machine$double.eps^0.5, strict. = TRUE,
-  negate. = FALSE, ...)
+  negate. = FALSE, subset. = list(), ...)
 
-isBetween(lwr. = -Inf, upr. = Inf, closed. = c("both", "none", "lwr",
-  "upr"), strict. = TRUE, negate. = FALSE, ...)
+isSame(ref., strict. = TRUE, negate. = FALSE, subset. = list(), ...)
+
+isBetween(lwr. = -Inf, upr. = Inf, open. = c("none", "both", "lwr",
+  "upr"), strict. = TRUE, negate. = FALSE, subset. = list(), ...)
 
 isNegative(strict. = TRUE, negate. = FALSE, ...)
 
@@ -56,14 +60,16 @@ for details)}
 \item{ref.}{the reference value or a vector (or matrix/array) of reference
 values.}
 
-\item{tol.}{tolerance}
+\item{tol.}{tolerance value, the maximum difference which is still tolerated.
+Can be a vector (or matrix/array) as well.}
 
 \item{lwr.,upr.}{numeric values referring to the lower and upper limit
 (the defaults are -Inf and Inf, respectively). Both lwr. and upr. can be
 scalars and vectors as well.}
 
-\item{closed.}{the limit which is closed; can be "both" (the default),
-"none", lwr" or "upr"}
+\item{open.}{the side of the interval which is open (that is, it does not
+contain the given endpoint); can be "none" (the default), "both", lwr" or
+"upr"}
 
 \item{what.}{specifies whether minima ("min"), maxima ("max") or
 extrema ("both", the default) should be tested}
@@ -77,23 +83,30 @@ function-specific descriptions and the section Use cases for short examples.
 \details{
 All \code{is*} functions return a function of the class
 \code{IsFunction} which has only one argument, '\code{x}' (the data object
-to test). A second major rule is that all functions returned by an \code{is*}
+to test). '\code{x}' can be an atomic vector, matrix, or array; all other
+object types result in error.\cr
+A second major rule is that all functions returned by an \code{is*}
 function return a logical object of the same shape as the input object.
-The third rule is that the function returned by any \code{is*} function has
-an attribute called \code{.MUST}. This affects the way how the results are
-combined for joint logical tests (more on this later).
+The third rule is that the function returned by any \code{is*} function is
+a hard (strict) or soft (optional) constraint. This affects the way how the
+results are combined for joint logical tests (see \code{\link{combine}}).
 \cr
 }
 \section{Functions}{
 \itemize{
 \item \code{isPattern}: produces a function to test whether the values in an atomic
-object match a pre-specified character pattern. See \code{\link{grepl}} for
-further details and additional arguments it accepts.
+character object match a pre-specified character pattern. See
+\code{\link{grepl}} for further details and additional arguments.
 
 \item \code{isEqual}: produces a function to test whether the values in an atomic
 object are equal to a (vector of) reference value(s) with a given tolerance.
 The returned function accepts objects of any type for which \code{asNumeric}
 does not fail (see the documentation of \code{\link{asNumeric}}).
+
+\item \code{isSame}: produces a function to test whether the values in an atomic
+object are the same as a (vector of) reference value(s). It is a wrapper
+around \code{\link{==}}. If you want to test numeric values, \code{isEqual}
+is a much better alternative.
 
 \item \code{isBetween}: produces a function to test whether
 the values in an atomic object are between pre-specified limits.
@@ -181,10 +194,23 @@ stopifnot(identical(
 # tolerance can be vectors (or even matrices or arrays), not only scalars,
 # and its values are recycled or cropped if necessarily to match the length
 # of the 'x' object
-check_values <- isEqual(c(0, 1, 2), strict. = FALSE)
+check_values <- isEqual(c(0, 1, 2))
 stopifnot(identical(
     c(check_values(c(0, 1.1, 2, 1e-9))),
     c(TRUE, FALSE, TRUE, TRUE)
+))
+
+# it is also possible to base the check only on a subset of x and expand
+# the results back to the original array
+check_width <- isEqual(1, tol. = 0.1, subset. = list(measure = "width"))
+( x <- matrix(c(1.001, 1.6, 1.2, 1.003), 2, 2,
+              dimnames = list(observation = c("a", "b"),
+                              measure = c("width", "height"))) )
+( res <- check_width(x) )
+stopifnot(identical(dim(res), dim(x)))
+stopifnot(identical(
+    c(res),
+    c(TRUE, FALSE, TRUE, FALSE)
 ))
 
 # isEqual, just like all other is* functions, can be negated:
@@ -195,8 +221,15 @@ stopifnot(check_not_zero(1))
 check_not_zero2 <- !isEqual(0)
 stopifnot(identical(check_not_zero(1), check_not_zero2(1)))
 #
+# example for isSame;
+check_not_A <- isSame("A", negate. = TRUE)
+stopifnot(identical(
+    c(check_not_A(c("a", "A"))),
+    c(TRUE, FALSE)
+))
+#
 # example for isBetween();
-# note that lwr_ and upr_ might be given in reversed order
+# note that lwr. and upr. might be given in reversed order
 check_0_100 <- isBetween(100, 0)
 stopifnot(identical(
     c(check_0_100(c(-1, 1, 101))),
@@ -211,5 +244,9 @@ stopifnot(identical(
     c(check_global_extr(c(-1, 1, 0, 100, 50))),
     c(TRUE, FALSE, FALSE, TRUE, FALSE)
 ))
+}
+\seealso{
+\code{\link{combine}} how to combine is* tests, and \code{\link{isStrict}}
+how to check afterwards whether a test is strict or optional
 }
 
