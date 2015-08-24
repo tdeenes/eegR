@@ -14,6 +14,39 @@
 #' @export
 address <- data.table::address
 
+
+#' Set attributes of objects by reference
+
+#' \code{setattr} changes the attribute of an object by reference, that is, 
+#' without making any copy. This is an imported and re-exported function from
+#' the \bold{data.table} package with two minor enhancements (see Details).
+#' @param x an object
+#' @param name the name of the attribute (a character string)
+#' @param value the value to assign to the attribute. If value is NULL, 
+#' \code{setattr} removes the attribute (if present).
+#' @param check_for an object which might have the same address in RAM as
+#' 'x' but should not be affected by \code{setattr}
+#' @details The original \code{\link[data.table]{setattr}} function has an
+#' undesirable consequence on \code{!FALSE} or \code{!TRUE} if the 'x' object 
+#' is a logical scalar (see References). This function corrects this bug. 
+#' Additionally, the standard \code{attr} function is applied for such an 'x' 
+#' object, which is referenced to the 'check_for' object (has the same address 
+#' in RAM, see \code{\link{address}}).
+#' @seealso
+#' \code{\link[data.table]{setattr}} for the original version in the data.table
+#' package
+#' @references
+#' \url{https://github.com/Rdatatable/data.table/issues/1281}
+setattr <- function(x, name, value, check_for = NULL) {
+    if ((is.logical(x) && length(x) == 1L) || 
+        (identical(address(x), address(check_for)))) {
+        attr(x, name) <- value
+    } else {
+        data.table::setattr(x, name, value)
+    }
+}
+
+
 #' Check for availability of packages
 #' @keywords internal
 reqFn <- function(packages) {
