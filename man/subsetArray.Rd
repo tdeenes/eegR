@@ -5,22 +5,22 @@
 \alias{subsetArray<-}
 \title{Extract or replace a part of an array}
 \usage{
-subsetArray(dat, subsets., which_dims. = NULL, drop. = NULL,
-            keep_attributes. = TRUE, ...)
+subsetArray(dat, subset. = list(), which_dims. = NULL, drop. = NULL,
+  keep_attributes. = TRUE, ...)
 
-subsetArray(dat, subsets., which_dims. = NULL, ...) <- value
+subsetArray(dat, subset. = list(), which_dims. = NULL, ...) <- value
 }
 \arguments{
 \item{dat}{array to be subsetted}
 
-\item{subsets.}{a (named) list of character, numeric, or logical vectors or
+\item{subset.}{a (named) list of character, numeric, or logical vectors or
 a subsetting function (see \code{\link[eegR]{is}}) indicating which levels
-of which dimensions to subset (see Details). If 'subsets.' is an unnamed
+of which dimensions to subset (see Details). If 'subset.' is an unnamed
 list, the argument 'which_dims.' must be provided.}
 
 \item{which_dims.}{numeric or character indices of the dimensions which
 should be subsetted. If 'which_dims.' is not NULL, 'which_dims.' is used and
-the names of 'subsets.' is ignored.}
+the names of 'subset.' is ignored.}
 
 \item{drop.}{either 1) NULL (the default), or 2) a logical value
 (TRUE or FALSE), or 3) numeric or character indices of the dimensions which
@@ -33,7 +33,7 @@ inherits the custom attributes of the input (TRUE, default) or not}
 \item{...}{an alternative specification of the subsetting rule; one can
 provide the subsetting vectors as named arguments, where the argument name
 refers to the name of the subsetted dimension. For programmatic use,
-'subsets.' is preferred because the names of dimensions might interfere with
+'subset.' is preferred because the names of dimensions might interfere with
 the default argument names.}
 
 \item{value}{a vector, matrix or array of the new values}
@@ -47,7 +47,7 @@ values.
 part of an array which has dimension names
 }
 \details{
-Names of 'subsets.' or the indices of dimensions as given in
+Names of 'subset.' or the indices of dimensions as given in
 'which_dim.' indicate which dimensions are to be subsetted in
 the input array, and each list element indicates which levels of the given
 dimension will be selected. If a list element is an empty vector, all levels

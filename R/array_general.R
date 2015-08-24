@@ -75,7 +75,7 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
     message(sprintf("\n==== Analyze Chunk 1/%i ====", nrow(chunkgrid)))
     subs <- mapply("==", chunks, chunkgrid[1, ], SIMPLIFY = FALSE)
     x <- subsetArray(dat,
-                     subsets. = subs,
+                     subset. = subs,
                      drop. = FALSE)
     message()
     outpart <- do.call(fun, append(list(x), arg_list))
@@ -103,13 +103,13 @@ chunkify <- function(dat, fun, arg_list = NULL, chunks = NULL) {
                             i, nrow(chunkgrid)))
             subs <- mapply("==", chunks, chunkgrid[i, ], SIMPLIFY = FALSE)
             x <- subsetArray(dat,
-                             subsets. = subs,
+                             subset. = subs,
                              drop. = FALSE)
             outpart <- do(fun, x, arg_list = arg_list)
         }
         subsetArray(
             out,
-            subsets. = subs) <- outpart
+            subset. = subs) <- outpart
         gc()
     }
     message("\n==== Analysis completed ====")
@@ -501,7 +501,7 @@ fnDims <- function(dat, target_dim, target_fn, arg_list = NULL,
     }
     array_(out, dims, dims.n)
     if (keep_dimorder && length(dims) == length(orig_dim) &&
-        is.null(setdiff(names(dims.n), names(orig_dimn)))) {
+        length(setdiff(names(dims.n), names(orig_dimn))) == 0L) {
         out <- apermArray(out, order(dimord),
                           keep_attributes. = TRUE)
     }

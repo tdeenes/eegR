@@ -58,7 +58,7 @@ extract.default <- function(object, what,
         subs <- params$subs[intersect(names(params$subs),
                                       names(dimnames(out)))]
         if (length(subs) > 0L) {
-            out <- subsetArray(out, subsets. = subs, drop. = params$drop,
+            out <- subsetArray(out, subset. = subs, drop. = params$drop,
                                keep_attributes. = FALSE)
             setattr(out, "type", attr(x, "type"))
         }
@@ -102,7 +102,7 @@ extract.default <- function(object, what,
     if ("means" %in% what) {
         m <- attr(object$stat, "marginal_means")
         if (!is.null(m)) {
-            m <- lapply(m, subsetArray, subsets. = sub[c("chan", "time")],
+            m <- lapply(m, subsetArray, subset. = sub[c("chan", "time")],
                         drop. = drop)
             out[["means"]] <-
                 if (drop && length(term) == 1L) m[[term]] else m[term]

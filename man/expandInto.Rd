@@ -4,7 +4,8 @@
 \alias{expandInto}
 \title{Expand array}
 \usage{
-expandInto(dat, new_dat, expand_levels = NULL, safe_mode = TRUE)
+expandInto(dat, new_dat, expand_levels = NULL, safe_mode = TRUE,
+  fill = TRUE)
 }
 \arguments{
 \item{dat}{an array}
@@ -23,6 +24,12 @@ dimensions is not allowed if the corresponding vectors in 'expand_levels' are
 not provided (default: TRUE). If 'safe_mode' is TRUE, and both 'dat' and
 'new_dat' has dimension names, non-expanded dimensions are checked if the
 order of levels should be adjusted for the given dimension. See Examples.}
+
+\item{fill}{a logical value if the 'new_dat' should be filled with the
+corresponding values in 'dat' (TRUE, the default). In this case the values
+of 'dat' are coerced to match the type of 'new_dat' and the returned array
+inherits all attributes of 'new_dat'. Otherwise, only the dimensions and
+dimension names are preserved.}
 }
 \description{
 \code{expandInto} expands an array to a larger array (either to an array
@@ -105,5 +112,37 @@ stopifnot(identical(x_Cz_B, x_Cz_C))
 x_Fz_B <- subsetArray(x_Fz, stimclass = "B")
 ( tab <- table(x_Fz_B, x_Cz_B) )
 stopifnot(identical(sum(diag(tab)), length(x_Fz_B)))
+
+# -----
+# it is possible that we want to expand an array into a larger array,
+# but the types do not match; consider the 'fill' argument depending on
+# your needs
+# -----
+# create a logical matrix
+( from_logical <- matrix(c(TRUE, FALSE), 2, 1,
+                         dimnames = list(observation = c("a", "b"),
+                                         measure = "width")) )
+
+# it should be expanded to a larger, integer matrix with a special class
+( to_integer <- matrix(1:4, 2, 2,
+                       dimnames = list(observation = c("a", "b"),
+                                       measure = c("height", "width"))) )
+class(to_integer) <- "mySpecialClass"
+
+# perform to expansions
+( res_int <- expandInto(from_logical, to_integer) )
+( res_log <- expandInto(from_logical, to_integer, fill = FALSE) )
+
+# res_int is integer, and preserves the class, res_log not
+stopifnot(is.integer(res_int))
+stopifnot(inherits(res_int, "mySpecialClass"))
+stopifnot(is.logical(res_log))
+stopifnot(!inherits(res_log, "mySpecialClass"))
+
+# however, the dimnames are preserved
+stopifnot(identical(
+    dimnames(res_log),
+    dimnames(to_integer)
+))
 }
 

@@ -4,10 +4,10 @@
 \alias{subsetIndices}
 \title{Create subset indices for subsetArray}
 \usage{
-subsetIndices(subsets., which_dims., dim., dimnames.)
+subsetIndices(subset., which_dims., dim., dimnames.)
 }
 \arguments{
-\item{subsets.}{a possibly named list of subset indices (either logical,
+\item{subset.}{a possibly named list of subset indices (either logical,
 integer or is* functional indices)}
 
 \item{which_dims.}{the indices of the dimensions which should be subsetted}

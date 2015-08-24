@@ -256,7 +256,12 @@ fillMissingDimnames <- function(dimn, .dim, .names = TRUE, .dimnames = TRUE) {
         check <- TRUE
     }
     if (check_dimnames) {
-        missings <- lapply(dimn, checkForMissing)
+        missings <- 
+            if (is.null(dimn)) {
+                as.list(rep_len(TRUE, length(.dim)))
+            } else {
+                lapply(dimn, checkForMissing)    
+            }
         decor_dim <- vapply(missings, any, FALSE)
         if (any(decor_dim)) check <- TRUE
     }
@@ -641,45 +646,46 @@ array_ <- function(x, dim, dimnames = NULL,
 #'
 #' \code{subsetIndices} check arguments and creates subset indices for
 #' subsetArray and `subsetArray<-`.
-#' @param subsets. a possibly named list of subset indices (either logical,
+#' @param subset. a possibly named list of subset indices (either logical,
 #' integer or is* functional indices)
 #' @param which_dims. the indices of the dimensions which should be subsetted
 #' @param dim. the dimensions of the data to subset on
 #' @param dimnames. the dimension names of the data to subset on
 #' @keywords internal
-subsetIndices <- function(subsets., which_dims., dim., dimnames.) {
+subsetIndices <- function(subset., which_dims., dim., dimnames.) {
     dimid. <- names(dimnames.)
-    assertList(subsets.,
+    if (is.null(subset.)) subset. <- list()
+    assertList(subset.,
                types = c("logical", "integerish", "character", "function"),
                any.missing = FALSE, max.len = length(dim.),
-               .var.name = "subsets.")
-    if (any(duplicated(names(subsets.))))
-        stop("Duplicated elements in the joint list of 'subsets.' and '...'")
-    if (length(subsets.) == 0L)
-        stop(paste0("The joint list of 'subsets.' and '...' is empty. ",
-                    "Provide either 'subsets.' or use '...' or both."))
+               .var.name = "subset.")
+    if (any(duplicated(names(subset.))))
+        stop("Duplicated elements in the joint list of 'subset.' and '...'")
+    if (length(subset.) == 0L)
+        stop(paste0("The joint list of 'subset.' and '...' is empty. ",
+                    "Provide either 'subset.' or use '...' or both."))
     if (is.null(which_dims.)) {
         if (anyDuplicated(dimid.)) {
             stop(paste0(
                 "'dat' has duplicated dimension identifiers. ",
                 "Provide 'which_dims.' and do not rely on the names of ",
-                "the subsets."))
+                "the subset."))
         }
-        which_dims. <- match(names(subsets.), dimid.)
+        which_dims. <- match(names(subset.), dimid.)
         if (anyNA(which_dims.)) {
             stop(paste0(
-                "Not all names in the join list of 'subsets.' and '...' ",
+                "Not all names in the join list of 'subset.' and '...' ",
                 "correspond to existing dimensions in 'dat'. Provide ",
                 "either 'which_dim' to disambiguate or set the names ",
-                "in 'subsets.' and/or '...' properly."))
+                "in 'subset.' and/or '...' properly."))
         }
     } else {
         if (is.null(which_dims.))
             stop(paste0(
-                "If 'subsets.' is not a named list and/or the arguments ",
+                "If 'subset.' is not a named list and/or the arguments ",
                 "in '...' are not named, 'which_dims.' must be provided."))
         assertVector(which_dims., strict = TRUE, any.missing = FALSE,
-                     len = length(subsets.), unique = TRUE,
+                     len = length(subset.), unique = TRUE,
                      .var.name = "which_dims.")
         if (is.character(which_dims.)) {
             which_dims. <- match(which_dims., dimid.)
@@ -688,13 +694,13 @@ subsetIndices <- function(subsets., which_dims., dim., dimnames.) {
     #
     # subsetting indices
     ind <- as.list(rep(TRUE, length(dim.)))
-    for (i in seq_along(subsets.)) {
-        subset_ <- subsets.[[i]]
+    for (i in seq_along(subset.)) {
+        subset_ <- subset.[[i]]
         dimid_ <- which_dims.[i]
         dimn_ <- dimnames.[[dimid_]]
-        ind[[dimid_]] <-  
+        ind[[dimid_]] <-
             if (is.function(subset_)) {
-                subset_(dimn_)    
+                subset_(dimn_)
             } else {
                 subset_
             }
@@ -712,39 +718,36 @@ subsetIndices <- function(subsets., which_dims., dim., dimnames.) {
 #' \code{subsetArray} is a convenience function for extracting or replacing a
 #' part of an array which has dimension names
 #' @name subsetArray
-#' @usage subsetArray(dat, subsets., which_dims. = NULL, drop. = NULL, 
-#'             keep_attributes. = TRUE, ...)
-#' @usage subsetArray(dat, subsets.) <- value
 #' @param dat array to be subsetted
-#' @param subsets. a (named) list of character, numeric, or logical vectors or
-#' a subsetting function (see \code{\link[eegR]{is}}) indicating which levels 
-#' of which dimensions to subset (see Details). If 'subsets.' is an unnamed 
+#' @param subset. a (named) list of character, numeric, or logical vectors or
+#' a subsetting function (see \code{\link[eegR]{is}}) indicating which levels
+#' of which dimensions to subset (see Details). If 'subset.' is an unnamed
 #' list, the argument 'which_dims.' must be provided.
 #' @param keep_attributes. a logical variable which determines if the result
 #' inherits the custom attributes of the input (TRUE, default) or not
 #' @param value a vector, matrix or array of the new values
 #' @param which_dims. numeric or character indices of the dimensions which
 #' should be subsetted. If 'which_dims.' is not NULL, 'which_dims.' is used and
-#' the names of 'subsets.' is ignored.
+#' the names of 'subset.' is ignored.
 #' @param drop. either 1) NULL (the default), or 2) a logical value
 #' (TRUE or FALSE), or 3) numeric or character indices of the dimensions which
 #' should be dropped if they become singleton dimensions (i.e. have only one
 #' level) after subsetting (see Details)
-#' @param ... an alternative specification of the subsetting rule; one can 
+#' @param ... an alternative specification of the subsetting rule; one can
 #' provide the subsetting vectors as named arguments, where the argument name
-#' refers to the name of the subsetted dimension. For programmatic use, 
-#' 'subsets.' is preferred because the names of dimensions might interfere with
+#' refers to the name of the subsetted dimension. For programmatic use,
+#' 'subset.' is preferred because the names of dimensions might interfere with
 #' the default argument names.
-#' @details Names of 'subsets.' or the indices of dimensions as given in
+#' @details Names of 'subset.' or the indices of dimensions as given in
 #' 'which_dim.' indicate which dimensions are to be subsetted in
 #' the input array, and each list element indicates which levels of the given
 #' dimension will be selected. If a list element is an empty vector, all levels
-#' of the correspondig dimension will be selected. Further possibilities for 
+#' of the correspondig dimension will be selected. Further possibilities for
 #' subsetting vectors:
 #' \itemize{
 #' \item{function: }{a function which returns a logical vector if called on
-#' the dimension levels of the given dimension (see Examples for a use case 
-#' of \code{\link{isBetween}} and \code{\link{isPattern}}). Note that 'dat' 
+#' the dimension levels of the given dimension (see Examples for a use case
+#' of \code{\link{isBetween}} and \code{\link{isPattern}}). Note that 'dat'
 #' must have non-NULL dimension names for functional subsetting.}
 #' \item{logical: }{logical vector of the same length as the given dimension,
 #' denoting whether the given level of the dimension should be included in the
@@ -752,18 +755,18 @@ subsetIndices <- function(subsets., which_dims., dim., dimnames.) {
 #' \item{integer: }{numeric indices of the dimension levels which should be
 #' included in the subset}
 #' \item{character: }{character vector of the dimension levels which should be
-#' included in the subset. Note that 'dat' must have non-NULL dimension names 
+#' included in the subset. Note that 'dat' must have non-NULL dimension names
 #' for character subsetting.}
 #' }
 #' The argument 'drop.' defines the procedure if a dimension becomes a singleton
 #' dimension after subsetting. The default behaviour (\code{drop. = NULL}) is to
 #' drop all subsetting dimensions but no others. If 'drop.' is FALSE, all
-#' dimensions are kept, if TRUE, all singleton dimensions are dropped. If 
-#' 'drop.' is a numeric or character vector, its elements define which 
+#' dimensions are kept, if TRUE, all singleton dimensions are dropped. If
+#' 'drop.' is a numeric or character vector, its elements define which
 #' dimensions to drop.
 #' @export
-#' @seealso See the \code{\link[eegR]{is}} family of functions for subsetting 
-#' dimensions by functional expressions; see also \code{\link[abind]{asub}} 
+#' @seealso See the \code{\link[eegR]{is}} family of functions for subsetting
+#' dimensions by functional expressions; see also \code{\link[abind]{asub}}
 #' for a less general approach.
 #' @return The function returns a subset of the array or the array with replaced
 #' values.
@@ -777,7 +780,7 @@ subsetIndices <- function(subsets., which_dims., dim., dimnames.) {
 #' # subsetting without knowing the exact order of dimensions and using
 #' # various subsetting schemes
 #' sub1 <- subsetArray(erps,
-#'                     time = isBetween(0, 10), 
+#'                     time = isBetween(0, 10),
 #'                     chan = isPattern("Fp"),
 #'                     stimclass = c(TRUE, FALSE, FALSE),
 #'                     keep_attributes. = FALSE)
@@ -793,19 +796,18 @@ subsetIndices <- function(subsets., which_dims., dim., dimnames.) {
 #' sub2["transp", , , 1] <- NA
 #' stopifnot(identical(sub1, sub2))
 #'
-# Extract a part of an array
-subsetArray <- function(dat, subsets. = list(), which_dims. = NULL, 
+subsetArray <- function(dat, subset. = list(), which_dims. = NULL,
                         drop. = NULL, keep_attributes. = TRUE, ...) {
     # if NULL, return
     if (is.null(dat)) return(NULL)
     #
-    # check arguments (dat, subsets., which_dims.) and find indices
+    # check arguments (dat, subset., which_dims.) and find indices
     assertArray(dat, min.d = 2L, .var.name = "dat")
     dat_d <- dim(dat)
     dat_dn <- dimnames(dat)
     dat_dimid <- names(dat_dn)
-    subsets. <- c(subsets., list(...))
-    ind <- subsetIndices(subsets., which_dims., dat_d, dat_dn)
+    subset. <- c(subset., list(...))
+    ind <- subsetIndices(subset., which_dims., dat_d, dat_dn)
     which_dims. <- attr(ind, "which_dims.")
     #
     # do subsetting
@@ -859,7 +861,7 @@ subsetArray <- function(dat, subsets. = list(), which_dims. = NULL,
         # this is just to handle the temporary "factor_level" attribute of
         # the eeg data
         if (!is.null(attr(out, "factors")) &&
-                ("factor_level" %in% names(subsets.)) ) {
+                ("factor_level" %in% names(subset.)) ) {
             tempa <- splitMarker(dimnames(out)$factor_level,
                                  colnames(attr(out, "factors")),
                                  splitchar = "\\|")
@@ -874,16 +876,17 @@ subsetArray <- function(dat, subsets. = list(), which_dims. = NULL,
 #' @rdname subsetArray
 #' @export
 # Replace a part of an array
-`subsetArray<-` <- function(dat, subsets., which_dims. = NULL, ..., value) {
+`subsetArray<-` <- function(dat, subset. = list(), which_dims. = NULL, ..., 
+                            value) {
     #
-    # check arguments (dat, subsets., which_dims.) and find indices
+    # check arguments (dat, subset., which_dims.) and find indices
     assertArray(dat, min.d = 2L, .var.name = "dat")
-    assertList(subsets., types = c("logical", "integerish", "character"),
-               .var.name = "subsets.")
+    assertList(subset., types = c("logical", "integerish", "character"),
+               .var.name = "subset.")
     dat_d <- dim(dat)
     dat_dn <- dimnames(dat)
     dat_dimid <- names(dat_dn)
-    ind <- subsetIndices(subsets., which_dims., dat_d, dat_dn)
+    ind <- subsetIndices(subset., which_dims., dat_d, dat_dn)
     #
     # do subsetting
     value_dnn <- names(dimnames(value))
@@ -899,76 +902,81 @@ subsetArray <- function(dat, subsets. = list(), which_dims. = NULL,
 }
 
 #' Expand array
-#' 
+#'
 #' \code{expandInto} expands an array to a larger array (either to an array
 #' with more dimensions or an array with longer dimensions or both).
 #' @param dat an array
 #' @param new_dat an array to expand 'dat' into
 #' @param expand_levels a list of vectors which define the expanding scheme
 #' for each dimension of 'dat' or a named list of vectors where the names refer
-#' to selected dimensions in 'dat' (in this case 'dat' must have named 
-#' dimnames). The length of each vector in 'expand_levels' must match the 
+#' to selected dimensions in 'dat' (in this case 'dat' must have named
+#' dimnames). The length of each vector in 'expand_levels' must match the
 #' corresponding dimension size in 'new_dat'. The vectors must contain either
 #' numeric or character indices of the levels of the given dimension in 'dat'.
-#' @param safe_mode a logical value whether the expansion of non-singleton 
+#' @param safe_mode a logical value whether the expansion of non-singleton
 #' dimensions is not allowed if the corresponding vectors in 'expand_levels' are
-#' not provided (default: TRUE). If 'safe_mode' is TRUE, and both 'dat' and 
-#' 'new_dat' has dimension names, non-expanded dimensions are checked if the 
-#' order of levels should be adjusted for the given dimension. See Examples. 
+#' not provided (default: TRUE). If 'safe_mode' is TRUE, and both 'dat' and
+#' 'new_dat' has dimension names, non-expanded dimensions are checked if the
+#' order of levels should be adjusted for the given dimension. See Examples.
+#' @param fill a logical value if the 'new_dat' should be filled with the 
+#' corresponding values in 'dat' (TRUE, the default). In this case the values 
+#' of 'dat' are coerced to match the type of 'new_dat' and the returned array 
+#' inherits all attributes of 'new_dat'. Otherwise, only the dimensions and
+#' dimension names are preserved. 
 #' @export
 #' @examples
 #' # load example data
 #' data(erps)
-#' 
+#'
 #' # -----
 #' # solve the following task: find all data points for which the amplitudes
-#' # in the "Fz" channel are negative, and return TRUE for all corresponding 
+#' # in the "Fz" channel are negative, and return TRUE for all corresponding
 #' # data points in the other channels as well
 #' # -----
-#' 
+#'
 #' # subset the data and return TRUE if the values are negative
 #' x_Fz <- subsetArray(erps, chan = "Fz") < 0
 #' str(x_Fz)
-#' 
+#'
 #' # expand this array into the original array
 #' result <- expandInto(x_Fz, erps)
 #' str(result)
-#' 
+#'
 #' # check on a random channel that the results are really fine
 #' x_Cz <- subsetArray(result, chan = "Cz")
 #' # -->
 #' # all TRUEs in x_Fz are also TRUE in x_Cz, and vica versa
 #' ( tab <- table(x_Fz, x_Cz) )
 #' stopifnot(identical(sum(diag(tab)), length(x_Fz)))
-#' 
+#'
 #' # -----
-#' # the function is clever enough to reorder the levels for those 
-#' # dimensions as well, which should not be expanded, but the order 
+#' # the function is clever enough to reorder the levels for those
+#' # dimensions as well, which should not be expanded, but the order
 #' # of levels is different in 'new_dat'
 #' # -----
 #' # reorder the 'stimclass' dimension in the original ERP array
 #' erps2 <- subsetArray(erps, stimclass = c("C", "B", "A"))
-#' 
+#'
 #' # expand x_Fz again
 #' result2 <- expandInto(x_Fz, erps2)
-#' 
+#'
 #' # turn 'safe_mode' off
 #' result2_notsafe <- expandInto(x_Fz, erps2, safe_mode = FALSE)
-#' 
+#'
 #' # check the results -> result2 is fine
-#' x_Cz_2 <- subsetArray(result2, 
-#'                       chan = "Cz", 
+#' x_Cz_2 <- subsetArray(result2,
+#'                       chan = "Cz",
 #'                       stimclass = c("A", "B", "C"))
 #' ( tab <- table(x_Fz, x_Cz_2) )
 #' stopifnot(identical(sum(diag(tab)), length(x_Fz)))
-#' 
+#'
 #' # check the results -> result2_notsafe is wrong
-#' x_Cz_2w <- subsetArray(result2_notsafe, 
-#'                        chan = "Cz", 
+#' x_Cz_2w <- subsetArray(result2_notsafe,
+#'                        chan = "Cz",
 #'                        stimclass = c("A", "B", "C"))
 #' ( tab <- table(x_Fz, x_Cz_2w) )
 #' stopifnot(!identical(sum(diag(tab)), length(x_Fz)))
-#' 
+#'
 #' # -----
 #' # the safest way is to provide 'expand_levels' explicitly for all
 #' # dimensions where the order or number of levels do not match;
@@ -977,24 +985,57 @@ subsetArray <- function(dat, subsets. = list(), which_dims. = NULL,
 #' # -----
 #' # suppose we want stimclass C to be copied from stimclass B while expanding
 #' # to all channels (on the original ERP array)
-#' result <- expandInto(x_Fz, erps, 
+#' result <- expandInto(x_Fz, erps,
 #'                      expand_levels = list(stimclass = c("A", "B", "B")))
-#' 
+#'
 #' # check the results
-#' x_Cz_B <- subsetArray(result, 
-#'                       chan = "Cz", 
+#' x_Cz_B <- subsetArray(result,
+#'                       chan = "Cz",
 #'                       stimclass = "B")
-#' x_Cz_C <- subsetArray(result, 
-#'                       chan = "Cz", 
+#' x_Cz_C <- subsetArray(result,
+#'                       chan = "Cz",
 #'                       stimclass = "C")
 #' # --> they are identical:
 #' stopifnot(identical(x_Cz_B, x_Cz_C))
 #' # --> compared to the results on Fz, stimclass B remained the same:
-#' x_Fz_B <- subsetArray(x_Fz, stimclass = "B")                    
+#' x_Fz_B <- subsetArray(x_Fz, stimclass = "B")
 #' ( tab <- table(x_Fz_B, x_Cz_B) )
 #' stopifnot(identical(sum(diag(tab)), length(x_Fz_B)))
+#'
+#' # -----
+#' # it is possible that we want to expand an array into a larger array,
+#' # but the types do not match; consider the 'fill' argument depending on
+#' # your needs
+#' # -----
+#' # create a logical matrix
+#' ( from_logical <- matrix(c(TRUE, FALSE), 2, 1,
+#'                          dimnames = list(observation = c("a", "b"),
+#'                                          measure = "width")) )
 #' 
-expandInto <- function(dat, new_dat, expand_levels = NULL, safe_mode = TRUE) {
+#' # it should be expanded to a larger, integer matrix with a special class
+#' ( to_integer <- matrix(1:4, 2, 2,
+#'                        dimnames = list(observation = c("a", "b"),
+#'                                        measure = c("height", "width"))) )
+#' class(to_integer) <- "mySpecialClass"
+#' 
+#' # perform to expansions
+#' ( res_int <- expandInto(from_logical, to_integer) )
+#' ( res_log <- expandInto(from_logical, to_integer, fill = FALSE) )
+#' 
+#' # res_int is integer, and preserves the class, res_log not
+#' stopifnot(is.integer(res_int))
+#' stopifnot(inherits(res_int, "mySpecialClass"))
+#' stopifnot(is.logical(res_log))
+#' stopifnot(!inherits(res_log, "mySpecialClass"))
+#' 
+#' # however, the dimnames are preserved
+#' stopifnot(identical(
+#'     dimnames(res_log),
+#'     dimnames(to_integer)
+#' ))
+#' 
+expandInto <- function(dat, new_dat, expand_levels = NULL, safe_mode = TRUE,
+                       fill = TRUE) {
     # check arguments
     assertArray(dat, min.d = 1L, .var.name = "dat")
     orig_dim <- dim(dat)
@@ -1010,11 +1051,11 @@ expandInto <- function(dat, new_dat, expand_levels = NULL, safe_mode = TRUE) {
     }
     # match dimension order
     shared_dimid <- intersect(new_dimid, orig_dimid)
-    dat <- 
+    dat <-
         if (identical(shared_dimid, orig_dimid)) {
             copy(dat)
         } else {
-            apermArray(dat, shared_dimid) 
+            apermArray(dat, shared_dimid)
         }
     # insert new dimensions
     orig_dimn2 <- setNames(rep(list("1"), length(new_dim)), new_dimid)
@@ -1022,31 +1063,31 @@ expandInto <- function(dat, new_dat, expand_levels = NULL, safe_mode = TRUE) {
     array_(dat, vapply(orig_dimn2, length, integer(1L)), orig_dimn2)
     # consider expand_levels
     if (!is.null(expand_levels)) {
-        assertList(expand_levels, types = c("character", "numeric"), 
-                   any.missing = FALSE, 
-                   min.len = 1L, max.len = length(orig_dim), 
+        assertList(expand_levels, types = c("character", "numeric"),
+                   any.missing = FALSE,
+                   min.len = 1L, max.len = length(orig_dim),
                    .var.name = "expand_levels")
         if (is.null(names(expand_levels))) {
             if (length(expand_levels) != length(orig_dim)) {
                 stop(paste0("if the length of 'expand_levels' does not ",
-                            "match the number of dimension of 'dat', ", 
+                            "match the number of dimension of 'dat', ",
                             "'expand_levels' must be named"))
             } else {
                 names(expand_levels) <- orig_dimid
             }
-        } 
+        }
         expand_levels <- fillMissingDimnames(
             expand_levels, vapply(expand_levels, length, integer(1L)))
     }
     # create subsetting indices
     sub_indices <- mapply(
         function(old, new, nam) {
-            if (safe_mode && is.null(expand_levels) && 
+            if (safe_mode && is.null(expand_levels) &&
                 length(old) > 1L && length(old) != length(new)) {
                 stop(sprintf(
                     paste0("the '%s' dimension is not a singleton dimension ",
                            "in 'dat', but it should be expanded to match ",
-                           "the corresponding dimension in 'new_dat'. ", 
+                           "the corresponding dimension in 'new_dat'. ",
                            "Please provide 'expand_levels' or if you really ",
                            "know what you are doing, set 'safe_mode' to FALSE."
                            ), nam))
@@ -1077,16 +1118,21 @@ expandInto <- function(dat, new_dat, expand_levels = NULL, safe_mode = TRUE) {
             } else {
                 stop(sprintf(
                     paste0("the size of the '%s' dimension in 'new_dat' ",
-                           "and the length of the corresponding vector in ", 
+                           "and the length of the corresponding vector in ",
                            "'expand_levels' must be equal"), nam))
             }
         },
         orig_dimn2, new_dimn, new_dimid, SIMPLIFY = FALSE
     )
-    # expand array
-    new_dat[] <- subsetArray(dat, sub_indices)
-    # return
-    new_dat
+    # expand array and return
+    if (fill) {
+        new_dat[] <- subsetArray(dat, sub_indices)
+        new_dat
+    } else {
+        out <- subsetArray(dat, sub_indices)
+        setattr(out, "dimnames", dimnames(new_dat))
+        out
+    }
 }
 
 
