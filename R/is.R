@@ -10,13 +10,16 @@
 #' \code{asNumeric} is similar to \code{\link{as.numeric}} except that 1) 
 #' it results in an error for character strings for which as.numeric would 
 #' send a warning, 2) keeps integer, Date and POSIXt objects as they are (i.e. 
-#' does not convert them to double), 3) keeps 'dim' and 'dimnames' 
-#' attributes if requested, and 4) always copies the original object, even if no
-#' actual coercion occurs. \code{asNumeric_} returns the original object if 
-#' possible and does not alter the shape of multidimensional inputs.
+#' does not convert them to double), 3) coerces logicals to integer, not double,
+#' 4) keeps 'dim' and 'dimnames' attributes if requested, and 5) always copies 
+#' the original object, even if no actual coercion occurs. \code{asNumeric_} 
+#' returns the original object if possible and does not alter the shape of 
+#' multidimensional inputs.
 #' @param x the object to coerce
 #' @param keep_dim logical value whether \code{dim} and \code{dimnames}
-#' attributes should be preserved
+#' attributes should be preserved. The default is FALSE. (But note that 
+#' \code{asNumeric_} does not have this argument, because it always preserves
+#' both attributes.)
 #' @return \code{asNumeric} returns the original object (at the same memory 
 #' address) if it is numeric (that is, is.numeric(x) returns TRUE) or inherits 
 #' "Date" or "POSIXt" classes. Otherwise, it returns a double vector if 
@@ -89,6 +92,9 @@ asNumeric <- function(x, keep_dim = FALSE) {
 #' @export
 asNumeric_ <- function(x) {
     if (is.numeric(x) || inherits(x, c("POSIXt", "Date"))) {
+        x
+    } else if (is.logical(x)) {
+        storage.mode(x) <- "integer"
         x
     } else {
         if (!is.numeric(x)) {
