@@ -331,6 +331,24 @@ isExpandInto <- function(from, to, from_name) {
     out
 }
 
+#' Check the 'dim_index' attribute of the subset. argument
+#' 
+#' \code{checkIsSubsetAttribute} is a tiny helper function to check the 
+#' 'dim_index' attribute of the 'subset.' argument in \code{is*} functions.
+#' @keywords internal
+checkIsSubsetAttribute <- function(subset) {
+    if (length(subset) > 0L && is.null(names(subset))) {
+        dim_index <- attr(subset, "dim_index")
+        if (is.null(dim_index)) {
+            stop(paste0("if 'subset.' is not named, it must have a ", 
+                        "non-NULL 'dim_index' attribute"))
+        }
+        dim_index
+    } else {
+        NULL
+    }
+}
+
 
 # < main functions > ------
 
@@ -348,6 +366,12 @@ isExpandInto <- function(from, to, from_name) {
 #' be negated (default: FALSE). You can also use the standard \code{\link{!}} 
 #' operator for negation which has a specific method for the \code{IsFunction} 
 #' class (see Examples).
+#' @param subset. a named list of character, numeric, or logical vectors or
+#' a subsetting function (of class IsFunction) indicating which levels
+#' of which dimensions to subset (see Details). If 'subset.' is an unnamed
+#' list, it must have an attribute 'dim_index', referring to the numeric 
+#' indices of the dimensions to subset on. Use it only if you are _absolutely_
+#' _sure_ about the datasets you want to test later on!
 #' @param ... further arguments passed to the wrapped function (see Functions
 #' for details)
 #' @details All \code{is*} functions return a function of the class 
@@ -357,9 +381,18 @@ isExpandInto <- function(from, to, from_name) {
 #' A second major rule is that all functions returned by an \code{is*}
 #' function return a logical object of the same shape as the input object. 
 #' The third rule is that the function returned by any \code{is*} function is
-#' a hard (strict) or soft (optional) constraint. This affects the way how the 
-#' results are combined for joint logical tests (see \code{\link{combine}}). 
+#' a hard (strict) or soft (optional) constraint, controled by the 'strict.' 
+#' argument. This affects the way how the results are combined for joint 
+#' logical tests (see \code{\link{combine}}).
 #' \cr
+#' Additionally, all \code{is*} functions has a 'negate.' and a 'subset.' 
+#' argument. By setting 'negate.' to TRUE, the function can be conceived of as
+#' a \code{not*} function. The same can be achieved by using the standard 
+#' negation operator (see Examples).\cr
+#' The 'subset.' argument is only considered if the returned function will be 
+#' called on matrices or arrays. In this case, the logical condition is tested 
+#' only on the subsetted slice of the array, which is then expanded to the 
+#' original array (see Examples).
 #' @section Use cases:
 #' \subsection{\code{is*} as simple pre-defined test}{
 #' A very basic use case is to pre-define a logical rule and apply it to several
@@ -412,6 +445,7 @@ NULL
 isPattern <- function(pattern., strict. = TRUE, negate. = FALSE, 
                       subset. = list(), ...) {
     assertString(pattern., na.ok = FALSE, .var.name = "pattern.")
+    which_dims. <- checkIsSubsetAttribute(subset.)
     options <- list(...)
     assertList(options, names = "unique", .var.name = "arguments in '...'")
     structure(
@@ -427,7 +461,8 @@ isPattern <- function(pattern., strict. = TRUE, negate. = FALSE,
             out <- 
                 if (length(dim(x)) > 0L && length(subset.) > 0L) {
                     expandInto(
-                        tempfn(subsetArray(x, subset.), pattern., options),
+                        tempfn(subsetArray(x, subset., which_dims.), 
+                               pattern., options),
                         x,
                         fill = FALSE
                     )
@@ -479,6 +514,14 @@ isPattern <- function(pattern., strict. = TRUE, negate. = FALSE,
 #'     c(TRUE, FALSE, TRUE, FALSE)
 #' ))
 #' 
+#' \dontshow{
+#' subs <- list("width")
+#' attr(subs, "dim_index") <- 2L
+#' check_width <- isEqual(1, tol. = 0.1, subset. = subs)
+#' res2 <- check_width(x)
+#' stopifnot(identical(res, res2))
+#' }
+#' 
 #' # isEqual, just like all other is* functions, can be negated:
 #' check_not_zero <- isEqual(0, negate. = TRUE)
 #' stopifnot(check_not_zero(1))
@@ -495,6 +538,7 @@ isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
                   .var.name = "strict.")
     assertLogical(negate., len = 1L, any.missing = FALSE, 
                   .var.name = "negate.")
+    which_dims. <- checkIsSubsetAttribute(subset.)
     structure(
         function(x) {
             tempfn <- function(dat, ref., tol.) {
@@ -517,7 +561,8 @@ isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
             out <- 
                 if (length(dim(x)) > 0L && length(subset.) > 0L) {
                     expandInto(
-                        tempfn(subsetArray(x, subset.), ref., tol.),
+                        tempfn(subsetArray(x, subset., which_dims.), 
+                               ref., tol.),
                         x,
                         fill = FALSE
                     )
@@ -545,6 +590,11 @@ isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
 #' 
 isSame <- function(ref., strict. = TRUE, negate. = FALSE, 
                    subset. = list(), ...) {
+    assertLogical(strict., len = 1L, any.missing = FALSE, 
+                  .var.name = "strict.")
+    assertLogical(negate., len = 1L, any.missing = FALSE, 
+                  .var.name = "negate.")
+    which_dims. <- checkIsSubsetAttribute(subset.)
     structure(
         function(x) {
             tempfn <- function(dat, ref., negate.) {
@@ -559,7 +609,8 @@ isSame <- function(ref., strict. = TRUE, negate. = FALSE,
             #
             if (length(dim(x)) > 0L && length(subset.) > 0L) {
                 expandInto(
-                    tempfn(subsetArray(x, subset.), ref., negate.),
+                    tempfn(subsetArray(x, subset., which_dims.), 
+                           ref., negate.),
                     x,
                     fill = FALSE
                 )
@@ -597,7 +648,11 @@ isBetween <- function(lwr. = -Inf, upr. = Inf,
     lwr. <- asNumeric_(lwr.)
     upr. <- asNumeric_(upr.)
     open. <- match.arg(open.)
-    assertLogical(strict., any.missing = FALSE, len = 1L, .var.name = "strict")
+    assertLogical(strict., len = 1L, any.missing = FALSE, 
+                  .var.name = "strict.")
+    assertLogical(negate., len = 1L, any.missing = FALSE, 
+                  .var.name = "negate.")
+    which_dims. <- checkIsSubsetAttribute(subset.)
     #
     lwr <- lwr.; upr <- upr.
     lwr. <- pmin(lwr, upr)
@@ -637,7 +692,8 @@ isBetween <- function(lwr. = -Inf, upr. = Inf,
             out <- 
                 if (length(dim(x)) > 0L && length(subset.) > 0L) {
                     expandInto(
-                        tempfn(subsetArray(x, subset.), lwr., upr., open.),
+                        tempfn(subsetArray(x, subset., which_dims.), 
+                               lwr., upr., open.),
                         x,
                         fill = FALSE
                     )
@@ -688,15 +744,31 @@ isPositive <- function(strict. = TRUE, ...) {
 #' ))
 #' 
 isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE, 
-                       negate. = FALSE, ...) {
+                       negate. = FALSE, subset. = list(), ...) {
     what. <- match.arg(what.)
-    assertLogical(strict., any.missing = FALSE, len = 1L, .var.name = "strict")
+    assertLogical(strict., len = 1L, any.missing = FALSE, 
+                  .var.name = "strict.")
+    assertLogical(negate., len = 1L, any.missing = FALSE, 
+                  .var.name = "negate.")
+    which_dims. <- checkIsSubsetAttribute(subset.)
     options <- list(...)
     assertList(options, names = "unique", .var.name = "arguments in '...'")
     # return
     structure(
         function(x) {
-            out <- do("findExtrema", x, arg_list = options)
+            x <- asNumeric_(x)
+            out <- 
+                if (length(dim(x)) > 0L && length(subset.) > 0L) {
+                    expandInto(
+                        do("findExtrema", 
+                           subsetArray(x, subset., which_dims.), 
+                           arg_list = options),
+                        x,
+                        fill = FALSE
+                    )
+                } else {
+                    do("findExtrema", x, arg_list = options)
+                }
             out <- switch(what., 
                           max = out == 1L, 
                           min = out == -1L, 
@@ -708,31 +780,35 @@ isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE,
 #' @describeIn is a shorthand for \code{isExtremum("max", strict., ...)}. See 
 #' \code{\link{findExtrema}} for additional details and further arguments. 
 #' @export
-isLocalMaximum <- function(strict. = TRUE, negate. = FALSE, ...) {
-    isExtremum("max", strict., negate., ...)
+isLocalMaximum <- function(strict. = TRUE, negate. = FALSE, 
+                           subset. = list(), ...) {
+    isExtremum("max", strict., negate., subset., ...)
 }
 
 #' @describeIn is a shorthand for \code{isExtremum("min", strict., ...)}. See 
 #' \code{\link{findExtrema}} for additional details and further arguments. 
 #' @export
-isLocalMinimum <- function(strict. = TRUE, negate. = FALSE, ...) {
-    isExtremum("min", strict., negate., ...)
+isLocalMinimum <- function(strict. = TRUE, negate. = FALSE, 
+                           subset. = list(), ...) {
+    isExtremum("min", strict., negate., subset., ...)
 }
 
 #' @describeIn is a shorthand for 
 #' \code{isExtremum("max", strict., global = TRUE, ...)}. See 
 #' \code{\link{findExtrema}} for additional details and further arguments. 
 #' @export
-isMaximum <- function(strict. = TRUE, negate. = FALSE, ...) {
-    isExtremum("max", strict., negate., global = TRUE, ...)
+isMaximum <- function(strict. = TRUE, negate. = FALSE, 
+                      subset. = list(), ...) {
+    isExtremum("max", strict., negate., subset., global = TRUE, ...)
 }
 
 #' @describeIn is a shorthand for 
 #' \code{isExtremum("min", strict., global = TRUE, ...)}. See 
 #' \code{\link{findExtrema}} for additional details and further arguments. 
 #' @export
-isMinimum <- function(strict. = TRUE, negate. = FALSE, ...) {
-    isExtremum("min", strict., negate., global = TRUE, ...)
+isMinimum <- function(strict. = TRUE, negate. = FALSE, 
+                      subset. = list(), ...) {
+    isExtremum("min", strict., negate., subset., global = TRUE, ...)
 }
 
 

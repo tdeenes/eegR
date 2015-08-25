@@ -31,15 +31,15 @@ isNegative(strict. = TRUE, negate. = FALSE, ...)
 isPositive(strict. = TRUE, ...)
 
 isExtremum(what. = c("both", "min", "max"), strict. = TRUE,
-  negate. = FALSE, ...)
+  negate. = FALSE, subset. = list(), ...)
 
-isLocalMaximum(strict. = TRUE, negate. = FALSE, ...)
+isLocalMaximum(strict. = TRUE, negate. = FALSE, subset. = list(), ...)
 
-isLocalMinimum(strict. = TRUE, negate. = FALSE, ...)
+isLocalMinimum(strict. = TRUE, negate. = FALSE, subset. = list(), ...)
 
-isMaximum(strict. = TRUE, negate. = FALSE, ...)
+isMaximum(strict. = TRUE, negate. = FALSE, subset. = list(), ...)
 
-isMinimum(strict. = TRUE, negate. = FALSE, ...)
+isMinimum(strict. = TRUE, negate. = FALSE, subset. = list(), ...)
 }
 \arguments{
 \item{pattern.}{a character regexp pattern, see the 'pattern' argument in
@@ -53,6 +53,13 @@ tests (not available at the moment).}
 be negated (default: FALSE). You can also use the standard \code{\link{!}}
 operator for negation which has a specific method for the \code{IsFunction}
 class (see Examples).}
+
+\item{subset.}{a named list of character, numeric, or logical vectors or
+a subsetting function (of class IsFunction) indicating which levels
+of which dimensions to subset (see Details). If 'subset.' is an unnamed
+list, it must have an attribute 'dim_index', referring to the numeric
+indices of the dimensions to subset on. Use it only if you are _absolutely_
+_sure_ about the datasets you want to test later on!}
 
 \item{...}{further arguments passed to the wrapped function (see Functions
 for details)}
@@ -88,9 +95,18 @@ object types result in error.\cr
 A second major rule is that all functions returned by an \code{is*}
 function return a logical object of the same shape as the input object.
 The third rule is that the function returned by any \code{is*} function is
-a hard (strict) or soft (optional) constraint. This affects the way how the
-results are combined for joint logical tests (see \code{\link{combine}}).
+a hard (strict) or soft (optional) constraint, controled by the 'strict.'
+argument. This affects the way how the results are combined for joint
+logical tests (see \code{\link{combine}}).
 \cr
+Additionally, all \code{is*} functions has a 'negate.' and a 'subset.'
+argument. By setting 'negate.' to TRUE, the function can be conceived of as
+a \code{not*} function. The same can be achieved by using the standard
+negation operator (see Examples).\cr
+The 'subset.' argument is only considered if the returned function will be
+called on matrices or arrays. In this case, the logical condition is tested
+only on the subsetted slice of the array, which is then expanded to the
+original array (see Examples).
 }
 \section{Functions}{
 \itemize{
@@ -212,6 +228,14 @@ stopifnot(identical(
     c(res),
     c(TRUE, FALSE, TRUE, FALSE)
 ))
+
+\dontshow{
+subs <- list("width")
+attr(subs, "dim_index") <- 2L
+check_width <- isEqual(1, tol. = 0.1, subset. = subs)
+res2 <- check_width(x)
+stopifnot(identical(res, res2))
+}
 
 # isEqual, just like all other is* functions, can be negated:
 check_not_zero <- isEqual(0, negate. = TRUE)
