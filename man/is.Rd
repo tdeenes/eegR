@@ -16,30 +16,38 @@
 \title{Test logical statements on data points}
 \usage{
 isPattern(pattern., strict. = TRUE, negate. = FALSE, subset. = list(),
-  ...)
+  expand. = list(), ...)
 
 isEqual(ref., tol. = .Machine$double.eps^0.5, strict. = TRUE,
-  negate. = FALSE, subset. = list(), ...)
+  negate. = FALSE, subset. = list(), expand. = list(), ...)
 
-isSame(ref., strict. = TRUE, negate. = FALSE, subset. = list(), ...)
+isSame(ref., strict. = TRUE, negate. = FALSE, subset. = list(),
+  expand. = list(), ...)
 
 isBetween(lwr. = -Inf, upr. = Inf, open. = c("none", "both", "lwr",
-  "upr"), strict. = TRUE, negate. = FALSE, subset. = list(), ...)
+  "upr"), strict. = TRUE, negate. = FALSE, subset. = list(),
+  expand. = list(), ...)
 
-isNegative(strict. = TRUE, negate. = FALSE, ...)
+isNegative(strict. = TRUE, negate. = FALSE, subset. = list(),
+  expand. = list(), ...)
 
-isPositive(strict. = TRUE, ...)
+isPositive(strict. = TRUE, negate. = FALSE, subset. = list(),
+  expand. = list(), ...)
 
 isExtremum(what. = c("both", "min", "max"), strict. = TRUE,
-  negate. = FALSE, subset. = list(), ...)
+  negate. = FALSE, subset. = list(), expand. = list(), ...)
 
-isLocalMaximum(strict. = TRUE, negate. = FALSE, subset. = list(), ...)
+isLocalMaximum(strict. = TRUE, negate. = FALSE, subset. = list(),
+  expand. = list(), ...)
 
-isLocalMinimum(strict. = TRUE, negate. = FALSE, subset. = list(), ...)
+isLocalMinimum(strict. = TRUE, negate. = FALSE, subset. = list(),
+  expand. = list(), ...)
 
-isMaximum(strict. = TRUE, negate. = FALSE, subset. = list(), ...)
+isMaximum(strict. = TRUE, negate. = FALSE, subset. = list(),
+  expand. = list(), ...)
 
-isMinimum(strict. = TRUE, negate. = FALSE, subset. = list(), ...)
+isMinimum(strict. = TRUE, negate. = FALSE, subset. = list(),
+  expand. = list(), ...)
 }
 \arguments{
 \item{pattern.}{a character regexp pattern, see the 'pattern' argument in
@@ -54,12 +62,12 @@ be negated (default: FALSE). You can also use the standard \code{\link{!}}
 operator for negation which has a specific method for the \code{IsFunction}
 class (see Examples).}
 
-\item{subset.}{a named list of character, numeric, or logical vectors or
-a subsetting function (of class IsFunction) indicating which levels
-of which dimensions to subset (see Details). If 'subset.' is an unnamed
-list, it must have an attribute 'dim_index', referring to the numeric
-indices of the dimensions to subset on. Use it only if you are _absolutely_
-_sure_ about the datasets you want to test later on!}
+\item{subset.,expand.}{a named list of character, numeric, or logical
+vectors or a subsetting function (of class IsFunction) indicating which
+levels of which dimensions to subset or expand on (see Details). If an
+unnamed list, it must have an attribute 'dim_index', referring to the numeric
+indices of the dimensions to subset or expand on. Use it only if you are
+\emph{absolutely sure} about the datasets you want to test later on!}
 
 \item{...}{further arguments passed to the wrapped function (see Functions
 for details)}
@@ -99,14 +107,17 @@ a hard (strict) or soft (optional) constraint, controled by the 'strict.'
 argument. This affects the way how the results are combined for joint
 logical tests (see \code{\link{combine}}).
 \cr
-Additionally, all \code{is*} functions has a 'negate.' and a 'subset.'
-argument. By setting 'negate.' to TRUE, the function can be conceived of as
-a \code{not*} function. The same can be achieved by using the standard
-negation operator (see Examples).\cr
-The 'subset.' argument is only considered if the returned function will be
-called on matrices or arrays. In this case, the logical condition is tested
-only on the subsetted slice of the array, which is then expanded to the
-original array (see Examples).
+Additionally, all \code{is*} functions has 'negate.', 'subset.', and
+'expand.' arguments. By setting 'negate.' to TRUE, the function can be
+conceived of as a \code{not*} function. The same can be achieved by using
+the standard negation operator (see Examples).\cr
+The 'subset.' and 'expand.' arguments are only considered if the returned
+function will be called on matrices or arrays. If 'subset.' is provided, the
+logical condition is tested only on the subsetted slice of the array, and
+all other data points in the array become FALSE (or TRUE, if negate. is
+TRUE). The 'expand.' argument does the same except that it expands the
+subsetted results to the original array instead of fixing the outer-subset
+data points to FALSE (or TRUE). See Examples.
 }
 \section{Functions}{
 \itemize{
@@ -145,18 +156,18 @@ for additional details and further arguments. The returned function accepts
 objects of any type for which \code{asNumeric}
 does not fail (see the documentation of \code{\link{asNumeric}}).
 
-\item \code{isLocalMaximum}: a shorthand for \code{isExtremum("max", strict., ...)}. See
+\item \code{isLocalMaximum}: a shorthand for \code{isExtremum("max", ...)}. See
 \code{\link{findExtrema}} for additional details and further arguments.
 
-\item \code{isLocalMinimum}: a shorthand for \code{isExtremum("min", strict., ...)}. See
+\item \code{isLocalMinimum}: a shorthand for \code{isExtremum("min", ...)}. See
 \code{\link{findExtrema}} for additional details and further arguments.
 
 \item \code{isMaximum}: a shorthand for
-\code{isExtremum("max", strict., global = TRUE, ...)}. See
+\code{isExtremum("max", global = TRUE, ...)}. See
 \code{\link{findExtrema}} for additional details and further arguments.
 
 \item \code{isMinimum}: a shorthand for
-\code{isExtremum("min", strict., global = TRUE, ...)}. See
+\code{isExtremum("min", global = TRUE, ...)}. See
 \code{\link{findExtrema}} for additional details and further arguments.
 }}
 \section{Use cases}{
@@ -187,87 +198,131 @@ the time range may be different).
 }
 }
 \examples{
-# example for isPattern
+#
+# example for isPattern #
+#
 # note how we pass the 'ignore.case' argument to the internally used
 # grepl() function (see ?grepl)
 check_start_a <- isPattern("^a", ignore.case = TRUE)
-
+check_start_a(c("a", "A", "ba"))
+\dontshow{
 # check the results -> note that the class and the attribute has to be
 # removed by calling 'c' (or 'as.vector') to make the results identical
 stopifnot(identical(
     c(check_start_a(c("a", "A", "ba"))),
     c(TRUE, TRUE, FALSE)
 ))
+}
 #
-# example for isEqual
+# example for isEqual #
+#
 check_zero <- isEqual(0, tol. = 1e-4)
+check_zero(c("0", "0.000001", "1"))
+\dontshow{
 stopifnot(identical(
     c(check_zero(c("0", "0.000001", "1"))),
     c(TRUE, TRUE, FALSE)
 ))
+}
 
 # note that just like for other is* functions, the reference and the
 # tolerance can be vectors (or even matrices or arrays), not only scalars,
 # and its values are recycled or cropped if necessarily to match the length
 # of the 'x' object
 check_values <- isEqual(c(0, 1, 2))
+check_values(c(0, 1.1, 2, 1e-9))
+
+\dontshow{
 stopifnot(identical(
     c(check_values(c(0, 1.1, 2, 1e-9))),
     c(TRUE, FALSE, TRUE, TRUE)
 ))
+}
 
-# it is also possible to base the check only on a subset of x and expand
-# the results back to the original array
-check_width <- isEqual(1, tol. = 0.1, subset. = list(measure = "width"))
-( x <- matrix(c(1.001, 1.6, 1.2, 1.003), 2, 2,
-              dimnames = list(observation = c("a", "b"),
-                              measure = c("width", "height"))) )
+# it is also possible to base the check only on a subset of x and also
+# on a reference slice of x which is then expanded back to the original
+# array;
+# here we want to test that in the "pre-test" phase of an experiment which
+# observations had a width of 1 with 0.1 tolerance (expanded also to height)
+check_width <- isEqual(1, tol. = 0.1,
+                       subset. = list(time = "pre"),
+                       expand. = list(measure = "width")
+                       )
+( x <- array(c(1.001, 1.6, 1.2, 1.003, 1.01, 1, 4, 3.5),
+             dim = c(2, 2, 2),
+             dimnames = list(observation = c("a", "b"),
+                             measure = c("width", "height"),
+                             time = c("pre", "post"))) )
 ( res <- check_width(x) )
+
+# note that all "time = post" data points are FALSE, and also that
+# all height measures are TRUE where width is TRUE
+array(paste(x, res, sep = ": "), dim(x), dimnames(x))
+\dontshow{
 stopifnot(identical(dim(res), dim(x)))
 stopifnot(identical(
     c(res),
-    c(TRUE, FALSE, TRUE, FALSE)
+    c(TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)
 ))
-
-\dontshow{
-subs <- list("width")
-attr(subs, "dim_index") <- 2L
-check_width <- isEqual(1, tol. = 0.1, subset. = subs)
+#
+subs <- list("pre")
+attr(subs, "dim_index") <- 3L
+exp <- list("width")
+attr(exp, "dim_index") <- 2L
+check_width <- isEqual(1, tol. = 0.1, subset. = subs, expand. = exp)
 res2 <- check_width(x)
 stopifnot(identical(res, res2))
 }
 
 # isEqual, just like all other is* functions, can be negated:
 check_not_zero <- isEqual(0, negate. = TRUE)
+check_not_zero(1)
+\dontshow{
 stopifnot(check_not_zero(1))
+}
 
 # the same can be achieved by using ! for negation
 check_not_zero2 <- !isEqual(0)
+check_not_zero2(1)
+\dontshow{
 stopifnot(identical(check_not_zero(1), check_not_zero2(1)))
+}
 #
-# example for isSame;
+# example for isSame #
+#
 check_not_A <- isSame("A", negate. = TRUE)
+check_not_A(c("a", "A"))
+\dontshow{
 stopifnot(identical(
     c(check_not_A(c("a", "A"))),
     c(TRUE, FALSE)
 ))
+}
 #
-# example for isBetween();
+# example for isBetween() #
+#
 # note that lwr. and upr. might be given in reversed order
 check_0_100 <- isBetween(100, 0)
+check_0_100(c(-1, 1, 101))
+\dontshow{
 stopifnot(identical(
     c(check_0_100(c(-1, 1, 101))),
     c(FALSE, TRUE, FALSE)
 ))
+}
 #
-# example for isExtremum
+# example for isExtremum #
+#
 # note how we can pass the 'global' and 'tail' arguments to the internal
 # findExtrema() function (see ?findExtrema)
 check_global_extr <- isExtremum(global = TRUE, tail = "do_not_care")
+check_global_extr(c(-1, 1, 0, 100, 50))
+\dontshow{
 stopifnot(identical(
     c(check_global_extr(c(-1, 1, 0, 100, 50))),
     c(TRUE, FALSE, FALSE, TRUE, FALSE)
 ))
+}
 }
 \seealso{
 \code{\link{combine}} how to combine is* tests, and \code{\link{isStrict}}
