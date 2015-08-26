@@ -1130,6 +1130,7 @@ expandInto <- function(dat, new_dat, expand_levels = NULL, safe_mode = TRUE,
         new_dat
     } else {
         out <- subsetArray(dat, sub_indices)
+        setattr(out, "dim", dim(new_dat))
         setattr(out, "dimnames", dimnames(new_dat))
         out
     }
