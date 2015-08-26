@@ -94,7 +94,7 @@ sub2 <- erps["A", , c("Fp1", "Fp2"), c("0", "2", "4", "6", "8", "10"), ]
 stopifnot(identical(sub1, sub2))
 
 # the same for replacement
-subsetArray(sub1, list(id = 1, pairtype = "transp")) <- NA
+subsetArray(sub1, list(id = 1, pairtype = isSame("transp"))) <- NA
 sub2["transp", , , 1] <- NA
 stopifnot(identical(sub1, sub2))
 }

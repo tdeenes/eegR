@@ -674,7 +674,7 @@ subsetIndices <- function(subset., which_dims., dim., dimnames.) {
         which_dims. <- match(names(subset.), dimid.)
         if (anyNA(which_dims.)) {
             stop(paste0(
-                "Not all names in the join list of 'subset.' and '...' ",
+                "Not all names in the joint list of 'subset.' and '...' ",
                 "correspond to existing dimensions in 'dat'. Provide ",
                 "either 'which_dim' to disambiguate or set the names ",
                 "in 'subset.' and/or '...' properly."))
@@ -792,7 +792,7 @@ subsetIndices <- function(subset., which_dims., dim., dimnames.) {
 #' stopifnot(identical(sub1, sub2))
 #'
 #' # the same for replacement
-#' subsetArray(sub1, list(id = 1, pairtype = "transp")) <- NA
+#' subsetArray(sub1, list(id = 1, pairtype = isSame("transp"))) <- NA
 #' sub2["transp", , , 1] <- NA
 #' stopifnot(identical(sub1, sub2))
 #'
@@ -876,16 +876,15 @@ subsetArray <- function(dat, subset. = list(), which_dims. = NULL,
 #' @rdname subsetArray
 #' @export
 # Replace a part of an array
-`subsetArray<-` <- function(dat, subset. = list(), which_dims. = NULL, ..., 
-                            value) {
+`subsetArray<-` <- function(dat, subset. = list(), which_dims. = NULL, 
+                            drop. = NULL, ..., value) {
     #
     # check arguments (dat, subset., which_dims.) and find indices
     assertArray(dat, min.d = 2L, .var.name = "dat")
-    assertList(subset., types = c("logical", "integerish", "character"),
-               .var.name = "subset.")
     dat_d <- dim(dat)
     dat_dn <- dimnames(dat)
     dat_dimid <- names(dat_dn)
+    subset. <- c(subset., list(...))
     ind <- subsetIndices(subset., which_dims., dat_d, dat_dn)
     #
     # do subsetting
