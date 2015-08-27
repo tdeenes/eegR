@@ -408,7 +408,7 @@ isMainCompFn <- function(FUN., x, subset., expand.,
                 out <- array_(FALSE, dim(x), dimnames(x))
                 x_sub <- subsetArray(x, subset., which_dims.$subset., 
                                      drop. = FALSE)
-                subsetArray(out, subset., which_dims.$subset., drop = FALSE) <- 
+                subsetArray(out, subset., which_dims.$subset., drop. = FALSE) <- 
                     if (length(expand.) > 0L) {
                         expandInto(
                             FUN.(subsetArray(x_sub, 
