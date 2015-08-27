@@ -718,14 +718,13 @@ subsetIndices <- function(subset., which_dims., dim., dimnames.) {
 #' \code{subsetArray} is a convenience function for extracting or replacing a
 #' part of an array which has dimension names
 #' @name subsetArray
+#' @usage
+#' subsetArray(dat, subset.=list(), which_dims.=NULL, drop.=NULL, keep_attributes.=TRUE, ...)
 #' @param dat array to be subsetted
 #' @param subset. a (named) list of character, numeric, or logical vectors or
 #' a subsetting function (see \code{\link[eegR]{is}}) indicating which levels
 #' of which dimensions to subset (see Details). If 'subset.' is an unnamed
 #' list, the argument 'which_dims.' must be provided.
-#' @param keep_attributes. a logical variable which determines if the result
-#' inherits the custom attributes of the input (TRUE, default) or not
-#' @param value a vector, matrix or array of the new values
 #' @param which_dims. numeric or character indices of the dimensions which
 #' should be subsetted. If 'which_dims.' is not NULL, 'which_dims.' is used and
 #' the names of 'subset.' is ignored.
@@ -733,6 +732,8 @@ subsetIndices <- function(subset., which_dims., dim., dimnames.) {
 #' (TRUE or FALSE), or 3) numeric or character indices of the dimensions which
 #' should be dropped if they become singleton dimensions (i.e. have only one
 #' level) after subsetting (see Details)
+#' @param keep_attributes. a logical variable which determines if the result
+#' inherits the custom attributes of the input (TRUE, default) or not
 #' @param ... an alternative specification of the subsetting rule; one can
 #' provide the subsetting vectors as named arguments, where the argument name
 #' refers to the name of the subsetted dimension. For programmatic use,
@@ -770,7 +771,6 @@ subsetIndices <- function(subset., which_dims., dim., dimnames.) {
 #' for a less general approach.
 #' @return The function returns a subset of the array or the array with replaced
 #' values.
-#' @rdname subsetArray
 #' @export
 #' @examples
 #' # example data (see ?erps)
@@ -874,6 +874,9 @@ subsetArray <- function(dat, subset. = list(), which_dims. = NULL,
 }
 
 #' @rdname subsetArray
+#' @usage
+#' subsetArray(dat, subset. = list(), which_dims. = NULL, drop. = NULL, ...) <- value
+#' @param value a vector, matrix or array of the new values
 #' @export
 # Replace a part of an array
 `subsetArray<-` <- function(dat, subset. = list(), which_dims. = NULL, 

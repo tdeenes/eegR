@@ -5,10 +5,9 @@
 \alias{subsetArray<-}
 \title{Extract or replace a part of an array}
 \usage{
-subsetArray(dat, subset. = list(), which_dims. = NULL, drop. = NULL,
-  keep_attributes. = TRUE, ...)
+subsetArray(dat, subset.=list(), which_dims.=NULL, drop.=NULL, keep_attributes.=TRUE, ...)
 
-subsetArray(dat, subset. = list(), which_dims. = NULL, ...) <- value
+subsetArray(dat, subset. = list(), which_dims. = NULL, drop. = NULL, ...) <- value
 }
 \arguments{
 \item{dat}{array to be subsetted}
