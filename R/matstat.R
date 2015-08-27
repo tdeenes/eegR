@@ -23,6 +23,7 @@
 #' at the tails
 #' @param topN a positive integer scalar; if not NULL (the default), the local 
 #' extrema must be among the top N highest/lowest extrema to be marked as such. 
+#' If there are ties, all of them are returned.
 #' @param has_NA if FALSE, x is not checked for missing values, thereby speeding
 #' up the computations; if has_NA is NULL (default), a fast check is performed 
 #' and if x has missing values, special corrections are applied (see Details).
@@ -49,8 +50,9 @@
 #' (local maximum), -1 (local minimum), and 0 (neither minimum nor maximum), or 
 #' NA (not available).
 #' @examples
-#' # create a vector with two local minima and one local maximum
-#' x <- c(10, 3, 1, 2, -1, 0, 4, 5)
+#' # create a vector with two local minima (which are equal) and two 
+#' # local maxima (which are different)
+#' x <- c(10, 7, -1, 6, 2, -1, 5, 4, 3)
 #' 
 #' # find local minima/maxima
 #' (x_extr <- findExtrema(x))
@@ -58,38 +60,39 @@
 #' # the same with a more stringent criterion
 #' (x_extr2 <- findExtrema(x, 2L))
 #' 
-#' # return only the top 1 extrema
+#' # return only the top 1 extrema; note that the local minima are equal,
+#' # so both of them are returned, but only the higher local maximum is kept
 #' (x_extr3 <- findExtrema(x, topN = 1L))
 #' 
-#' # note that findExtrema always returns an integer vector or matrix
+#' # findExtrema() always returns an integer vector or matrix
 #' stopifnot(is.integer(x_extr))
 #' 
 #' # check results
-#' stopifnot(identical(x[x_extr < 0L], c(1, -1)))
-#' stopifnot(identical(x[x_extr > 0L], 2))
-#' stopifnot(identical(x[x_extr2 != 0L], -1))
-#' stopifnot(identical(x[x_extr3 != 0L], c(2, -1)))
+#' stopifnot(identical(x[x_extr < 0L], c(-1, -1)))
+#' stopifnot(identical(x[x_extr > 0L], c(6, 5)))
+#' stopifnot(identical(x[x_extr2 != 0L], c(-1, -1, 5)))
+#' stopifnot(identical(x[x_extr3 != 0L], c(-1, 6, -1)))
 #' 
 #' # look for global extrema
 #' (x_global <- findExtrema(x, global = TRUE))
-#' stopifnot(identical(x[x_global != 0L], -1))
+#' stopifnot(identical(x[x_global != 0L], c(-1, -1)))
 #' 
 #' # the same with large 'n'
 #' (x_global2 <- findExtrema(x, length(x)))
 #' stopifnot(identical(x_global, x_global2))
 #' 
 #' # modify the vector to have a plateau at the start, and a missing value at
-#' # the position 7; consider only the nearest neighbours
+#' # the position 8; consider only the nearest neighbours
 #' x <- c(10, x)
-#' x[7] <- NA
+#' x[8] <- NA
 #' x
 #' 
 #' # now the first two elements should also be identified as local maxima,
-#' # but the value -1 is not a local minimum any more because there is a 
-#' # missing value in its neighbourhood
+#' # but the second local minimum is not a local minimum any more because 
+#' # there is a missing value in its neighbourhood
 #' (x_extr <- findExtrema(x))
 #' stopifnot(all(x_extr[1:2] == 1L))
-#' stopifnot(all(is.na(x_extr[6:8])))
+#' stopifnot(all(is.na(x_extr[7:9])))
 #' 
 #' # visualize the results (blue: local minimum, red: local maximum)
 #' plot(x, type = "l", lty = 3)
@@ -123,6 +126,7 @@ findExtrema <- function(x, n = 1L, global = FALSE, along_dim = 1L,
     if (!is.null(topN) && !identical(topN, Inf)) {
         assertIntegerish(topN, lower = 1, any.missing = FALSE, len = 1L, 
                          .var.name = "topN")
+        topN <- as.integer(topN)
     }
     if (is.null(has_NA)) {
         has_NA <- anyNA(x) 
@@ -236,10 +240,14 @@ findExtremaMatrix <- function(x, n, tail, topN, has_NA) {
     if (is.integer(topN)) {
         temp_x <- x
         temp_x[out != -1L] <- NA
-        out[which(colRanks(temp_x, preserveShape = TRUE) > topN)] <- 0L
+        out[which(colRanks(temp_x, 
+                           ties.method = "min",
+                           preserveShape = TRUE) > topN)] <- 0L
         temp_x <- -x
         temp_x[out != 1L] <- NA
-        out[which(colRanks(temp_x, preserveShape = TRUE) > topN)] <- 0L
+        out[which(colRanks(temp_x, 
+                           ties.method = "min",
+                           preserveShape = TRUE) > topN)] <- 0L
     }
     # return
     out

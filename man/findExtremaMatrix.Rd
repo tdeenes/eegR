@@ -20,7 +20,8 @@ extrema at the tails; "do_not_care" means no special treatment of extrema
 at the tails}
 
 \item{topN}{a positive integer scalar; if not NULL (the default), the local
-extrema must be among the top N highest/lowest extrema to be marked as such.}
+extrema must be among the top N highest/lowest extrema to be marked as such.
+If there are ties, all of them are returned.}
 
 \item{has_NA}{if FALSE, x is not checked for missing values, thereby speeding
 up the computations; if has_NA is NULL (default), a fast check is performed
