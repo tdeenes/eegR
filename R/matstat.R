@@ -118,21 +118,18 @@ findExtrema <- function(x, n = 1L, global = FALSE, along_dim = 1L,
     #
     # argument checks
     assertAtomic(x, .var.name = "x")
-    assertIntegerish(n, lower = 1,
-                     any.missing = FALSE, len = 1L, .var.name = "n")
-    assertLogical(global, any.missing = FALSE, len = 1L, .var.name = "global")
+    assertInt(n, lower = 1, .var.name = "n")
+    assertFlag(global, .var.name = "global")
     if (global) n <- length(x)
     tail <- match.arg(tail)
     if (!is.null(topN) && !identical(topN, Inf)) {
-        assertIntegerish(topN, lower = 1, any.missing = FALSE, len = 1L, 
-                         .var.name = "topN")
+        assertCount(topN, .var.name = "topN")
         topN <- as.integer(topN)
     }
     if (is.null(has_NA)) {
         has_NA <- anyNA(x) 
     } else {
-        assertLogical(has_NA, any.missing = FALSE, 
-                      len = 1L, .var.name = "has_NA")
+        assertFlag(has_NA, .var.name = "has_NA")
     }
     n <- as.integer(n)
     # return
@@ -309,8 +306,7 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
     width <- as.integer(width)
     if (length(width) > 1L) width <- rep_len(width, dims[1])
     FUN <- match.fun(FUN)
-    assertLogical(force_rollapply, any.missing = FALSE, len = 1L,
-                  .var.name = "force_rollaply")
+    assertFlag(force_rollapply, .var.name = "force_rollaply")
     if (!force_rollapply) {
         funlist <- list(min = min, max = max, mean = mean, 
                         sd = sd, mad = mad, quantile = quantile)

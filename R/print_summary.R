@@ -392,8 +392,8 @@ print.summary.eegr <- function(x, digits = 3L, quote = FALSE, fill_na = "-",
         x
     }
     # check arguments
-    assertIntegerish(digits, len = 1L, .var.name = "digits")
-    assertLogical(quote, any.missing = FALSE, len = 1L, .var.name = "quote")
+    assertCount(digits, .var.name = "digits")
+    assertFlag(quote, .var.name = "quote")
     # main
     cat("\n----\nCall\n----\n",
         paste(deparse(x$call), sep = "\n", collapse = "\n"))

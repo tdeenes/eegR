@@ -315,8 +315,7 @@ preTtest <- function(.arraydat, .arraydat2, paired, groups,
         full_dimnames2 <- fillMissingDimnames(dimnames(.arraydat2),
                                               dim(.arraydat2))
         # check 'paired'
-        assertLogical(paired, any.missing = FALSE, len = 1L, 
-                      .var.name = "paired")
+        assertFlag(paired, .var.name = "paired")
         # if paired == TRUE, compute the difference; 
         # if paired == FALSE, bind the two arrays and store the group membership
         # in 'groups'

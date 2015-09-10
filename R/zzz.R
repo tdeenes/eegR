@@ -20,8 +20,9 @@
 #' @importFrom checkmate assertAtomic assertVector assertMatrix assertArray
 #' @importFrom checkmate assertDataFrame assertList assertClass
 #' @importFrom checkmate assertLogical assertCharacter assertNumeric assertIntegerish testIntegerish
-#' @importFrom checkmate assertString assertNumber assertScalar
+#' @importFrom checkmate assertString assertNumber assertScalar assertCount assertFlag assertInt
 #' @importFrom checkmate testVector
+#' @importFrom checkmate assert checkChoice assertChoice
 #' @importFrom Rcpp evalCpp
 #' @importFrom Kmisc factor_ counts
 #' @importFrom orthopolynom polynomial.values legendre.polynomials

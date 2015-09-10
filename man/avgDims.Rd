@@ -10,7 +10,7 @@ avgDims(dat, dims, na_rm = TRUE)
 \item{dat}{matrix or array to average}
 
 \item{dims}{character vector of dimension names or numeric vector of
-dimension indices across which averaging should ocuur. If character vector,
+dimension indices across which averaging should occur. If character vector,
 dat must have named dimnames.}
 
 \item{na_rm}{logical variable; if TRUE (default), missing values are removed

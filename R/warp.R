@@ -65,12 +65,9 @@ warp <- function(erp, align_dim, time_dim = "time", lambda = 0,
                 .var.name = "erp")
     assertNumber(lambda, .var.name = "lambda")
     method <- match.arg(method)
-    assertLogical(smooth_data, any.missing = FALSE, len = 1L,
-                  .var.name = "smooth_data")
-    assertIntegerish(smooth_times, any.missing = FALSE, len = 1L, 
-                     .var.name = "smooth_times")
-    assertLogical(verbose, any.missing = FALSE, len = 1L,
-                  .var.name = "verbose")
+    assertFlag(smooth_data, .var.name = "smooth_data")
+    assertInt(smooth_times, .var.name = "smooth_times")
+    assertFlag(verbose, .var.name = "verbose")
     dims <- dim(erp)
     dimn <- dimnames(erp)
     dimid <- names(dimnames(erp))
