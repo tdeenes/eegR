@@ -87,10 +87,10 @@ tfceParams <- function(ChN = NULL, EH = NULL, auto = TRUE, steps = 50L) {
             }
     }
     # checks
-    assertMatrix(ChN, any.missing = FALSE)
-    assertIntegerish(ChN)
-    assertNumeric(EH, any.missing = FALSE, len = 2L)
-    assertIntegerish(steps, any.missing = FALSE, len = 1L)
+    assertMatrix(ChN, any.missing = FALSE, .var.name = "ChN")
+    assertIntegerish(ChN, .var.name = "ChN")
+    assertNumeric(EH, any.missing = FALSE, len = 2L, .var.name = "EH")
+    assertCount(steps, .var.name = "steps")
     # return
     structure(list(ChN = ChN, EH = EH, steps = as.integer(steps)), 
               class = "tfceParams")
@@ -206,7 +206,212 @@ parallelParams <- function(cl = NULL, method = c("auto", "snow", "multicore"),
 #' to the arguments ('n' and 'type')
 #' 
 permParams <- function(n = 999L, type = c("residuals", "observations")) {
-    assertIntegerish(n, len = 1L, any.missing = FALSE, .var.name = "n")
+    assertCount(n, .var.name = "n")
     type <- match.arg(type)
     list(n = n, type = type)
 }
+
+#' Setting the parameters for auto-conversion
+#' 
+#' \code{convertParams} defines the rules how variables meeting user-defined 
+#' conditions shall be converted (most often, coerced).
+#' @usage
+#' convertParams(
+#'     ...,
+#'     factor = list(
+#'         IF = is.factor,
+#'         DO = list(function(x) as.logical(as.character(x)),
+#'                   function(x) as.integer(as.character(x)),
+#'                   function(x) as.double(as.character(x)),
+#'                   function(x) as.Date(as.character(x)),
+#'                   as.character),
+#'         EVAL = function(x, y) isTRUE(all.equal(as.character(x), 
+#'                                                as.character(y),
+#'                                                check.attributes = FALSE))
+#'     ),
+#'     integer = list(
+#'         IF = is.integer,
+#'         DO = list(as.logical),
+#'         EVAL = function(x, y) isTRUE(all.equal(as.vector(x), as.integer(y),
+#'                                                check.attributes = FALSE))
+#'     ),
+#'     double = list(
+#'         IF = is.double,
+#'         DO = list(as.logical, 
+#'                   as.integer),
+#'         EVAL = function(x, y) isTRUE(all.equal(as.vector(x), as.double(y),
+#'                                                check.attributes = FALSE))
+#'     ),
+#'     character = list(
+#'         IF = is.character,
+#'         DO = list(as.logical, 
+#'                   as.integer, 
+#'                   as.Date, 
+#'                   as.double, 
+#'                   factor_, 
+#'                   as.factor),
+#'         EVAL = function(x, y) isTRUE(all.equal(as.vector(x), 
+#'                                                as.character(y),
+#'                                                check.attributes = FALSE))
+#'     ))
+#' @param ... named definitions of new rules, each being a named list of 'IF', 
+#' 'DO', and 'EVAL' elements. See the pre-defined rules below and the Details 
+#' section for further information. Note that the argument name "ANY" is 
+#' reserved for internal use.
+#' @param factor,integer,double,character pre-defined rules for the most 
+#' standard object types. See Details.
+#' @details \code{convertParams} defines a collection of conversion rules. A
+#' rule is a named list of three elements: 'IF', 'DO', and 'EVAL'.\cr
+#' 'IF' defines the condition which triggers the conversion; it is a function 
+#' or a character string denoting a function (e.g., \code{"is.integer"}) which 
+#' accepts at least one argument (the data which should be converted). It must
+#' return a single logical value (TRUE or FALSE).\cr
+#' 'DO' is a list of potential conversion procedures, that is, functions or
+#' character strings denoting the functions. During conversion, the functions
+#' in 'DO' are called in the given order and their returned values are compared
+#' to the original data as defined in 'EVAL' (see later). Therefore, each 
+#' function should accept at least one argument (the data), and all functions
+#' should return an object which is accepted by 'EVAL'. Usually, functions in 
+#' 'DO' return a vector of the same length as the input data; a typical example
+#' could be \code{as.logical}.\cr
+#' 'EVAL' is a single function or a character string denoting a function which
+#' is used to evaluate whether the conversion resulted in an acceptible return
+#' value. Therefore, an 'EVAL' function must accept at least two arguments: the
+#' original data and the returned value of a 'DO' function. Note that the 
+#' order of arguments is important. Additionally, the 'EVAL' function must 
+#' return a single logical value: TRUE if the conversion is acceptible, and 
+#' FALSE if it is not. Usually, the 'EVAL' function is a counterpart of the 
+#' 'IF' function, e.g. \code{as.integer}. 
+#' @return \code{convertParams} returns a named list of conversion rules.
+#' The list has a special class "convertParams".
+#' @export
+#' @seealso
+#' \code{\link{autoConvert}} for examples
+convertParams <- function(
+    ...,
+    factor = list(
+        IF = is.factor,
+        DO = list(function(x) as.logical(as.character(x)),
+                  function(x) as.integer(as.character(x)),
+                  function(x) as.double(as.character(x)),
+                  function(x) as.Date(as.character(x)),
+                  as.character),
+        EVAL = function(x, y) isTRUE(all.equal(as.character(x), as.character(y),
+                                               check.attributes = FALSE))
+        ),
+    integer = list(
+        IF = is.integer,
+        DO = list(as.logical),
+        EVAL = function(x, y) isTRUE(all.equal(as.vector(x), as.integer(y),
+                                               check.attributes = FALSE))
+        ),
+    double = list(
+        IF = is.double,
+        DO = list(as.logical, 
+                  as.integer),
+        EVAL = function(x, y) isTRUE(all.equal(as.vector(x), as.double(y),
+                                               check.attributes = FALSE))
+        ),
+    character = list(
+        IF = is.character,
+        DO = list(as.logical, 
+                  as.integer, 
+                  as.Date, 
+                  as.double, 
+                  factor_, 
+                  as.factor),
+        EVAL = function(x, y) isTRUE(all.equal(as.vector(x), 
+                                               as.character(y),
+                                               check.attributes = FALSE))
+        )) {
+    #
+    # collect all arguments 
+    out <- c(
+        lapply(match.call(expand.dots = FALSE)$`...`, eval),
+        mget(setdiff(ls(sorted = FALSE, all.names = TRUE), "..."))
+    )
+    # checks
+    if ("ANY" %in% names(out)) {
+        stop(paste0(
+            "The argument name 'ANY' is reserved for internal use. ",
+            "Choose an other name for that rule."
+        ))
+    }
+    out <- lapply(out, function(x) {
+        if (!is.list(x) || is.null(names(x)) || 
+            !identical(sort(names(x)), c("DO", "EVAL", "IF"))) {
+            stop(paste0(
+                "convertParams: all arguments must be three-element, named ",
+                "lists with names 'IF', 'DO', and 'EVAL'"), call. = FALSE)
+        }
+        if (length(x$IF) != 1L) {
+            stop("convertParams: the 'IF' element must be of length 1",
+                 call. = FALSE)
+        }
+        if (is.character(x$IF)) {
+            x$IF <- tryCatch(match.fun(x$IF), error = function(e)
+                stop(paste0("convertParams: function with name '",
+                            x$IF, "' was not found"), call. = FALSE))
+        } else if (!is.function(x$IF)) {
+            stop(paste0(
+                "convertParams: the 'IF' element must be a function or ",
+                "a character string of the function name"))
+        }
+#         if (length(formals(x$IF)) < 1L) {
+#             stop(paste0(
+#                 "convertParams: the 'IF' function must have at least ", 
+#                 "one argument"), call. = FALSE)
+#         }
+        if (length(x$DO) == 0L) {
+            stop("convertParams: the 'DO' element must be of length 1 or more",
+                 call. = FALSE)
+        }
+        if (is.character(x$DO)) {
+            x$DO <- as.list(x$DO)
+        } else if (is.function(x$DO)) {
+            x$DO <- list(x$DO)
+        }
+        x$DO <- lapply(x$DO, function(fun) {
+            if (is.character(fun)) {
+                fun <- tryCatch(match.fun(fun), error = function(e)
+                    stop(paste0("convertParams: function with name '",
+                                fun, "' was not found"), call. = FALSE))
+            } else if (!is.function(fun)) {
+                stop(paste0(
+                    "convertParams: the 'DO' element must be a character ",
+                    "vector or a list of functions"))
+            }
+#             if (length(formals(fun)) < 1L) {
+#                 stop(paste0(
+#                     "convertParams: the 'DO' functions must have at least ", 
+#                     "one argument"), call. = FALSE)
+#             }
+            fun
+        })
+        if (length(x$EVAL) != 1L) {
+            stop("convertParams: the 'EVAL' element must be of length 1",
+                 call. = FALSE)
+        }
+        if (is.character(x$EVAL)) {
+            x$IF <- tryCatch(match.fun(x$EVAL), error = function(e)
+                stop(paste0("convertParams: function with name '",
+                            x$EVAL, "' was not found"), call. = FALSE))
+        } else if (!is.function(x$EVAL)) {
+            stop(paste0(
+                "convertParams: the 'EVAL' element must be a function or ",
+                "a character string of the function name"))
+        }
+#         if (length(formals(x$EVAL)) < 2L) {
+#             stop(paste0(
+#                 "convertParams: the 'EVAL' function must have at least ", 
+#                 "two arguments"), call. = FALSE)
+#         }
+        # return
+        x
+    })
+    # return
+    setattr(out, "class", "convertParams")
+    out
+}
+
+
