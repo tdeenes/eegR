@@ -305,7 +305,7 @@ compareLevels <- function(dat, which_dim = 1L, contr = NULL, ...) {
 #' simple averaging
 #' @param dat matrix or array to average
 #' @param dims character vector of dimension names or numeric vector of
-#' dimension indices across which averaging should ocuur. If character vector,
+#' dimension indices across which averaging should occur. If character vector,
 #' dat must have named dimnames.
 #' @param na_rm logical variable; if TRUE (default), missing values are removed
 #' before averaging
@@ -743,3 +743,126 @@ scaleArray <- function(dat, by_dims = NULL, along_dims = NULL,
     }
 }
 
+#' Select values from a vector, matrix or array
+#' 
+#' \code{selectValues} returns values (and their indices) of a vector, matrix,
+#' or array which meet the user-defined conditions.
+#' @concept find peaks
+#' @param dat an atomic object
+#' @param condition an IsFunction (see Details)
+#' @param return_index a logical value whether the indices of the selected
+#' values should be returned (default: TRUE)
+#' @param dim_labels a character vector; the name of the dimensions in the
+#' returned data.frame. If NULL (the default), the labels are extracted from
+#' the names of the dimnames attribute of the input data. If a single string, 
+#' the dimension numbers are appended after it. 
+#' @param value_label the name of the column in the returned data.frame which
+#' represent the values (default: "value")
+#' @param auto_convert a logical value whether automatic conversion of
+#' dimension names (i.e., characters to numeric (if possible) or to factors)
+#' should be performed (default: TRUE). Set to FALSE and call 
+#' \code{\link{autoConvert}} directly on the returned data frame if you need
+#' more control.
+#' @details \code{selectValues} builds upon the \code{\link[eegR]{is}} 
+#' family of functions. The standard workflow is to define (and possibly 
+#' combine) the conditions, and then feed the data into \code{selectValues}
+#' with the given condiiton object.
+#' @return This function returns a data frame with 'dim_labels' columns 
+#' containing the combination of the dimension levels where the selected values
+#' were found and an extra column of the selected values themselves.\cr
+#' If 'return_index' is TRUE, the numeric matrix of indices is returned as an
+#' additional attribute ('index'). This comes handy if one wants to select data
+#' points in the same positions from an other object having the same shape as
+#' 'dat'. 
+#' @export
+#' @seealso \code{\link[eegR]{is}}
+#' @examples
+#' #
+#' # A complex use-case: find peaks of curves meeting compex rules
+#' #
+#' # load example data
+#' data(erps)
+#' 
+#' # analyze only the three midline electrodes and use the
+#' # grand averages, for simplicity
+#' erps <- subsetArray(erps, chan = c("Fz", "Cz", "Pz"))
+#' avgs <- avgDims(erps, "id")
+#' 
+#' # find the most negative peak at Fz between 80 and 200 ms, and also select
+#' # the corresponding time points on the two other channels
+#' cond <- isMinimum(along_dim = "time", 
+#'                   subset. = list(time = isBetween(80, 200)),
+#'                   expand. = list(chan = "Fz")) &
+#'         isNegative(expand. = list(chan = "Fz"))
+#' 
+#' # find the peaks
+#' results <- selectValues(avgs, cond)
+#' 
+#' #
+#' # plot the grand averages, and add points to the curves where a peak was found;
+#' # note that the peaks are based on the Fz channel
+#' #
+#' library(ggplot2)
+#' ggplot(transformArray(value ~ ., avgs), 
+#'        aes(x = time, y = value, col = chan)) +
+#'     geom_line() + facet_grid(stimclass ~ pairtype) + 
+#'     geom_point(data = results, size = 3) + 
+#'     theme_bw()
+selectValues <- function(dat, condition, return_index = TRUE, 
+                         dim_labels = NULL, value_label = "value", 
+                         auto_convert = TRUE) {
+    # check arguments
+    assertAtomic(dat, .var.name = "dat")
+    if (!inherits(condition, "IsFunction")) {
+        stop("'condition' must be of class 'IsFunction' (see ?is)")
+    }
+    assertFlag(return_index, .var.name = "return_index")
+    assertString(value_label, .var.name = "value_label")
+    assertFlag(auto_convert, .var.name = "auto_convert")
+    # transform to matrix if vector or one-dimensional array
+    if (length(dim(dat)) <= 1L) dat <- as.matrix(dat)
+    # find indices
+    ind <- which(condition(dat), arr.ind = TRUE)
+    # setup data.frame by using dimension names
+    dimn <- fillMissingDimnames(dimnames(dat), dim(dat), .dimnames = FALSE)
+    if (auto_convert) dimn <- autoConvert(dimn)
+    out <- as.data.frame(
+        lapply(1:ncol(ind), 
+               function(i) {
+                   dn <- dimn[[i]]
+                   if (!is.null(dn)) {
+                       dn[ind[,i]]
+                   } else {
+                       ind[,i]
+                   }
+               }), stringsAsFactors = FALSE)
+    # dimension labels
+    nam <- 
+        if (is.null(dim_labels)) {
+            names(dimn)
+        } else if (is.character(dim_labels)) {
+            if (length(dim_labels) == 1L) {
+                paste0(dim_labels, seq_along(dim(dat)))
+            } else {
+                dim_labels
+            }
+        } else {
+            stop(paste0(
+                "selectValues: ",
+                "invalid type for 'dim_labels', must be NULL or character"),
+                call. = FALSE)
+        }
+    setattr(out, "names", nam)
+    # cbind the values
+    out[[value_label]] <- dat[ind]
+    if (auto_convert) {
+        out <- autoConvert(out, conversion = "character")
+    }
+    # attach index matrix if requested
+    if (return_index) {
+        setattr(ind, "dimnames", list(NULL, colnames(ind)))
+        setattr(out, "index", ind)
+    }
+    # return
+    out
+}
