@@ -6,78 +6,78 @@
 # < helper functions > ------
 
 #' Coerce to numeric
-#' 
-#' \code{asNumeric} is similar to \code{\link{as.numeric}} except that 1) 
-#' it results in an error for character strings for which as.numeric would 
-#' send a warning, 2) keeps integer, Date and POSIXt objects as they are (i.e. 
+#'
+#' \code{as.Numeric} is similar to \code{\link{as.numeric}} except that 1)
+#' it results in an error for character strings for which as.numeric would
+#' send a warning, 2) keeps integer, Date and POSIXt objects as they are (i.e.
 #' does not convert them to double), 3) coerces logicals to integer, not double,
-#' 4) keeps 'dim' and 'dimnames' attributes if requested, and 5) always copies 
-#' the original object, even if no actual coercion occurs. \code{asNumeric_} 
-#' returns the original object if possible and does not alter the shape of 
+#' 4) keeps 'dim' and 'dimnames' attributes if requested, and 5) always copies
+#' the original object, even if no actual coercion occurs. \code{as.Numeric_}
+#' returns the original object if possible and does not alter the shape of
 #' multidimensional inputs.
 #' @param x the object to coerce
 #' @param keep_dim logical value whether \code{dim} and \code{dimnames}
-#' attributes should be preserved. The default is FALSE. (But note that 
-#' \code{asNumeric_} does not have this argument, because it always preserves
+#' attributes should be preserved. The default is FALSE. (But note that
+#' \code{as.Numeric_} does not have this argument, because it always preserves
 #' both attributes.)
-#' @return \code{asNumeric} returns the original object (at the same memory 
-#' address) if it is numeric (that is, is.numeric(x) returns TRUE) or inherits 
-#' "Date" or "POSIXt" classes. Otherwise, it returns a double vector if 
-#' \code{as.numeric} is successful and stops with an error if 
+#' @return \code{as.Numeric} returns the original object (at the same memory
+#' address) if it is numeric (that is, is.numeric(x) returns TRUE) or inherits
+#' "Date" or "POSIXt" classes. Otherwise, it returns a double vector if
+#' \code{as.numeric} is successful and stops with an error if
 #' \code{as.numeric} results in a warning or error.
 #' @export
 #' @examples
-#' # if 'x' is double, asNumeric() simply returns it, just like as.numeric()
+#' # if 'x' is double, as.Numeric() simply returns it, just like as.numeric()
 #' x <- rnorm(10)
-#' stopifnot(identical(as.numeric(x), asNumeric(x)))
-#' 
-#' # if 'x' is integer, asNumeric() simply returns it, 
+#' stopifnot(identical(as.numeric(x), as.Numeric(x)))
+#'
+#' # if 'x' is integer, as.Numeric() simply returns it,
 #' # but as.numeric() converts to double
 #' x <- 1:10
-#' stopifnot(identical(x, asNumeric(x)))
-#' stopifnot(all.equal(as.numeric(x), asNumeric(x))) # not fully identical!
-#' 
-#' # if 'x' is Date or POSIXt, asNumeric() simply returns it
+#' stopifnot(identical(x, as.Numeric(x)))
+#' stopifnot(all.equal(as.numeric(x), as.Numeric(x))) # not fully identical!
+#'
+#' # if 'x' is Date or POSIXt, as.Numeric() simply returns it
 #' x1 <- as.Date("2013-03-14")
 #' x2 <- as.POSIXlt(x1)
-#' stopifnot(identical(x1, asNumeric(x1)))
-#' stopifnot(identical(x2, asNumeric(x2)))
-#' 
+#' stopifnot(identical(x1, as.Numeric(x1)))
+#' stopifnot(identical(x2, as.Numeric(x2)))
+#'
 #' # if 'x' contains only numeric-like characters (or NAs),
-#' # asNumeric() returns the same as as.numeric() 
+#' # as.Numeric() returns the same as as.numeric()
 #' x <- c(NA, as.character(1:10))
-#' stopifnot(identical(as.numeric(x), asNumeric(x)))
-#' 
+#' stopifnot(identical(as.numeric(x), as.Numeric(x)))
+#'
 #' # if 'x' contains any non-numeric characters (e.g. letters),
-#' # asNumeric() returns an error
+#' # as.Numeric() returns an error
 #' x <- c("a", as.character(1:10))
-#' x_num <- try(asNumeric(x), silent = TRUE)
+#' x_num <- try(as.Numeric(x), silent = TRUE)
 #' stopifnot(inherits(x_num, "try-error"))
-#' 
-#' # if 'x' is a matrix or array, asNumeric() converts it to a vector by 
+#'
+#' # if 'x' is a matrix or array, as.Numeric() converts it to a vector by
 #' # default, just like as.numeric()
 #' ( y <- x <- matrix(rnorm(10), 5, 2) )
-#' ( x_num <- asNumeric(x) )
+#' ( x_num <- as.Numeric(x) )
 #' stopifnot(is.null(attr(x_num, "dim")))
-#' 
+#'
 #' # however, you can ask to keep the original shape
-#' ( x_num2 <- asNumeric(x, TRUE) )
-#' 
-#' # if you use asNumeric_() instead, it keeps the shape
-#' ( x_num3 <- asNumeric_(x) )
+#' ( x_num2 <- as.Numeric(x, TRUE) )
+#'
+#' # if you use as.Numeric_() instead, it keeps the shape
+#' ( x_num3 <- as.Numeric_(x) )
 #' stopifnot(identical(x_num3, x))
-#' 
-#' # note that since 'x' is numeric, no coercion is needed, so 
-#' # so asNumeric_() does not create a copy, but asNumeric() does
+#'
+#' # note that since 'x' is numeric, no coercion is needed, so
+#' # so as.Numeric_() does not create a copy, but as.Numeric() does
 #' address(x)
 #' address(x_num2)
 #' address(x_num3)
 #' stopifnot(identical(address(x), address(x_num3)))
-#' 
-asNumeric <- function(x, keep_dim = FALSE) {
+#'
+as.Numeric <- function(x, keep_dim = FALSE) {
     dims <- dim(x)
     dimn <- dimnames(x)
-    x <- asNumeric_(copy(x))
+    x <- as.Numeric_(copy(x))
     if (!keep_dim) {
         setattr(x, "dim", NULL)
         setattr(x, "dimnames", NULL)
@@ -88,9 +88,9 @@ asNumeric <- function(x, keep_dim = FALSE) {
     x
 }
 
-#' @describeIn asNumeric
+#' @describeIn as.Numeric
 #' @export
-asNumeric_ <- function(x) {
+as.Numeric_ <- function(x) {
     if (is.numeric(x) || inherits(x, c("POSIXt", "Date"))) {
         x
     } else if (is.logical(x)) {
@@ -99,12 +99,12 @@ asNumeric_ <- function(x) {
     } else {
         if (!is.numeric(x)) {
             ._ok <- TRUE
-            x <- tryCatch(as.numeric(x), 
+            x <- tryCatch(as.numeric(x),
                           warning = function(w) ._ok <<- FALSE,
                           error = function(e) ._ok <<- FALSE)
             if (!._ok) {
                 stop(paste0("if 'x' is not numeric or date, it must be ",
-                            "numeric-like character, e.g. x = c('1', '2') ", 
+                            "numeric-like character, e.g. x = c('1', '2') ",
                             "or any other type for which as.numeric() returns ",
                             "numeric values"))
             }
@@ -114,9 +114,9 @@ asNumeric_ <- function(x) {
 }
 
 #' Negation for the is* family of functions
-#' 
-#' \code{`!.IsFunction`} implements logical negation for \code{is*} function. 
-#' The same effect can be achieved be setting the 'negate.' argument of the 
+#'
+#' \code{`!.IsFunction`} implements logical negation for \code{is*} function.
+#' The same effect can be achieved be setting the 'negate.' argument of the
 #' corresponding function.
 #' @name negate
 #' @aliases !
@@ -128,7 +128,7 @@ asNumeric_ <- function(x) {
 }
 
 #' Internal function which combines is* functions
-#' 
+#'
 #' \code{isCombineOperator} is the workhorse function behind logical operators
 #' for objects of class IsFunction.
 #' @param lhs the function (of class "IsFunction") on the left-hand side
@@ -161,21 +161,21 @@ isCombineOperator <- function(lhs, rhs, op) {
 
 
 #' Combination of is* conditions
-#' 
-#' Logical tests as defined by \code{is*} functions can be combined by the 
+#'
+#' Logical tests as defined by \code{is*} functions can be combined by the
 #' standard logical operators \code{\link{&}}, \code{\link{|}}, and
 #' \code{\link{xor}}.
 #' @name combine
 #' @param x,y two logical statements (\code{\link{is}} functions) which should
 #' be combined
 #' @aliases & &.IsFunction | |.IsFunction xor xor.IsFunction
-#' @details If both tests are strict tests (that is, they were called by 
-#' setting 'strict.' to TRUE [the default], which can be checked by 
+#' @details If both tests are strict tests (that is, they were called by
+#' setting 'strict.' to TRUE [the default], which can be checked by
 #' \code{\link{isStrict}}), the tests are combined in the standard fashion.\cr
-#' However, if at least one of the tests is optional (strict. = FALSE), the 
-#' combined result is going to be returned by the new test only if it contains 
-#' at least one TRUE value. Otherwise, it will return the result of the strict 
-#' test alone, or if both tests are optional, only FALSE values will be 
+#' However, if at least one of the tests is optional (strict. = FALSE), the
+#' combined result is going to be returned by the new test only if it contains
+#' at least one TRUE value. Otherwise, it will return the result of the strict
+#' test alone, or if both tests are optional, only FALSE values will be
 #' returned.\cr
 #' Note that \code{xor} has been made generic and a new \code{xor.default}
 #' method was added besides \code{xor.IsFunction}. The new default method
@@ -185,8 +185,8 @@ isCombineOperator <- function(lhs, rhs, op) {
 #' # define two strict constraints and combine them
 #' check_above_10 <- isBetween(lwr. = 10, open. = "lwr")
 #' check_local_max <- isLocalMaximum()
-#' check_local_max_above_10 <- check_local_max & check_above_10 
-#' 
+#' check_local_max_above_10 <- check_local_max & check_above_10
+#'
 #' # call the combined test on the following vector
 #' vec <- c(0, 1, 0, 11, 0, 21, 0)
 #' ( res <- check_local_max_above_10(vec) )
@@ -198,21 +198,21 @@ isCombineOperator <- function(lhs, rhs, op) {
 #' # make the above_10 constraint optional
 #' check_maybe_above_10 <- isBetween(lwr. = 10, open. = "lwr", strict. = FALSE)
 #' check_local_max_maybe_above_10 <- check_local_max & check_maybe_above_10
-#' 
+#'
 #' # call the combined test on the vector
 #' ( res2 <- check_local_max_maybe_above_10(vec) )
-#' 
+#'
 #' # the results are identical, because the combined test is TRUE for at least
 #' # one data point
 #' stopifnot(identical(
 #'     c(res), c(res2)
 #' ))
-#' 
-#' # now change the test vector with no local maximum above 10, 
+#'
+#' # now change the test vector with no local maximum above 10,
 #' # and run the test
 #' vec3 <- c(0, 1, 0)
 #' ( res3 <- check_local_max_maybe_above_10(vec3) )
-#' 
+#'
 #' # here, the optional test is ignored
 #' stopifnot(identical(
 #'     res3, check_local_max(vec3)
@@ -248,7 +248,7 @@ xor.default <- function(x, y) as.logical(x) != as.logical(y)
 
 
 #' Check if an is* function is strict or optional
-#' 
+#'
 #' \code{isStrict} is a helper function to check whether a function of class
 #' \code{IsFunction} (see \code{\link[eegR]{is}}) is strict or optional. This
 #' attribute is important if the tests are combined, see \code{\link{combine}}.
@@ -278,7 +278,7 @@ isStrict <- function(...) {
 
 
 #' Match the length of an object to an other object with warning
-#' 
+#'
 #' \code{repLen} is a wrapper around \code{rep_len} to recycle or crop a
 #' vector so that its length matches a pre-defined length. It throws a warning
 #' in such cases.
@@ -306,15 +306,15 @@ repLen <- function(x, len, x_name = NULL) {
             x
         }
     } else {
-        x
+        rep_len(x, len)
     }
 }
 
 
 #' Expansion in is* functions, with a fallback to repLen
-#' 
+#'
 #' \code{isExpandInto} is a wrapper around \code{expandInto} which is used
-#' in the is* functions to transform the arguments like ref., tol., etc. 
+#' in the is* functions to transform the arguments like ref., tol., etc.
 #' to match the input array.
 #' @keywords internal
 isExpandInto <- function(from, to, from_name) {
@@ -336,9 +336,9 @@ isExpandInto <- function(from, to, from_name) {
 }
 
 #' Get 'dim_index' of the subset. and expand. arguments in the is* functions
-#' 
-#' \code{checkIsSubsetExpand} is a tiny helper function to check the 
-#' 'dim_index' attributes of the 'subset.' and 'expand.' arguments in 
+#'
+#' \code{checkIsSubsetExpand} is a tiny helper function to check the
+#' 'dim_index' attributes of the 'subset.' and 'expand.' arguments in
 #' \code{is*} functions. It also checks for potential dimension overlaps.
 #' @keywords internal
 checkSubsetExpand <- function(subset., expand.) {
@@ -387,34 +387,34 @@ checkSubsetExpand <- function(subset., expand.) {
 }
 
 #' Call the internal function in is* functions on subsets and expand
-#' 
+#'
 #' \code{isMainCompFn} calls the internal function in the given \code{is*}
-#' function on the input vector or on the appropriate slices of the input 
+#' function on the input vector or on the appropriate slices of the input
 #' array.
 #' @param FUN. the internal function whose first two arguments are the data (x)
-#' and the options (options.). Additional arguments must be provided in dots 
+#' and the options (options.). Additional arguments must be provided in dots
 #' (...).
 #' @param subset.,expand.,which.dims.,options.,negate. obligatory arguments, see
 #' \code{is}
 #' @param ... arguments passed to FUN.
 #' @keywords internal
-isMainCompFn <- function(FUN., x, subset., expand., 
+isMainCompFn <- function(FUN., x, subset., expand.,
                          which_dims., options., negate., ...) {
     do_sub <- length(subset.) > 0L
     do_exp <- length(expand.) > 0L
-    out <- 
+    out <-
         if (length(dim(x)) > 0L && (do_sub | do_exp)) {
             if (do_sub) {
                 out <- array_(FALSE, dim(x), dimnames(x))
-                x_sub <- subsetArray(x, subset., which_dims.$subset., 
+                x_sub <- subsetArray(x, subset., which_dims.$subset.,
                                      drop. = FALSE)
-                subsetArray(out, subset., which_dims.$subset., drop. = FALSE) <- 
+                subsetArray(out, subset., which_dims.$subset., drop. = FALSE) <-
                     if (length(expand.) > 0L) {
                         expandInto(
-                            FUN.(subsetArray(x_sub, 
-                                             expand., 
+                            FUN.(subsetArray(x_sub,
+                                             expand.,
                                              which_dims.$expand.,
-                                             drop. = FALSE), 
+                                             drop. = FALSE),
                                  options., negate., ...),
                             x_sub,
                             fill = FALSE
@@ -425,15 +425,15 @@ isMainCompFn <- function(FUN., x, subset., expand.,
                 out
             } else if (do_exp) {
                 expandInto(
-                    FUN.(subsetArray(x, 
-                                     expand., 
+                    FUN.(subsetArray(x,
+                                     expand.,
                                      which_dims.$expand.,
-                                     drop. = FALSE), 
+                                     drop. = FALSE),
                          options., negate., ...),
                     x,
                     fill = FALSE
                 )
-            } 
+            }
         } else {
             FUN.(x, options., negate., ...)
         }
@@ -445,72 +445,72 @@ isMainCompFn <- function(FUN., x, subset., expand.,
 # < main functions > ------
 
 #' Test logical statements on data points
-#' 
-#' \code{is*} are functions which produce functions of class \code{IsFunction} 
-#' to test logical statements on each data point of an atomic object (vector, 
-#' matrix, or array). See Details for the general idea, Functions for the short 
+#'
+#' \code{is*} are functions which produce functions of class \code{IsFunction}
+#' to test logical statements on each data point of an atomic object (vector,
+#' matrix, or array). See Details for the general idea, Functions for the short
 #' function-specific descriptions and the section Use cases for short examples.
 #' @name is
 #' @param strict. logical value whether the tested condition is obligatory
 #' (TRUE, the default) or optional (FALSE). Only used for combining multiple
 #' tests (not available at the moment).
 #' @param negate. logical value whether the return value of the function should
-#' be negated (default: FALSE). You can also use the standard \code{\link{!}} 
-#' operator for negation which has a specific method for the \code{IsFunction} 
+#' be negated (default: FALSE). You can also use the standard \code{\link{!}}
+#' operator for negation which has a specific method for the \code{IsFunction}
 #' class (see Examples).
-#' @param subset.,expand. a named list of character, numeric, or logical 
-#' vectors or a subsetting function (of class IsFunction) indicating which 
-#' levels of which dimensions to subset or expand on (see Details). If an 
-#' unnamed list, it must have an attribute 'dim_index', referring to the numeric 
-#' indices of the dimensions to subset or expand on. Use it only if you are 
+#' @param subset.,expand. a named list of character, numeric, or logical
+#' vectors or a subsetting function (of class IsFunction) indicating which
+#' levels of which dimensions to subset or expand on (see Details). If an
+#' unnamed list, it must have an attribute 'dim_index', referring to the numeric
+#' indices of the dimensions to subset or expand on. Use it only if you are
 #' \emph{absolutely sure} about the datasets you want to test later on!
 #' @param ... further arguments passed to the wrapped function (see Functions
 #' for details)
-#' @details All \code{is*} functions return a function of the class 
-#' \code{IsFunction} which has only one argument, '\code{x}' (the data object 
-#' to test). '\code{x}' can be an atomic vector, matrix, or array; all other 
+#' @details All \code{is*} functions return a function of the class
+#' \code{IsFunction} which has only one argument, '\code{x}' (the data object
+#' to test). '\code{x}' can be an atomic vector, matrix, or array; all other
 #' object types result in error.\cr
 #' A second major rule is that all functions returned by an \code{is*}
-#' function return a logical object of the same shape as the input object. 
+#' function return a logical object of the same shape as the input object.
 #' The third rule is that the function returned by any \code{is*} function is
-#' a hard (strict) or soft (optional) constraint, controled by the 'strict.' 
-#' argument. This affects the way how the results are combined for joint 
+#' a hard (strict) or soft (optional) constraint, controled by the 'strict.'
+#' argument. This affects the way how the results are combined for joint
 #' logical tests (see \code{\link{combine}}).
 #' \cr
-#' Additionally, all \code{is*} functions has 'negate.', 'subset.', and 
-#' 'expand.' arguments. By setting 'negate.' to TRUE, the function can be 
-#' conceived of as a \code{not*} function. The same can be achieved by using 
+#' Additionally, all \code{is*} functions has 'negate.', 'subset.', and
+#' 'expand.' arguments. By setting 'negate.' to TRUE, the function can be
+#' conceived of as a \code{not*} function. The same can be achieved by using
 #' the standard negation operator (see Examples).\cr
-#' The 'subset.' and 'expand.' arguments are only considered if the returned 
-#' function will be called on matrices or arrays. If 'subset.' is provided, the 
+#' The 'subset.' and 'expand.' arguments are only considered if the returned
+#' function will be called on matrices or arrays. If 'subset.' is provided, the
 #' logical condition is tested only on the subsetted slice of the array, and
-#' all other data points in the array become FALSE (or TRUE, if negate. is 
-#' TRUE). The 'expand.' argument does the same except that it expands the 
-#' subsetted results to the original array instead of fixing the outer-subset 
+#' all other data points in the array become FALSE (or TRUE, if negate. is
+#' TRUE). The 'expand.' argument does the same except that it expands the
+#' subsetted results to the original array instead of fixing the outer-subset
 #' data points to FALSE (or TRUE). See Examples.
 #' @section Use cases:
 #' \subsection{\code{is*} as simple pre-defined test}{
 #' A very basic use case is to pre-define a logical rule and apply it to several
 #' objects. For example one can define\cr
 #' \code{rangeTest <- isBetween(200, 300)}\cr
-#' and use this rule to check for whatever numeric or numeric-like character 
-#' vector, matrix or array whether the values are between 200 and 300. If 
-#' \code{x} denotes the object, \code{rangeTest(x)} returns a logical object 
-#' of the same length and shape as \code{x} with TRUEs for values between 200 
+#' and use this rule to check for whatever numeric or numeric-like character
+#' vector, matrix or array whether the values are between 200 and 300. If
+#' \code{x} denotes the object, \code{rangeTest(x)} returns a logical object
+#' of the same length and shape as \code{x} with TRUEs for values between 200
 #' and 300 and FALSE otherwise.
 #' }
 #' \subsection{\code{is*} as function argument}{
-#' \code{is*} functions come in especially handy if they are used as function 
-#' arguments.\cr 
+#' \code{is*} functions come in especially handy if they are used as function
+#' arguments.\cr
 #' For example the code \code{subsetArray(erps, time = isBetween(200, 300))} is
 #' a very compact and readable way of subsetting the \code{erps} data array
-#' on its \code{time} dimension, selecting only that part of the array where 
+#' on its \code{time} dimension, selecting only that part of the array where
 #' \code{time >= 200 & time <= 300}. Note that this allows the definition
 #' of a subsetting rule without knowing in advance how the object which is to
-#' be subsetted looks like. For example you can define 
+#' be subsetted looks like. For example you can define
 #' \code{sub_def <- isBetween(200, 300)} beforehand and use \code{sub_def} as
 #' an argument in \code{subsetArray} for all data arrays if all of them have a
-#' \code{time} dimension measured in the same unit (note that the resolution and 
+#' \code{time} dimension measured in the same unit (note that the resolution and
 #' the time range may be different).
 #' }
 #' @seealso
@@ -518,14 +518,14 @@ isMainCompFn <- function(FUN., x, subset., expand.,
 #' how to check afterwards whether a test is strict or optional
 NULL
 
-#' @describeIn is produces a function to test whether the values in an atomic 
-#' character object match a pre-specified character pattern. See 
+#' @describeIn is produces a function to test whether the values in an atomic
+#' character object match a pre-specified character pattern. See
 #' \code{\link{grepl}} for further details and additional arguments.
-#' @param pattern. a character regexp pattern, see the 'pattern' argument in 
+#' @param pattern. a character regexp pattern, see the 'pattern' argument in
 #' \code{\link{grepl}}
 #' @export
 #' @examples
-#' # 
+#' #
 #' # example for isPattern #
 #' #
 #' # note how we pass the 'ignore.case' argument to the internally used
@@ -533,27 +533,25 @@ NULL
 #' check_start_a <- isPattern("^a", ignore.case = TRUE)
 #' check_start_a(c("a", "A", "ba"))
 #' \dontshow{
-#' # check the results -> note that the class and the attribute has to be 
+#' # check the results -> note that the class and the attribute has to be
 #' # removed by calling 'c' (or 'as.vector') to make the results identical
 #' stopifnot(identical(
-#'     c(check_start_a(c("a", "A", "ba"))), 
+#'     c(check_start_a(c("a", "A", "ba"))),
 #'     c(TRUE, TRUE, FALSE)
 #' ))
 #' }
-isPattern <- function(pattern., strict. = TRUE, negate. = FALSE, 
+isPattern <- function(pattern., strict. = TRUE, negate. = FALSE,
                       subset. = list(), expand. = list(), ...) {
     assertString(pattern., na.ok = FALSE, .var.name = "pattern.")
-    assertLogical(strict., len = 1L, any.missing = FALSE, 
-                  .var.name = "strict.")
-    assertLogical(negate., len = 1L, any.missing = FALSE, 
-                  .var.name = "negate.")
+    assertFlag(strict., .var.name = "strict.")
+    assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
     options. <- list(...)
     assertList(options., names = "unique", .var.name = "arguments in '...'")
     structure(
         function(x) {
             tempfn <- function(dat, options., negate., pattern.) {
-                out <- do("grepl", pattern., as.vector(dat), 
+                out <- do("grepl", pattern., as.vector(dat),
                           arg_list = options.)
                 setattr(out, "dim", dim(dat))
                 setattr(out, "dimnames", dimnames(dat))
@@ -562,17 +560,17 @@ isPattern <- function(pattern., strict. = TRUE, negate. = FALSE,
             #
             assertCharacter(x, .var.name = "x")
             out <- isMainCompFn(tempfn, x, subset., expand., which_dims.,
-                                options., negate., 
+                                options., negate.,
                                 pattern. = pattern.)
         }, .MUST = strict., class = "IsFunction")
 }
 
-#' @describeIn is produces a function to test whether the values in an atomic 
+#' @describeIn is produces a function to test whether the values in an atomic
 #' object are equal to a (vector of) reference value(s) with a given tolerance.
-#' The returned function accepts objects of any type for which \code{asNumeric} 
-#' does not fail (see the documentation of \code{\link{asNumeric}}).
-#' @param ref. the reference value or a vector (or matrix/array) of reference 
-#' values. 
+#' The returned function accepts objects of any type for which \code{as.Numeric}
+#' does not fail (see the documentation of \code{\link{as.Numeric}}).
+#' @param ref. the reference value or a vector (or matrix/array) of reference
+#' values.
 #' @param tol. tolerance value, the maximum difference which is still tolerated.
 #' Can be a vector (or matrix/array) as well.
 #' @export
@@ -584,41 +582,41 @@ isPattern <- function(pattern., strict. = TRUE, negate. = FALSE,
 #' check_zero(c("0", "0.000001", "1"))
 #' \dontshow{
 #' stopifnot(identical(
-#'     c(check_zero(c("0", "0.000001", "1"))), 
+#'     c(check_zero(c("0", "0.000001", "1"))),
 #'     c(TRUE, TRUE, FALSE)
 #' ))
 #' }
-#' 
-#' # note that just like for other is* functions, the reference and the 
+#'
+#' # note that just like for other is* functions, the reference and the
 #' # tolerance can be vectors (or even matrices or arrays), not only scalars,
 #' # and its values are recycled or cropped if necessarily to match the length
 #' # of the 'x' object
 #' check_values <- isEqual(c(0, 1, 2))
 #' check_values(c(0, 1.1, 2, 1e-9))
-#' 
+#'
 #' \dontshow{
 #' stopifnot(identical(
-#'     c(check_values(c(0, 1.1, 2, 1e-9))), 
+#'     c(check_values(c(0, 1.1, 2, 1e-9))),
 #'     c(TRUE, FALSE, TRUE, TRUE)
 #' ))
 #' }
-#' 
-#' # it is also possible to base the check only on a subset of x and also 
-#' # on a reference slice of x which is then expanded back to the original 
+#'
+#' # it is also possible to base the check only on a subset of x and also
+#' # on a reference slice of x which is then expanded back to the original
 #' # array;
 #' # here we want to test that in the "pre-test" phase of an experiment which
-#' # observations had a width of 1 with 0.1 tolerance (expanded also to height) 
-#' check_width <- isEqual(1, tol. = 0.1, 
+#' # observations had a width of 1 with 0.1 tolerance (expanded also to height)
+#' check_width <- isEqual(1, tol. = 0.1,
 #'                        subset. = list(time = "pre"),
 #'                        expand. = list(measure = "width")
 #'                        )
-#' ( x <- array(c(1.001, 1.6, 1.2, 1.003, 1.01, 1, 4, 3.5), 
-#'              dim = c(2, 2, 2), 
-#'              dimnames = list(observation = c("a", "b"), 
+#' ( x <- array(c(1.001, 1.6, 1.2, 1.003, 1.01, 1, 4, 3.5),
+#'              dim = c(2, 2, 2),
+#'              dimnames = list(observation = c("a", "b"),
 #'                              measure = c("width", "height"),
 #'                              time = c("pre", "post"))) )
 #' ( res <- check_width(x) )
-#' 
+#'
 #' # note that all "time = post" data points are FALSE, and also that
 #' # all height measures are TRUE where width is TRUE
 #' array(paste(x, res, sep = ": "), dim(x), dimnames(x))
@@ -637,29 +635,27 @@ isPattern <- function(pattern., strict. = TRUE, negate. = FALSE,
 #' res2 <- check_width(x)
 #' stopifnot(identical(res, res2))
 #' }
-#' 
+#'
 #' # isEqual, just like all other is* functions, can be negated:
 #' check_not_zero <- isEqual(0, negate. = TRUE)
 #' check_not_zero(1)
 #' \dontshow{
 #' stopifnot(check_not_zero(1))
 #' }
-#' 
+#'
 #' # the same can be achieved by using ! for negation
 #' check_not_zero2 <- !isEqual(0)
 #' check_not_zero2(1)
 #' \dontshow{
 #' stopifnot(identical(check_not_zero(1), check_not_zero2(1)))
 #' }
-isEqual <- function(ref., tol. = .Machine$double.eps^0.5, 
-                    strict. = TRUE, negate. = FALSE, 
+isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
+                    strict. = TRUE, negate. = FALSE,
                     subset. = list(), expand. = list(), ...) {
-    ref. <- asNumeric_(ref.)
-    tol. <- asNumeric_(tol.)
-    assertLogical(strict., len = 1L, any.missing = FALSE, 
-                  .var.name = "strict.")
-    assertLogical(negate., len = 1L, any.missing = FALSE, 
-                  .var.name = "negate.")
+    ref. <- as.Numeric_(ref.)
+    tol. <- as.Numeric_(tol.)
+    assertFlag(strict., .var.name = "strict.")
+    assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
     options. <- list(...)
     assertList(options., names = "unique", .var.name = "arguments in '...'")
@@ -681,21 +677,21 @@ isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
                     }
                 # return
                 if (!negate.) {
-                    abs(dat - ref.) <= tol. 
+                    abs(dat - ref.) <= tol.
                 } else {
                     abs(dat - ref.) > tol.
                 }
             }
             #
-            x <- asNumeric_(x)
+            x <- as.Numeric_(x)
             isMainCompFn(tempfn, x, subset., expand., which_dims.,
-                         options., negate., 
+                         options., negate.,
                          ref. = ref., tol. = tol.)
         }, .MUST = strict., class = "IsFunction")
 }
 
 
-#' @describeIn is produces a function to test whether the values in an atomic 
+#' @describeIn is produces a function to test whether the values in an atomic
 #' object are the same as a (vector of) reference value(s). It is a wrapper
 #' around \code{\link{==}}. If you want to test numeric values, \code{isEqual}
 #' is a much better alternative.
@@ -708,16 +704,14 @@ isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
 #' check_not_A(c("a", "A"))
 #' \dontshow{
 #' stopifnot(identical(
-#'     c(check_not_A(c("a", "A"))), 
+#'     c(check_not_A(c("a", "A"))),
 #'     c(TRUE, FALSE)
 #' ))
 #' }
-isSame <- function(ref., strict. = TRUE, negate. = FALSE, 
+isSame <- function(ref., strict. = TRUE, negate. = FALSE,
                    subset. = list(), expand. = list(), ...) {
-    assertLogical(strict., len = 1L, any.missing = FALSE, 
-                  .var.name = "strict.")
-    assertLogical(negate., len = 1L, any.missing = FALSE, 
-                  .var.name = "negate.")
+    assertFlag(strict., .var.name = "strict.")
+    assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
     options. <- list(...)
     assertList(options., names = "unique", .var.name = "arguments in '...'")
@@ -734,7 +728,7 @@ isSame <- function(ref., strict. = TRUE, negate. = FALSE,
             }
             # return
             isMainCompFn(tempfn, x, subset., expand., which_dims.,
-                         options., negate., 
+                         options., negate.,
                          ref. = ref.)
         }, .MUST = strict., class = "IsFunction")
 }
@@ -742,13 +736,13 @@ isSame <- function(ref., strict. = TRUE, negate. = FALSE,
 
 #' @describeIn is produces a function to test whether
 #' the values in an atomic object are between pre-specified limits.
-#' The returned function accepts objects of any type for which \code{asNumeric} 
-#' does not fail (see the documentation of \code{\link{asNumeric}}).
+#' The returned function accepts objects of any type for which \code{as.Numeric}
+#' does not fail (see the documentation of \code{\link{as.Numeric}}).
 #' @param lwr.,upr. numeric values referring to the lower and upper limit
 #' (the defaults are -Inf and Inf, respectively). Both lwr. and upr. can be
 #' scalars and vectors as well.
 #' @param open. the side of the interval which is open (that is, it does not
-#' contain the given endpoint); can be "none" (the default), "both", lwr" or 
+#' contain the given endpoint); can be "none" (the default), "both", lwr" or
 #' "upr"
 #' @export
 #' @examples
@@ -760,21 +754,19 @@ isSame <- function(ref., strict. = TRUE, negate. = FALSE,
 #' check_0_100(c(-1, 1, 101))
 #' \dontshow{
 #' stopifnot(identical(
-#'     c(check_0_100(c(-1, 1, 101))), 
+#'     c(check_0_100(c(-1, 1, 101))),
 #'     c(FALSE, TRUE, FALSE)
 #' ))
 #' }
-isBetween <- function(lwr. = -Inf, upr. = Inf, 
+isBetween <- function(lwr. = -Inf, upr. = Inf,
                       open. = c("none", "both", "lwr", "upr"),
-                      strict. = TRUE, negate. = FALSE, 
+                      strict. = TRUE, negate. = FALSE,
                       subset. = list(), expand. = list(), ...) {
-    lwr. <- asNumeric_(lwr.)
-    upr. <- asNumeric_(upr.)
+    lwr. <- as.Numeric_(lwr.)
+    upr. <- as.Numeric_(upr.)
     open. <- match.arg(open.)
-    assertLogical(strict., len = 1L, any.missing = FALSE, 
-                  .var.name = "strict.")
-    assertLogical(negate., len = 1L, any.missing = FALSE, 
-                  .var.name = "negate.")
+    assertFlag(strict., .var.name = "strict.")
+    assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
     options. <- list(...)
     assertList(options., names = "unique", .var.name = "arguments in '...'")
@@ -814,39 +806,39 @@ isBetween <- function(lwr. = -Inf, upr. = Inf,
                 if (!negate.) out else !out
             }
             #
-            x <- asNumeric_(x)
+            x <- as.Numeric_(x)
             # return
             isMainCompFn(tempfn, x, subset., expand., which_dims.,
-                         options., negate., 
+                         options., negate.,
                          lwr. = lwr., upr. = upr., open. = open.)
         }, .MUST = strict., class = "IsFunction")
 }
 
-#' @describeIn is produces a function to test whether the values in an atomic 
-#' object are negative. The returned function accepts 
-#' objects of any type for which \code{asNumeric} 
-#' does not fail (see the documentation of \code{\link{asNumeric}}).
+#' @describeIn is produces a function to test whether the values in an atomic
+#' object are negative. The returned function accepts
+#' objects of any type for which \code{as.Numeric}
+#' does not fail (see the documentation of \code{\link{as.Numeric}}).
 #' @export
-isNegative <- function(strict. = TRUE, negate. = FALSE, 
+isNegative <- function(strict. = TRUE, negate. = FALSE,
                        subset. = list(), expand. = list(), ...) {
     isBetween(-Inf, 0, "upr", strict., negate., subset., expand., ...)
 }
 
-#' @describeIn is produces a function to test whether the values in an atomic 
-#' object are positive. The returned function accepts 
-#' objects of any type for which \code{asNumeric} 
-#' does not fail (see the documentation of \code{\link{asNumeric}}).
+#' @describeIn is produces a function to test whether the values in an atomic
+#' object are positive. The returned function accepts
+#' objects of any type for which \code{as.Numeric}
+#' does not fail (see the documentation of \code{\link{as.Numeric}}).
 #' @export
-isPositive <- function(strict. = TRUE, negate. = FALSE, 
+isPositive <- function(strict. = TRUE, negate. = FALSE,
                        subset. = list(), expand. = list(), ...) {
     isBetween(0, Inf, "lwr", strict., negate., subset., expand., ...)
 }
 
-#' @describeIn is produces a function to test whether the the values in an 
+#' @describeIn is produces a function to test whether the the values in an
 #' atomic object are local or global extrema. See \code{\link{findExtrema}}
-#' for additional details and further arguments. The returned function accepts 
-#' objects of any type for which \code{asNumeric} 
-#' does not fail (see the documentation of \code{\link{asNumeric}}).
+#' for additional details and further arguments. The returned function accepts
+#' objects of any type for which \code{as.Numeric}
+#' does not fail (see the documentation of \code{\link{as.Numeric}}).
 #' @param what. specifies whether minima ("min"), maxima ("max") or
 #' extrema ("both", the default) should be tested
 #' @export
@@ -854,24 +846,22 @@ isPositive <- function(strict. = TRUE, negate. = FALSE,
 #' #
 #' # example for isExtremum #
 #' #
-#' # note how we can pass the 'global' and 'tail' arguments to the internal 
+#' # note how we can pass the 'global' and 'tail' arguments to the internal
 #' # findExtrema() function (see ?findExtrema)
 #' check_global_extr <- isExtremum(global = TRUE, tail = "do_not_care")
 #' check_global_extr(c(-1, 1, 0, 100, 50))
 #' \dontshow{
 #' stopifnot(identical(
-#'     c(check_global_extr(c(-1, 1, 0, 100, 50))), 
+#'     c(check_global_extr(c(-1, 1, 0, 100, 50))),
 #'     c(TRUE, FALSE, FALSE, TRUE, FALSE)
 #' ))
 #' }
-isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE, 
-                       negate. = FALSE, 
+isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE,
+                       negate. = FALSE,
                        subset. = list(), expand. = list(), ...) {
     what. <- match.arg(what.)
-    assertLogical(strict., len = 1L, any.missing = FALSE, 
-                  .var.name = "strict.")
-    assertLogical(negate., len = 1L, any.missing = FALSE, 
-                  .var.name = "negate.")
+    assertFlag(strict., .var.name = "strict.")
+    assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
     options. <- list(...)
     assertList(options., names = "unique", .var.name = "arguments in '...'")
@@ -880,51 +870,51 @@ isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE,
         function(x) {
             tempfn <- function(x, options., negate., what.) {
                 out <- do("findExtrema", x, arg_list = options.)
-                out <- switch(what., 
+                out <- switch(what.,
                               max = out == 1L,
                               min = out == -1L,
                               both = (out == 1L) | (out == -1L))
                 if (!negate.) out else !out
             }
             #
-            x <- asNumeric_(x)
+            x <- as.Numeric_(x)
             # return
             isMainCompFn(tempfn, x, subset., expand., which_dims.,
-                         options., negate., 
+                         options., negate.,
                          what. = what.)
         }, .MUST = strict., class = "IsFunction")
 }
 
-#' @describeIn is a shorthand for \code{isExtremum("max", ...)}. See 
-#' \code{\link{findExtrema}} for additional details and further arguments. 
+#' @describeIn is a shorthand for \code{isExtremum("max", ...)}. See
+#' \code{\link{findExtrema}} for additional details and further arguments.
 #' @export
-isLocalMaximum <- function(strict. = TRUE, negate. = FALSE, 
+isLocalMaximum <- function(strict. = TRUE, negate. = FALSE,
                            subset. = list(), expand. = list(), ...) {
     isExtremum("max", strict., negate., subset., expand., ...)
 }
 
-#' @describeIn is a shorthand for \code{isExtremum("min", ...)}. See 
-#' \code{\link{findExtrema}} for additional details and further arguments. 
+#' @describeIn is a shorthand for \code{isExtremum("min", ...)}. See
+#' \code{\link{findExtrema}} for additional details and further arguments.
 #' @export
-isLocalMinimum <- function(strict. = TRUE, negate. = FALSE, 
+isLocalMinimum <- function(strict. = TRUE, negate. = FALSE,
                            subset. = list(), expand. = list(), ...) {
     isExtremum("min", strict., negate., subset., expand., ...)
 }
 
-#' @describeIn is a shorthand for 
-#' \code{isExtremum("max", global = TRUE, ...)}. See 
-#' \code{\link{findExtrema}} for additional details and further arguments. 
+#' @describeIn is a shorthand for
+#' \code{isExtremum("max", global = TRUE, ...)}. See
+#' \code{\link{findExtrema}} for additional details and further arguments.
 #' @export
-isMaximum <- function(strict. = TRUE, negate. = FALSE, 
+isMaximum <- function(strict. = TRUE, negate. = FALSE,
                       subset. = list(), expand. = list(), ...) {
     isExtremum("max", strict., negate., subset., expand., global = TRUE, ...)
 }
 
-#' @describeIn is a shorthand for 
-#' \code{isExtremum("min", global = TRUE, ...)}. See 
-#' \code{\link{findExtrema}} for additional details and further arguments. 
+#' @describeIn is a shorthand for
+#' \code{isExtremum("min", global = TRUE, ...)}. See
+#' \code{\link{findExtrema}} for additional details and further arguments.
 #' @export
-isMinimum <- function(strict. = TRUE, negate. = FALSE, 
+isMinimum <- function(strict. = TRUE, negate. = FALSE,
                       subset. = list(), expand. = list(), ...) {
     isExtremum("min", strict., negate., subset., expand., global = TRUE, ...)
 }

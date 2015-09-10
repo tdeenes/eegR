@@ -127,8 +127,8 @@ character object match a pre-specified character pattern. See
 
 \item \code{isEqual}: produces a function to test whether the values in an atomic
 object are equal to a (vector of) reference value(s) with a given tolerance.
-The returned function accepts objects of any type for which \code{asNumeric}
-does not fail (see the documentation of \code{\link{asNumeric}}).
+The returned function accepts objects of any type for which \code{as.Numeric}
+does not fail (see the documentation of \code{\link{as.Numeric}}).
 
 \item \code{isSame}: produces a function to test whether the values in an atomic
 object are the same as a (vector of) reference value(s). It is a wrapper
@@ -137,24 +137,24 @@ is a much better alternative.
 
 \item \code{isBetween}: produces a function to test whether
 the values in an atomic object are between pre-specified limits.
-The returned function accepts objects of any type for which \code{asNumeric}
-does not fail (see the documentation of \code{\link{asNumeric}}).
+The returned function accepts objects of any type for which \code{as.Numeric}
+does not fail (see the documentation of \code{\link{as.Numeric}}).
 
 \item \code{isNegative}: produces a function to test whether the values in an atomic
 object are negative. The returned function accepts
-objects of any type for which \code{asNumeric}
-does not fail (see the documentation of \code{\link{asNumeric}}).
+objects of any type for which \code{as.Numeric}
+does not fail (see the documentation of \code{\link{as.Numeric}}).
 
 \item \code{isPositive}: produces a function to test whether the values in an atomic
 object are positive. The returned function accepts
-objects of any type for which \code{asNumeric}
-does not fail (see the documentation of \code{\link{asNumeric}}).
+objects of any type for which \code{as.Numeric}
+does not fail (see the documentation of \code{\link{as.Numeric}}).
 
 \item \code{isExtremum}: produces a function to test whether the the values in an
 atomic object are local or global extrema. See \code{\link{findExtrema}}
 for additional details and further arguments. The returned function accepts
-objects of any type for which \code{asNumeric}
-does not fail (see the documentation of \code{\link{asNumeric}}).
+objects of any type for which \code{as.Numeric}
+does not fail (see the documentation of \code{\link{as.Numeric}}).
 
 \item \code{isLocalMaximum}: a shorthand for \code{isExtremum("max", ...)}. See
 \code{\link{findExtrema}} for additional details and further arguments.
