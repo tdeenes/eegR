@@ -4,52 +4,70 @@
 \alias{array2df}
 \title{Transforms an array to a data.frame}
 \usage{
-array2df(dat, response_name = "values", response_type = typeof(dat),
-  dim_types = "character", row_names = NULL, na_omit = FALSE, ...)
+array2df(dat, value_name = "values", value_dim = NULL,
+  value_type = typeof(dat), auto_convert = FALSE, na_omit = FALSE, ...)
 }
 \arguments{
 \item{dat}{a matrix or array}
 
-\item{response_name}{the name of the variable in the data.frame which
-contains the values of the input (default: "values")}
+\item{value_name}{the name of the variable in the data.frame which
+contains the values of the input (default: "values"). If 'value_dim' is
+not NULL or \code{character(0L)}, the name of the value-columns will start
+with 'value_name'.}
 
-\item{response_type}{a character value which specifies the type of the
-response (default: \code{typeof(dat)}). Possible types are "logical",
+\item{value_dim}{numeric or character index(es) of dimension(s) whose
+levels should be handled as separate measures. They appear as separate
+variables in the returned data.frame. The default is NULL, which means
+that one variable will contain all data points of the array.}
+
+\item{value_type}{a character value which specifies the type of the
+measure (default: \code{typeof(dat)}). Possible types are "logical",
 "character", "numeric", "double", "integer", "factor", "raw", "complex".}
 
-\item{dim_types}{a character value or a named list which specifies
-the type of the variable in the data.frame corresponding to the dimension of
-the input array. If one character value is given, all variables are
-transformed to that type (default: "character").}
-
-\item{row_names}{NULL or a single integer or character string specifying a
-column to be used as row names, or a character or integer vector giving the
-row names for the data frame}
+\item{auto_convert}{a logical value whether automatic conversion of
+dimension names (i.e., characters to numeric (if possible) or to factors)
+should be performed (default: FALSE).}
 
 \item{na_omit}{if TRUE, omit all rows from the data.frame which have missing
 values (default: FALSE)}
 
-\item{...}{named arguments passed to \code{\link{decorateDims}}}
+\item{...}{named arguments passed to \code{\link{autoConvert}} if
+'auto_convert' is TRUE}
 }
 \value{
-A data.frame
+The function returns a data.frame.
 }
 \description{
 \code{array2df} transforms an array to a data.frame
+}
+\details{
+By default, this function returns a data.frame with as many
+variables as the number of dimensions of the array, coding the levels
+of each dimension, plus an extra variable containing the values of the array.
+However, 'dat' might be an array of different measures, e.g. one of the
+dimensions might have two levels: 'weight' and 'height' which should
+appear as separate variables in the returned data.frame. If this is the case,
+one should provide the name or index of the given dimension in the argument
+'value_dim'. If more dimensions are given in 'value_dim', all combinations
+of their levels will be returned as separate variables. The names of these
+variables will contain the character string as given in 'value_name', plus
+the concatenated names of the corresponding dimensions and dimension levels.
 }
 \examples{
 # example data
 data(erps)
 
-# transform to data.frame, change the default response name to "amplitudes"
-str(array2df(erps, response_name = "amplitudes"))
+# transform to data.frame, change the default value name to "amplitudes"
+str(array2df(erps, value_name = "amplitudes"))
 
 # treat all dimensions as factors, except for the time dimension, which
-# should be integer
-str(array2df(erps, dim_types = list(stimclass = "factor",
-                                    pairtype = "factor",
-                                    chan = "factor",
-                                    time = "integer",
-                                    id = "factor")))
+# should be integer, and return the three levels of the stimulus class
+# dimension in wide format (as separate variables)
+str(array2df(erps, value_name = "amplitudes", value_dim = "stimclass",
+             auto_convert = TRUE))
+}
+\seealso{
+\code{\link{autoConvert}} for coercion, and
+\code{\link{transformArray}} for a higher-level version of \code{array2df}
 }
 

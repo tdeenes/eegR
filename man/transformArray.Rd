@@ -4,21 +4,28 @@
 \alias{transformArray}
 \title{Data preparation mainly aimed at facilitating plotting in lattice or ggplot2}
 \usage{
-transformArray(formula, data, group = NULL, subset = NULL, datfr = TRUE,
-  auto_dimtype = TRUE, ...)
+transformArray(formula, data, group = NULL, group_fun = "avgDims",
+  subset = NULL, datfr = TRUE, auto_convert = TRUE, ...)
 }
 \arguments{
 \item{formula}{an object of class "formula" (or one that can be coerced to
-that class): a symbolic description of the transformation steps before
-converting the \code{array} to a \code{data.frame}. The details of how to
-specify the transformations are given under 'Details'.}
+that class, e.g., a character string): a symbolic description of the
+transformation steps before converting the \code{array} to a
+\code{data.frame}. See Details.}
 
 \item{data}{a matrix or an array. Must have named dimnames.}
 
 \item{group}{a list of grouping factors in the order of appearance in the
 transformation formula (see 'Details'). If a named list is provided, those
 names are used as the names of dimnames for the given grouping dimensions.
-It can be a simple vector if there are only one splitting factor.}
+It can be a simple vector if there is only one splitting factor.}
+
+\item{group_fun}{a function (or symbol or character string
+naming a function) which should be performed on the groups (i.e., on the
+list of arrays after splitting). \code{group_fun} must be a function which
+expects an array and a vector of dimension names as input and returns an
+array (or vector). Defaults to \code{avgDims}, which collapses (averages
+over) the grouping dimensions.}
 
 \item{subset}{a list of subsetting vectors on the input array passed to
 \code{\link{subsetArray}} before any transformation steps}
@@ -26,14 +33,17 @@ It can be a simple vector if there are only one splitting factor.}
 \item{datfr}{a logical value (default: TRUE) if the resulting array shall be
 transformed to a data.frame}
 
-\item{auto_dimtype}{a logical value (default: TRUE) if dimension types
-shall be automatically transformed to "logical", "integer", "numeric" or
-"factor". Ignored if datfr is FALSE or if dim_types is explicitly provided.}
+\item{auto_convert}{a logical value whether automatic conversion of
+dimension names (i.e., characters to numeric (if possible) or to factors)
+should be performed (default: TRUE). Set to FALSE and call
+\code{\link{autoConvert}} directly on the returned data frame if you need
+more control.}
 
 \item{...}{additional parameters to be passed to \code{\link{array2df}}}
 }
 \value{
-A data.frame if datfr is TRUE, and an array if datfr is FALSE
+The function returns a data.frame if 'datfr' is TRUE, and an array
+if 'datfr' is FALSE.
 }
 \description{
 \code{transformArray} provides several options to transform an array to a
@@ -43,52 +53,84 @@ conversion if compact code is desirable.
 }
 \details{
 The formula interface of \code{transformArray} shall be given in
-the form of
-\code{whateverFn(response_name, args) ~ dimA + .(dimC, dimD)}
-Dimensions which are not present on the right hand side (RHS) of the formula
-(e.g., dimB) are collapsed by calling \code{\link{avgDims}}. A simple .
-can be used in the RHS and means "all dimensions not otherwise present in
-the formula".
+the form of\cr
 
-Dimensions in parentheses (dimC and dimD, note the dot before
-the parenthesis) refer to the to-be-splitted dimensions (the corresponding
-list of splitting vectors must be given in the \code{group} argument).
-Splitting is performed by calling \code{\link{splitArray}}, and the splitted
-dimensions are immediately collapsed in the resulting list by calling
-\code{\link{avgDims}}.
+\code{fun(y[d1, d2], fun_args) ~ . - d3 | d4 + d5}\cr
 
-The left-hand side (LHS) of the formula provides the name of the response
-variable ("y") if data.frame conversion is requested (which is the default),
-and also allows arbitrary computations (e.g., calling \code{\link{compGfp}}
-on the array.
-
-If there were any splitting factors, the resulting list is
-back-transformed to an array. After the transformations, the array is
-converted to a data.frame if \code{datfr} is TRUE.
+where
+\describe{
+ \item{\code{fun }}{optional; an arbitrary function whose first argument is
+ the data, and returns an array (optional)}
+ \item{\code{y }}{the name of the variable which holds the values in the
+ returned data.frame (if 'datfr' is TRUE). See also \code{\link{array2df}}.}
+ \item{\code{[d1,d2] }}{optional; the dimensions of the data array whose
+ levels should be treated as separate value-variables in the returned
+ data.frame should be listed between squared brackets after the general
+ name of the value variable. If you do not want to have a general name,
+ place a dot (\code{.}) before the brackets. See also
+ \code{\link{array2df}}.}
+ \item{\code{. }}{a dot on the right-hand side [RHS] of the formula means
+ 'all dimensions of the data array which are not explicitly mentioned in
+ the formula'. The dimension names can be explicitly provided as well,
+ separated by \code{+}.}
+ \item{\code{d3 }}{optional; any dimension of the data array which is
+ preceeded by a minus sign or any dimension which is not present in the
+ formula will be collapsed (averaged over)}
+ \item{\code{d4,d5 }}{dimensions after the \code{|} sign are treated as
+ conditioning (grouping) dimensions, and shall be separated by \code{+} or
+ \code{*}.}
+}
+\cr
+\code{transformArray} performs the following actions:
+\enumerate{
+ \item Takes the input array ('data') and subsets it if 'subset' is not NULL
+ or an empty list.
+ \item Calls \code{\link{avgDims}} on the (subsetted) data, and collapses
+ over all dimensions which are preceeded by \code{-} in the formula or are
+ not present in any other part of the formula.
+ \item Calls \code{\link{splitArray}} on the averaged data with the
+ conditioning dimensions in the formula. The 'group' argument is
+ passed to the \code{\link{splitArray}} as the grouping argument ('f' in
+ \code{splitArray}). For each data array which is returned after splitting,
+ \code{group_fun} is called with the character vector of the grouping
+ dimension names as its second argument. The resulting arrays are merged
+ back to form one array.
+ \item If the left-hand side of the formula contains a function (see
+ \code{fun} above), this function is called on the merged array with its
+ arguments as given in \code{fun_args}.
+ \item If 'datfr' is TRUE (the default), the resulting array is transformed
+ to a data.frame by calling \code{array2df}.
+}
 }
 \examples{
 # example dataset
 data(erps)
 dat_id <- attr(erps, "id") # to get reading group memberships
 
-# collapse all dimensions except for stimclass and pairtype
-str(transformArray(y ~ stimclass + pairtype, erps))
+# compute simple grand averages (collapse over the 'id' dimension) and
+# return it as a data.frame
+DF <- transformArray(~ . - id, erps)
+head(DF, 10)
 
-# analyze separately dyslexic and control subjects, also compute Global Field
-# Power
-res1 <- transformArray(compGfp(y, keep_channels = TRUE) ~ . + .(id),
+# compute the grand averages for each level of pairtype in each channel and
+# time points; return the amplitudes of pairtype as separate variables in
+# a data.frame
+DF <- transformArray(ampl[pairtype] ~ time + chan, erps)
+head(DF, 10)
+
+# compute the grand averages of dyslexic and control subjects, and also
+# compute the Global Field Power (and transform to data.frame)
+res1 <- transformArray(compGfp(ampl, keep_channels = TRUE) ~ . | id,
                        erps, list(readgroup = dat_id$group))
 
-# the same with much more typing
+# the same with much more typing, and it would be even longer to make
+# it safer (e.g., match the order of dimensions, handle more grouping
+# dimensions, etc.)
 res2 <- splitArray(erps, "id", list(readgroup = dat_id$group))
-split_dnn <- dimnames(res2)
-names(split_dnn) <- names(dim(res2))
-res2 <- lapply(res2, avgDims, "id")
-res2 <- lapply(res2, compGfp, keep_channels = TRUE)
-res2 <- bindArrays(res2, along = 0L)
-res2 <- dim2multidim(res2, 1, expand.grid(split_dnn))
-res2 <- array2df(res2, response_name = "y", dim_types = "factor")
-res2$time <- as.integer(as.character(res2$time))
+res2[] <- lapply(res2, avgDims, "id")
+res2 <- bindArrays(res2, along_name = "readgroup")
+res2 <- compGfp(res2, keep_channels = TRUE)
+res2 <- array2df(res2, value_name = "ampl", auto_convert = TRUE)
 stopifnot(identical(res1, res2))
 }
 

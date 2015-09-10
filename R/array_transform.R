@@ -557,12 +557,10 @@ matrix_ <- function(x, nrow, ncol, byrow = FALSE,
             nrow <- length(x)
             ncol <- 1L
         } else if (missing(nrow)) {
-            assertNumeric(ncol, len = 1L, any.missing = FALSE,
-                          .var.name = "ncol")
+            assertCount(ncol, .var.name = "ncol")
             nrow <- length(x)/as.integer(ncol)
         } else if (missing(ncol)) {
-            assertNumeric(nrow, len = 1L, any.missing = FALSE,
-                          .var.name = "nrow")
+            assertCount(nrow, .var.name = "nrow")
             ncol <- length(x)/as.integer(nrow)
         }
         nrow <- as.integer(nrow)
@@ -1226,73 +1224,133 @@ mat2array <- function(dat, dims = NULL, row_dim = NULL) {
 #'
 #' \code{array2df} transforms an array to a data.frame
 #' @param dat a matrix or array
-#' @param response_name the name of the variable in the data.frame which
-#' contains the values of the input (default: "values")
-#' @param response_type a character value which specifies the type of the
-#' response (default: \code{typeof(dat)}). Possible types are "logical",
+#' @param value_name the name of the variable in the data.frame which
+#' contains the values of the input (default: "values"). If 'value_dim' is 
+#' not NULL or \code{character(0L)}, the name of the value-columns will start 
+#' with 'value_name'.
+#' @param value_dim numeric or character index(es) of dimension(s) whose
+#' levels should be handled as separate measures. They appear as separate
+#' variables in the returned data.frame. The default is NULL, which means
+#' that one variable will contain all data points of the array.
+#' @param value_type a character value which specifies the type of the
+#' measure (default: \code{typeof(dat)}). Possible types are "logical",
 #' "character", "numeric", "double", "integer", "factor", "raw", "complex".
-#' @param dim_types a character value or a named list which specifies
-#' the type of the variable in the data.frame corresponding to the dimension of
-#' the input array. If one character value is given, all variables are
-#' transformed to that type (default: "character").
-#' @param row_names NULL or a single integer or character string specifying a
-#' column to be used as row names, or a character or integer vector giving the
-#' row names for the data frame
+#' @param auto_convert a logical value whether automatic conversion of
+#' dimension names (i.e., characters to numeric (if possible) or to factors)
+#' should be performed (default: FALSE). 
 #' @param na_omit if TRUE, omit all rows from the data.frame which have missing
 #' values (default: FALSE)
-#' @param ... named arguments passed to \code{\link{decorateDims}}
+#' @param ... named arguments passed to \code{\link{autoConvert}} if 
+#' 'auto_convert' is TRUE
+#' @details By default, this function returns a data.frame with as many 
+#' variables as the number of dimensions of the array, coding the levels
+#' of each dimension, plus an extra variable containing the values of the array.
+#' However, 'dat' might be an array of different measures, e.g. one of the
+#' dimensions might have two levels: 'weight' and 'height' which should 
+#' appear as separate variables in the returned data.frame. If this is the case,
+#' one should provide the name or index of the given dimension in the argument
+#' 'value_dim'. If more dimensions are given in 'value_dim', all combinations 
+#' of their levels will be returned as separate variables. The names of these
+#' variables will contain the character string as given in 'value_name', plus
+#' the concatenated names of the corresponding dimensions and dimension levels.
 #' @export
-#' @return A data.frame
+#' @return The function returns a data.frame.
+#' @seealso \code{\link{autoConvert}} for coercion, and 
+#' \code{\link{transformArray}} for a higher-level version of \code{array2df}
 #' @examples
 #' # example data
 #' data(erps)
 #'
-#' # transform to data.frame, change the default response name to "amplitudes"
-#' str(array2df(erps, response_name = "amplitudes"))
+#' # transform to data.frame, change the default value name to "amplitudes"
+#' str(array2df(erps, value_name = "amplitudes"))
 #'
 #' # treat all dimensions as factors, except for the time dimension, which
-#' # should be integer
-#' str(array2df(erps, dim_types = list(stimclass = "factor",
-#'                                     pairtype = "factor",
-#'                                     chan = "factor",
-#'                                     time = "integer",
-#'                                     id = "factor")))
-array2df <- function(dat, response_name = "values",
-                     response_type = typeof(dat), dim_types = "character",
-                     row_names = NULL, na_omit = FALSE, ...) {
-    valid_types <- c("logical", "character", "integer",
-                     "numeric", "double", "factor", "complex", "raw")
-    if (!response_type %in% valid_types) {
-        stop("Invalid response_type argument")
-    }
-    if (!all(unlist(dim_types, use.names = FALSE) %in% valid_types)) {
-        stop("Invalid dim_type argument")
-    }
+#' # should be integer, and return the three levels of the stimulus class
+#' # dimension in wide format (as separate variables)
+#' str(array2df(erps, value_name = "amplitudes", value_dim = "stimclass",
+#'              auto_convert = TRUE))
+array2df <- function(dat, value_name = "values", value_dim = NULL,
+                     value_type = typeof(dat), 
+                     auto_convert = FALSE,
+                     na_omit = FALSE, ...) {
+    # argument checks
     assertArray(dat, min.d = 2L, .var.name = "dat")
-    dimn <- fillMissingDimnames(dimnames(dat), dim(dat), ...)
-    out <- expand.grid(dimn, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
-    if (!is.null(row_names)) {
-        setattr(out, "row.names", row_names)
+    assertString(value_name, .var.name = "value_name")
+    assertChoice(value_type, 
+                 c(typeof(dat), "logical", "character", "integer",
+                   "numeric", "double", "factor", "complex", "raw"), 
+                 .var.name = "value_type")
+    assertFlag(auto_convert, .var.name  = "auto_convert")
+    assertFlag(na_omit, .var.name = "na_omit")
+    orig_address <- address(dat)
+    # if value_dim is not NULL, dat must be permuted
+    if (length(value_dim)) {
+        if (is.character(value_dim)) {
+            value_dim <- match(value_dim, names(dimnames(dat)), 
+                                  nomatch = 0L)
+        }
+        if (!all(value_dim %in% seq_along(dim(dat)))) {
+            stop(paste0(
+                "array2df: not all dimensions in 'value_dim' ",
+                "are present in 'dat'"), call. = FALSE)
+        }
+        value_dim <- sort(value_dim)
+        # permute dat
+        dimord <- c(seq_along(dim(dat))[-value_dim], value_dim)
+        # modify select (a possible argument to autoConvert)
+        if (exists("select", inherits = FALSE) && is.numeric(select)) 
+            select <- match(select, dimord)
+        dat <- apermArray(dat, dimord)
     }
-    out[[response_name]] <- do.call(paste0("as.", response_type),
-                                    list(dat))
-    if (!identical(dim_types, "character")) {
-        if (!is.list(dim_types)) {
-            if (length(dim_types) > 1) {
-                stop("dim_types must be a single character value or a named list")
+    row_dim <- seq_len(length(dim(dat)) - length(value_dim))
+    var_dim <- seq_along(dim(dat))[-row_dim]
+    # coerce dat if needed
+    if (value_type != typeof(dat)) {
+        dat <- do(paste0("as.", value_type), dat)
+    }
+    # prepare dimension names
+    dimn <- fillMissingDimnames(dimnames(dat), dim(dat), .dimnames = FALSE)
+    if (auto_convert) dimn <- autoConvert(dimn, ...)
+    dimn_null <- vapply(dimn, is.null, logical(1L))
+    dimn[dimn_null] <- lapply(dim(dat)[dimn_null], seq_len)
+    # prepare the data.frame
+    out <- expand.grid(dimn[row_dim], KEEP.OUT.ATTRS = FALSE, 
+                       stringsAsFactors = FALSE)
+    # cbind the values
+    if (is.null(value_dim)) {
+        out[[value_name]] <- as.vector(dat)
+    } else {
+        if (identical(orig_address, address(dat))) {
+            dim(dat) <- c(nrow(out), length(dat)/nrow(out))
+        } else {
+            matrix_(dat, nrow = nrow(out))
+        }
+        tempn <- 
+            if (length(var_dim)) {
+                do.call(
+                    "paste",
+                    c(expand.grid(mapply(function(x, y) paste(x, y, sep = "_"),
+                                         names(dimn)[var_dim], dimn[var_dim],
+                                         SIMPLIFY = FALSE), 
+                                  KEEP.OUT.ATTRS = FALSE, 
+                                  stringsAsFactors = FALSE),
+                      sep = "."))
+            } else {
+                NULL
             }
-            dim_types <- setNames(as.list(rep(dim_types, ncol(out) - 1)),
-                                  setdiff(colnames(out), response_name))
-        }
-        for (i in names(dim_types)) {
-            out[[i]] <-
-                if (dim_types[[i]]  != "factor") {
-                    do.call(paste0("as.", dim_types[[i]]), list(out[[i]]))
-                } else {
-                    factor_(out[[i]], levels = dimn[[i]])
-                }
-        }
+        colnames(dat) <- 
+            if (length(value_name) & length(tempn)) {
+                paste(value_name, tempn, sep = ".")
+            } else if (length(tempn)) {
+                tempn
+            } else if (length(value_name)) {
+                value_name
+            } else {
+                "values"
+            }
+        out <- cbind(out, dat)
     }
+    # remove rows with NA if requested
     if (na_omit) out <- na.omit(out)
     # return
     out
@@ -1463,6 +1521,31 @@ dim2multidim <- function(dat, whichdim, datfr) {
 #' and \code{dimnames} attributes. The dimensions of the list correspond to the
 #' length of each element in \code{f} (after replacing NULL values with correct
 #' vectors).
+#' @examples
+#' # load example data
+#' data(erps)
+#' 
+#' # get the reading group membership of the subjects
+#' dat_id <- attr(erps, "id")
+#' 
+#' # split on the basis of the reading group membership
+#' groups <- splitArray(erps, "id", list(readgroup = dat_id$group))
+#' 
+#' # check
+#' str(groups)
+#' 
+#' \dontshow{
+#' stopifnot(identical(groups$control, 
+#'                     subsetArray(erps, id = dat_id$group == "control",
+#'                                 keep_attributes. = FALSE)))
+#' stopifnot(identical(groups$dl, 
+#'                     subsetArray(erps, id = dat_id$group == "dl",
+#'                                 keep_attributes. = FALSE)))
+#' stopifnot(identical(names(groups), c("control", "dl")))
+#' stopifnot(identical(dim(groups), 2L))
+#' stopifnot(identical(dimnames(groups), list(readgroup = c("control", "dl"))))
+#' }
+#' 
 splitArray <- function(dat, whichdim, f = NULL, drop = FALSE) {
     subFn <- function(ind) {
         abind::asub(dat, lapply(ind, unlist), whichdim_num, drop = drop)
@@ -1470,7 +1553,7 @@ splitArray <- function(dat, whichdim, f = NULL, drop = FALSE) {
     if (is.character(whichdim)) {
         whichdim_num <- match(whichdim, names(dimnames(dat)))
         if (anyNA(whichdim_num))
-            stop("Wrong dimension name(s) provided")
+            stop("splitArray: wrong dimension name(s) provided", call. = FALSE)
     } else {
         whichdim_num <- whichdim
     }
@@ -1482,26 +1565,31 @@ splitArray <- function(dat, whichdim, f = NULL, drop = FALSE) {
         f <- list(f)
         names(f) <- names(dimn)[whichdim_num[1]]
     }
+    if (is.character(whichdim)) {
+        ind <- names(f) == "" & vapply(f, is.null, logical(1L))
+        names(f)[ind] <- whichdim[ind]
+    }
     if (length(f) != length(whichdim_num)) {
-        stop("Length of f must match the length of whichdim")
+        stop("splitArray: length of f must match the length of whichdim", 
+             call. = FALSE)
     }
     for (i in seq_along(f)) {
         if (is.null(f[[i]])) {
-            f[[i]] <- seq_len(dim(dat)[whichdim_num[i]])
+            #f[[i]] <- seq_len(dim(dat)[whichdim_num[i]])
+            f[[i]] <- dimn[[whichdim_num[i]]]
         } else if (is.list(f[[i]])) {
             f[[i]] <- do.call(paste, list(f[[i]], sep="_"))
         }
     }
     f <- lapply(f, function(x) split(seq_along(x), x))
     out.dimnames <- lapply(f, names)
-    out.dim <- vapply(out.dimnames, length, integer(1L))
-    setattr(out.dimnames, "names", names(out.dim))
+    out.dim <- vapply(out.dimnames, length, integer(1L), USE.NAMES = FALSE)
     f <- expand.grid(f, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
     out <- lapply(1:nrow(f), function(i) subFn(f[i, ]))
-    setattr(out, "dim", out.dim)
-    setattr(out, "dimnames", out.dimnames)
     setattr(out, "names",
             do.call("paste", c(lapply(f, names), list(sep = "."))))
+    setattr(out, "dim", out.dim)
+    setattr(out, "dimnames", out.dimnames)
     # return
     out
 }
@@ -1632,7 +1720,8 @@ mergeArrays <- function(..., base_value = NA,
     #
     dat <- list(...)
     if (length(dat) > 1L && any(vapply(dat, is.list, logical(1L)))) {
-        stop("Only one list is allowed as an argument")
+        stop("mergeArrays: only one list is allowed as an argument", 
+             call. = FALSE)
     }
     if (is.list(dat[[1L]])) dat <- dat[[1L]]
     #
@@ -1640,13 +1729,17 @@ mergeArrays <- function(..., base_value = NA,
     if (any(checks <- !vapply(dimn, dimnCheck, logical(1L)))) {
         bad <- which(checks)
         stop(paste0(
-            "Dimension names of the arrays ",
+            "mergeArrays: dimension names of the arrays ",
             paste(bad, collapse = ", "),
-            " are not appropriate (see Arguments in help('mergeArrays')"))
+            " are not appropriate (see Arguments in help('mergeArrays')"), 
+            call. = FALSE)
     }
     ndimn <- lapply(dimn, names)
     if (length(unique(lapply(ndimn, sort))) > 1L)
-        stop("There are unique dimension identifiers")
+        stop(paste0(
+            "mergeArrays: at least one list element has a ",
+            "unique dimension identifier", 
+             call. = FALSE))
     all_dimn <- if (sort_dims) dimn[[1L]][order(ndimn[[1L]])] else dimn[[1L]]
     for (i in names(all_dimn)) {
         for (j in dimn[-1L]) {
@@ -1658,8 +1751,18 @@ mergeArrays <- function(..., base_value = NA,
     storage.mode(out) <- typeof(dat[[1L]])
     out <- array_(out, vapply(all_dimn, length, integer(1L)),
                   all_dimn)
-    for (i in dat) {
-        subsetArray(out, dimnames(i)) <- i
+    out_touched <- array_(FALSE, dim(out), dimnames(out))
+    for (i in seq_along(dat)) {
+        x <- dat[[i]]
+        if (any(subsetArray(out_touched, dimnames(x)))) {
+            stop(paste0(
+                "mergeArrays: ",
+                "the ", i, ". list element has overlapping dimension ",
+                "combination(s) with at least one of the previous list ",
+                "elements"), call. = FALSE)
+        }
+        subsetArray(out_touched, dimnames(x)) <- TRUE
+        subsetArray(out, dimnames(x)) <- x
     }
     # return
     out
@@ -1899,119 +2002,185 @@ prepare2plot <- function(dat, datid,
 #' afterwards. It can also be used for analyses purposes without data.frame
 #' conversion if compact code is desirable.
 #' @param formula an object of class "formula" (or one that can be coerced to
-#' that class): a symbolic description of the transformation steps before
-#' converting the \code{array} to a \code{data.frame}. The details of how to
-#' specify the transformations are given under 'Details'.
+#' that class, e.g., a character string): a symbolic description of the 
+#' transformation steps before converting the \code{array} to a 
+#' \code{data.frame}. See Details.
 #' @param data a matrix or an array. Must have named dimnames.
 #' @param group a list of grouping factors in the order of appearance in the
 #' transformation formula (see 'Details'). If a named list is provided, those
 #' names are used as the names of dimnames for the given grouping dimensions.
-#' It can be a simple vector if there are only one splitting factor.
+#' It can be a simple vector if there is only one splitting factor.
+#' @param group_fun a function (or symbol or character string 
+#' naming a function) which should be performed on the groups (i.e., on the 
+#' list of arrays after splitting). \code{group_fun} must be a function which 
+#' expects an array and a vector of dimension names as input and returns an 
+#' array (or vector). Defaults to \code{avgDims}, which collapses (averages 
+#' over) the grouping dimensions.
 #' @param subset a list of subsetting vectors on the input array passed to
 #' \code{\link{subsetArray}} before any transformation steps
 #' @param datfr a logical value (default: TRUE) if the resulting array shall be
 #' transformed to a data.frame
-#' @param auto_dimtype a logical value (default: TRUE) if dimension types
-#' shall be automatically transformed to "logical", "integer", "numeric" or
-#' "factor". Ignored if datfr is FALSE or if dim_types is explicitly provided.
+#' @param auto_convert a logical value whether automatic conversion of
+#' dimension names (i.e., characters to numeric (if possible) or to factors)
+#' should be performed (default: TRUE). Set to FALSE and call 
+#' \code{\link{autoConvert}} directly on the returned data frame if you need
+#' more control.
 #' @param ... additional parameters to be passed to \code{\link{array2df}}
 #' @details The formula interface of \code{transformArray} shall be given in
-#' the form of
-#' \code{whateverFn(response_name, args) ~ dimA + .(dimC, dimD)}
-#' Dimensions which are not present on the right hand side (RHS) of the formula
-#' (e.g., dimB) are collapsed by calling \code{\link{avgDims}}. A simple .
-#' can be used in the RHS and means "all dimensions not otherwise present in
-#' the formula".
-#'
-#' Dimensions in parentheses (dimC and dimD, note the dot before
-#' the parenthesis) refer to the to-be-splitted dimensions (the corresponding
-#' list of splitting vectors must be given in the \code{group} argument).
-#' Splitting is performed by calling \code{\link{splitArray}}, and the splitted
-#' dimensions are immediately collapsed in the resulting list by calling
-#' \code{\link{avgDims}}.
-#'
-#' The left-hand side (LHS) of the formula provides the name of the response
-#' variable ("y") if data.frame conversion is requested (which is the default),
-#' and also allows arbitrary computations (e.g., calling \code{\link{compGfp}}
-#' on the array.
-#'
-#' If there were any splitting factors, the resulting list is
-#' back-transformed to an array. After the transformations, the array is
-#' converted to a data.frame if \code{datfr} is TRUE.
+#' the form of\cr
+#' 
+#' \code{fun(y[d1, d2], fun_args) ~ . - d3 | d4 + d5}\cr
+#' 
+#' where 
+#' \describe{
+#'  \item{\code{fun }}{optional; an arbitrary function whose first argument is 
+#'  the data, and returns an array (optional)}
+#'  \item{\code{y }}{the name of the variable which holds the values in the 
+#'  returned data.frame (if 'datfr' is TRUE). See also \code{\link{array2df}}.}
+#'  \item{\code{[d1,d2] }}{optional; the dimensions of the data array whose 
+#'  levels should be treated as separate value-variables in the returned 
+#'  data.frame should be listed between squared brackets after the general 
+#'  name of the value variable. If you do not want to have a general name, 
+#'  place a dot (\code{.}) before the brackets. See also 
+#'  \code{\link{array2df}}.}
+#'  \item{\code{. }}{a dot on the right-hand side [RHS] of the formula means
+#'  'all dimensions of the data array which are not explicitly mentioned in
+#'  the formula'. The dimension names can be explicitly provided as well, 
+#'  separated by \code{+}.}
+#'  \item{\code{d3 }}{optional; any dimension of the data array which is 
+#'  preceeded by a minus sign or any dimension which is not present in the 
+#'  formula will be collapsed (averaged over)}
+#'  \item{\code{d4,d5 }}{dimensions after the \code{|} sign are treated as
+#'  conditioning (grouping) dimensions, and shall be separated by \code{+} or 
+#'  \code{*}.}
+#' }
+#' \cr
+#' \code{transformArray} performs the following actions:
+#' \enumerate{
+#'  \item Takes the input array ('data') and subsets it if 'subset' is not NULL
+#'  or an empty list.
+#'  \item Calls \code{\link{avgDims}} on the (subsetted) data, and collapses
+#'  over all dimensions which are preceeded by \code{-} in the formula or are
+#'  not present in any other part of the formula.
+#'  \item Calls \code{\link{splitArray}} on the averaged data with the
+#'  conditioning dimensions in the formula. The 'group' argument is 
+#'  passed to the \code{\link{splitArray}} as the grouping argument ('f' in 
+#'  \code{splitArray}). For each data array which is returned after splitting,
+#'  \code{group_fun} is called with the character vector of the grouping
+#'  dimension names as its second argument. The resulting arrays are merged 
+#'  back to form one array.
+#'  \item If the left-hand side of the formula contains a function (see 
+#'  \code{fun} above), this function is called on the merged array with its
+#'  arguments as given in \code{fun_args}.
+#'  \item If 'datfr' is TRUE (the default), the resulting array is transformed
+#'  to a data.frame by calling \code{array2df}.
+#' }
 #' @export
-#' @return A data.frame if datfr is TRUE, and an array if datfr is FALSE
+#' @return The function returns a data.frame if 'datfr' is TRUE, and an array 
+#' if 'datfr' is FALSE.
 #' @examples
 #' # example dataset
 #' data(erps)
 #' dat_id <- attr(erps, "id") # to get reading group memberships
 #'
-#' # collapse all dimensions except for stimclass and pairtype
-#' str(transformArray(y ~ stimclass + pairtype, erps))
+#' # compute simple grand averages (collapse over the 'id' dimension) and
+#' # return it as a data.frame
+#' DF <- transformArray(~ . - id, erps)
+#' head(DF, 10)
 #'
-#' # analyze separately dyslexic and control subjects, also compute Global Field
-#' # Power
-#' res1 <- transformArray(compGfp(y, keep_channels = TRUE) ~ . + .(id),
+#' # compute the grand averages for each level of pairtype in each channel and
+#' # time points; return the amplitudes of pairtype as separate variables in 
+#' # a data.frame
+#' DF <- transformArray(ampl[pairtype] ~ time + chan, erps)
+#' head(DF, 10)
+#'
+#' # compute the grand averages of dyslexic and control subjects, and also 
+#' # compute the Global Field Power (and transform to data.frame)
+#' res1 <- transformArray(compGfp(ampl, keep_channels = TRUE) ~ . | id,
 #'                        erps, list(readgroup = dat_id$group))
 #'
-#' # the same with much more typing
+#' # the same with much more typing, and it would be even longer to make
+#' # it safer (e.g., match the order of dimensions, handle more grouping
+#' # dimensions, etc.)
 #' res2 <- splitArray(erps, "id", list(readgroup = dat_id$group))
-#' split_dnn <- dimnames(res2)
-#' names(split_dnn) <- names(dim(res2))
-#' res2 <- lapply(res2, avgDims, "id")
-#' res2 <- lapply(res2, compGfp, keep_channels = TRUE)
-#' res2 <- bindArrays(res2, along = 0L)
-#' res2 <- dim2multidim(res2, 1, expand.grid(split_dnn))
-#' res2 <- array2df(res2, response_name = "y", dim_types = "factor")
-#' res2$time <- as.integer(as.character(res2$time))
+#' res2[] <- lapply(res2, avgDims, "id")
+#' res2 <- bindArrays(res2, along_name = "readgroup")
+#' res2 <- compGfp(res2, keep_channels = TRUE)
+#' res2 <- array2df(res2, value_name = "ampl", auto_convert = TRUE)
 #' stopifnot(identical(res1, res2))
-transformArray <- function(formula, data, group = NULL, subset = NULL,
-                           datfr = TRUE, auto_dimtype = TRUE, ...) {
+transformArray <- function(formula, data, group = NULL, group_fun = "avgDims",
+                           subset = NULL, datfr = TRUE, 
+                           auto_convert = TRUE, ...) {
     # checks
     assertArray(data, mode = "atomic", min.d = 2L, .var.name = "data")
-    dn <- dimnames(data)
-    dnn <- names(dn)
-    if (is.null(dnn) || any(dnn == ""))
-        stop("The input array must have named dimnames")
+    group_fun <- match.fun(group_fun)
+    opt <- list(...)
+    dimn <- dimnames(data)
+    dimid <- names(dimn)
+    if (is.null(dimid) || any(dimid == ""))
+        stop("transformArray: the input array must have named dimnames",
+             call. = FALSE)
     #
     if (!is.null(subset)) {
         data <- subsetArray(data, subset)
-        dn <- dimnames(data)
-        dnn <- names(dn)
+        dimn <- dimnames(data)
+        dimid <- names(dimn)
     }
     #
     formula <- as.formula(formula)
-    LHS <- formula[[2]]
-    RHS <- deparse(formula[[3]])
+    # LHS
+    if (length(formula) == 2L) {
+        formula[[3L]] <- formula[[2L]]
+        formula[[2L]] <- 
+            if (!is.null(opt$value_name)) {
+                as.symbol(opt$value_name)
+            } else {
+                as.symbol(formals(array2df)$value_name)
+            }
+    }
+    LHS <- formula[[2L]]
+    value_dims <- 
+        regmatches(deparse(LHS), 
+                   gregexpr("(?<=\\[).+?(?=\\])", deparse(LHS), perl = TRUE)
+                   )[[1L]]
+    if (length(value_dims)) value_dims <- strsplit(value_dims, ", *")[[1L]]
+    LHS <- parse(text = sub("\\[.*\\]", "", deparse(LHS)))[[1L]]
     # evaluate RHS
+    RHS <- deparse(formula[[3L]])
     RHS <- gsub(" ", "", RHS)
-    dims <- strsplit(RHS, "\\+")[[1]]
+    RHS <- gsub("-", "+-", RHS)
+    RHS <- strsplit(RHS, "\\|")[[1L]]
+    splitdims <- 
+        if (length(RHS) > 1L) {
+            strsplit(RHS[2L], "\\+")[[1L]] 
+        } else {
+            NULL
+        }
+    dims <- strsplit(RHS, "\\+")[[1L]]
     # collapse
-    avgdims <-
-        if ("." %in% dims) {
-            NULL
-        } else {
-            setdiff(dnn, gsub("\\(|\\)", "", dims))
-        }
-    if (!is.null(avgdims)) data <- avgDims(data, avgdims)
+    avgdims <- sub("^-", "", dims[grepl("^-", dims)])
+    dims <- dims[!grepl("^-", dims)]
+    if ("." %in% dims) {
+        dims <- setdiff(dimid, c(avgDims, value_dims, splitdims))
+    } else if ("." %in% splitdims) {
+        splitdims <- setdiff(dimid, c(avgDims, value_dims, dims))
+    }
+    avgdims <- setdiff(dimid, c(dims, value_dims, splitdims))
+    if (length(avgdims)) data <- avgDims(data, avgdims)
     # split
-    pd <- dims[grepl("\\.\\(.*\\)", dims)]
-    splitdims <-
-        if (length(pd) > 0L) {
-            strsplit(gsub("\\.\\(|\\)", "", pd), ",")[[1]]
-        } else {
-            NULL
-        }
     data <-
         if (!is.null(splitdims)) {
             if (is.null(group)) {
-                stop("Provide grouping factors (see group argument)")
+                group <- vector("list", length(splitdims))
             } else if (!is.list(group)) {
                 if (length(splitdims) == 1L) {
                     group <- list(group)
                 } else {
-                    stop("The group argument must be a list if there are more than one splitting dimensions")
+                    stop(paste0(
+                        "The group argument must be a list if there are ",
+                        "more than one splitting dimensions"), call. = FALSE)
                 }
-                }
+            }
             ind <-
                 if (is.null(names(group))) {
                     !logical(length(splitdims))
@@ -2020,50 +2189,219 @@ transformArray <- function(formula, data, group = NULL, subset = NULL,
                 }
             names(group)[ind] <- splitdims[ind]
             splitArray(data, splitdims, group)
-            } else {
-                list(data)
+        } else {
+            list(data)
+        }
+    if (!is.null(splitdims)) {
+        for (i in seq_along(data)) {
+            data[[i]] <- do(group_fun, data[[i]], splitdims)
+            if (!is.atomic(data[[i]])) {
+                stop(paste0(
+                    "transformArray: 'group_fun' must return an atomic object", 
+                    "(a vector, matrix, or array)"), call. = FALSE)
             }
-    if (!is.null(splitdims)) data[] <- lapply(data, avgDims, splitdims)
+        }
+    }
     # evaluate LHS
     if (length(LHS) > 1L) {
-        response_name <- as.character(LHS[[2]])
+        value_name <- as.character(LHS[[2]])
+        if (identical(value_name, ".")) value_name = ""
         LHS[[2]] <- quote(x)
         data[] <- lapply(data, function(x) eval(LHS))
     } else {
-        response_name <- as.character(LHS)
+        value_name <- as.character(LHS)
     }
     # back to array
-    dnn <- attr(data, "dimnames")
-    setattr(dnn, "names", names(attr(data, "dim")))
+    dimn <- attr(data, "dimnames")
     data <- bindArrays(data, along = 0L)
     data <- dim2multidim(data, 1,
-                         expand.grid(dnn,
+                         expand.grid(dimn,
                                      KEEP.OUT.ATTRS = FALSE,
                                      stringsAsFactors = FALSE))
+    # permute to the original dimension order
+    dimid[dimid %in% splitdims] <- names(dimn)
+    dimid <- intersect(dimid, names(dimnames(data)))
+    data <- apermArray(data, dimid)
     # transform to a data.frame
     if (datfr) {
         data <- decorateDims_(data)
-        dn <- dimnames(data)
+        dimn <- dimnames(data)
         singleton <- which(dim(data) == 1L &
-                               grepl("_Dim", names(dn)))
-        singleton <- names(dn)[singleton]
-        datfr_options <- list(...)
-        if (is.null(datfr_options$dim_types) && auto_dimtype) {
-            datfr_options$dim_types <- suppressWarnings(
-                lapply(dn, function(x) {
-                    if (identical(x, as.character(as.logical(x)))) "logical"
-                    else if (identical(x, as.character(as.integer(x)))) "integer"
-                    else if (identical(x, as.character(as.numeric(x)))) "numeric"
-                    else "factor"
-                }))
-        }
-        if (is.null(datfr_options$response_name)) {
-            datfr_options$response_name <- response_name
-        }
-        data <- do.call("array2df", c(list(data), datfr_options))
+                               grepl("_Dim", names(dimn)))
+        singleton <- names(dimn)[singleton]
+        data <- array2df(data, value_name = value_name, 
+                         value_dim = value_dims,
+                         auto_convert = auto_convert, 
+                         ...)
         if (length(singleton) > 0)
             data <- data[setdiff(colnames(data), singleton)]
     }
     # return
     data
+}
+
+
+#' Convert (coerce) variables according to various schemes
+#' 
+#' \code{autoConvert} converts the variables which meet specific conditions 
+#' on the basis of pre-defined conversion rules.
+#' @param dat an object
+#' @param select numeric or character indices of the variables or list elements
+#' which sould be converted, if 'dat' is a data.frame or a list, respectively
+#' @param conversion a character vector referring to the conversion rule
+#' which should be applied for the selected variable/list element. If a single 
+#' value, the same rule is applied for all variables/list elements. The default
+#' is 'ANY', which is handled in a special way (see Details).
+#' @param rules a list of conversion rules, see \code{\link{convertParams}}.
+#' To save typing, \code{.(key = value)} format is also accepted, and the 
+#' arguments inside the parentheses are forwarded to 
+#' \code{\link{convertParams}}.
+#' @details If 'conversion' is 'ANY' (the default), the 'IF' conditions in 
+#' the rule definitions in 'rules' are tested and for the first successful test,
+#' the given rule is selected. To avoid these sequential tests, provide the 
+#' name of the rule definition explicitly in 'conversion'.
+#' The rule definitions can be extended by arbitrary rules; it is suggested to
+#' prepare the rules by calling \code{\link{convertParams}} in advance (see
+#' Examples).
+#' @param keep_dim a logical value whether the dimensions and dimension names
+#' should be retained after the conversion (default: TRUE)
+#' @export
+#' @examples
+#' # create an example list with various variable types
+#' x <- list(A = c(1L, 0L, 0L),  # integer, but could be simplified to logical 
+#'           B = matrix(c(1, 3, 2, 1), 2, 2), # double, but could be integer  
+#'           C = c("1.2", "1", "0.92"),   # character, which could be double
+#'           D = factor(c("a", "b", "a"), levels = c("b", "a")) 
+#'                  # factor, which might be converted to character
+#'           )
+#' ( x_simplified <- autoConvert(x) )
+#' \dontshow{
+#' stopifnot(is.logical(x_simplified$A))
+#' stopifnot(is.integer(x_simplified$B))
+#' stopifnot(identical(dim(x$B), dim(x_simplified$B)))
+#' stopifnot(is.double(x_simplified$C))
+#' stopifnot(is.character(x_simplified$D))
+#' }
+#' 
+#' # a simple way to convert only those list elements which are factors
+#' autoConvert(x, conversion = "factor")
+#' 
+#' # suppose you do not want to convert characters at all
+#' rules <- convertParams()
+#' new_rules <- rules[setdiff(names(rules), "character")]
+#' ( x_simplified2 <- autoConvert(x, rules = new_rules) )
+#' \dontshow{
+#' stopifnot(identical(x$C, x_simplified2$C))
+#' }
+autoConvert <- function(dat, select = NULL, conversion = "ANY",  
+                        rules = convertParams(), keep_dim = TRUE) {
+    #
+    # workhorse function
+    convert <- function(x, conv, rules, x_ind, dat_type) {
+        # early return if 'x' does not match 'IF';
+        # choose the right element from 'rules' function list
+        if (!identical(conv, "ANY") && 
+            !isTRUE(rules[[conv]]$IF(x))) {
+            return(x)
+        } else if (identical(conv, "ANY")) {
+            conv_rule <- NULL
+            for (r in rules) {
+                if (isTRUE(r$IF(x))) {
+                    conv_rule <- r
+                    break
+                }
+            }
+            if (is.null(conv_rule)) return(x)
+        } else {
+            conv_rule <- rules[[conv]]
+        }
+        # informative error message
+        err_msg <- "autoConvert: the coercion resulted in an error"
+        if (dat_type != "other") {
+            tmp <- switch(dat_type,
+                          list = " element of the list",
+                          data.frame = " variable")
+            err_msg <- paste0(err_msg, 
+                              sprintf(" for the %d.", x_ind),
+                              tmp)
+        }
+        errFn <- function(e) stop(err_msg, call. = FALSE)
+        # 
+        for (cr in seq_along(conv_rule$DO)) {
+            DO <- conv_rule$DO[[cr]]
+            EVAL <- conv_rule$EVAL
+            out <- try(suppressWarnings(DO(x)), silent = TRUE)
+            # if error, continue with the next cr
+            if (inherits(out, "try-error")) {
+                out <- x
+                next
+            }
+            # evaluete
+            ev <- try(EVAL(x, out), silent = TRUE)
+            if (length(eval) > 1L) {
+                stop(paste0(
+                    "autoConvert: ",
+                    "the EVAL function must return a logical value (either ",
+                    "TRUE or FALSE)"), call. = FALSE)
+            } else if (inherits(ev, "try-error")) {
+                stop(paste0(
+                    "autoConvert: ",
+                    "the EVAL function exited with an error: ",
+                    ev), call. = FALSE)
+            } else if (isTRUE(ev)) {
+                if (keep_dim) {
+                    setattr(out, "dim", dim(x))
+                    setattr(out, "dimnames", dimnames(x))
+                }
+                break
+            } else {
+                out <- x
+            }
+        }
+        # return
+        out
+    }
+    #
+    # argument checks
+    #
+    # deparse 'convert'
+    rules <- argumentDeparser(substitute(rules), "convertParams")
+    # check 'dat'
+    if (is.atomic(dat)) {
+        dat_type <- "other"
+        dat <- list(dat)
+    } else if (is.data.frame(dat)) {
+        dat_type <- "data.frame"
+    } else if (is.list(dat)) {
+        dat_type <- "list"
+    } else {
+        stop(paste0(
+            "autoConvert: ",
+            "'dat' must be an atomic or list/data.frame object"), 
+            call. = FALSE)
+    }
+    # check 'select'
+    if (!is.null(select)) {
+        if (!all(select %in% seq_along(dat)) &&
+            !all(select %in% names(dat))) {
+            stop("autoConvert: 'select' has invalid element(s)", call. = FALSE)
+        }
+    } else {
+        select <- seq_along(dat)
+    }
+    select <- select[!vapply(dat[select], is.null, logical(1L))]
+    # check 'conversion'
+    assertChoice(conversion, c("ANY", names(rules)), .var.name = "conversion")
+    conversion <- repLen(conversion, length(select), "conversion")
+    # perform coercion
+    for (i in seq_along(select)) {
+        selind <- select[i]
+        dat[[selind]] <- convert(
+            dat[[selind]],
+            conversion[i], rules,
+            selind, dat_type
+        )
+    }
+    # return
+    dat
 }

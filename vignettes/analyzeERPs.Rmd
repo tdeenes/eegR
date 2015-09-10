@@ -65,7 +65,7 @@ control participants, and compare the curves.
 ```{r}
 # prepare data
 tempdat <- transformArray(
-    compGfp(amplitude) ~ . + .(id), 
+    compGfp(amplitude) ~ . | id, 
     erps, list(readgroup = id_dat$group))
 
 # create plot
@@ -87,7 +87,7 @@ reading groups and stimulus classes at 300 ms.
 ```{r}
 # subset the data (pairtype = "ident") and average across id based on 
 # reading group membership
-tempdat <- transformArray(y ~ . + .(id), erps, 
+tempdat <- transformArray(y ~ . | id, erps, 
                           group = list(readgroup = id_dat$group), 
                           subset = list(pairtype = "ident"), 
                           datfr = FALSE)

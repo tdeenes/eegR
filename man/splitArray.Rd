@@ -33,4 +33,29 @@ vectors).
 \code{splitArray} splits an array along given dimension(s) into a list of
 sub-arrays
 }
+\examples{
+# load example data
+data(erps)
+
+# get the reading group membership of the subjects
+dat_id <- attr(erps, "id")
+
+# split on the basis of the reading group membership
+groups <- splitArray(erps, "id", list(readgroup = dat_id$group))
+
+# check
+str(groups)
+
+\dontshow{
+stopifnot(identical(groups$control,
+                    subsetArray(erps, id = dat_id$group == "control",
+                                keep_attributes. = FALSE)))
+stopifnot(identical(groups$dl,
+                    subsetArray(erps, id = dat_id$group == "dl",
+                                keep_attributes. = FALSE)))
+stopifnot(identical(names(groups), c("control", "dl")))
+stopifnot(identical(dim(groups), 2L))
+stopifnot(identical(dimnames(groups), list(readgroup = c("control", "dl"))))
+}
+}
 
