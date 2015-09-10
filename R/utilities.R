@@ -16,7 +16,7 @@ address <- data.table::address
 
 
 #' Set attributes of objects by reference
-
+#' 
 #' \code{setattr} changes the attribute of an object by reference, that is, 
 #' without making any copy. This is an imported and re-exported function from
 #' the \bold{data.table} package with two minor enhancements (see Details).
@@ -303,7 +303,9 @@ argumentDeparser <- function(arg, replace_dot,
     if (missing(replace_dot)) {
         argname <- deparse(substitute(replace_dot))
         if (is.null(argname)) 
-            stop("Provide the 'replace_dot' argument, its name could not be figured out automagically")
+            stop(paste0(
+                "Provide the 'replace_dot' argument, its name could ",
+                "not be figured out automagically"))
         replace_dot <- paste0(argname, "Params")
     }
     if (is.symbol(arg)) arg <- eval(arg, parent.frame())
@@ -400,3 +402,5 @@ setattributes <- function(x, obj = NULL, type = NULL, dimorder = NULL) {
     # return
     invisible(x)
 }
+
+

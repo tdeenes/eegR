@@ -2,10 +2,7 @@
 % Please edit documentation in R/utilities.R
 \name{setattr}
 \alias{setattr}
-\title{Set attributes of objects by reference
-\code{setattr} changes the attribute of an object by reference, that is,
-without making any copy. This is an imported and re-exported function from
-the \bold{data.table} package with two minor enhancements (see Details).}
+\title{Set attributes of objects by reference}
 \usage{
 setattr(x, name, value, check_for = NULL)
 }
@@ -21,7 +18,6 @@ setattr(x, name, value, check_for = NULL)
 'x' but should not be affected by \code{setattr}}
 }
 \description{
-Set attributes of objects by reference
 \code{setattr} changes the attribute of an object by reference, that is,
 without making any copy. This is an imported and re-exported function from
 the \bold{data.table} package with two minor enhancements (see Details).
