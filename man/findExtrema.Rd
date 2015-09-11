@@ -5,8 +5,8 @@
 \title{Find local/global peaks (maxima) and valleys (minima) of a vector}
 \usage{
 findExtrema(x, n = 1L, global = FALSE, along_dim = 1L,
-  tail = c("if_plateau", "never", "do_not_care"), topN = NULL,
-  has_NA = NULL)
+  tail = c("if_plateau", "never", "do_not_care"), constant = 3L,
+  topN = NULL, has_NA = NULL)
 }
 \arguments{
 \item{x}{an integer or numeric vector, matrix, or array}
@@ -29,6 +29,9 @@ vector are only valid if they are part of a plateau; "never" means no
 extrema at the tails; "do_not_care" means no special treatment of extrema
 at the tails}
 
+\item{constant}{the value (an integer value between 0 and 3 or NA) which
+should be assigned to the elements of constant vectors (default: 3L)}
+
 \item{topN}{a positive integer scalar; if not NULL (the default), the local
 extrema must be among the top N highest/lowest extrema to be marked as such.
 If there are ties, all of them are returned.}
@@ -39,16 +42,18 @@ and if x has missing values, special corrections are applied (see Details).}
 }
 \value{
 \code{findExtrema} returns an object of the same shape and length
-as \code{x}, recoding the original values in \code{x} to integer values 1
-(local maximum), -1 (local minimum), and 0 (neither minimum nor maximum), or
-NA (not available).
+as \code{x}, recoding the original values in \code{x} to integer values 0, 1,
+2, or NA, where 0 refers to data points which are neither minima nor maxima,
+1 stands for local minima, 2 for local maxima, and NA for not available.
+Additionally, elements of constant vectors are coded by 3 as default, but
+can be any integer between 0 and 3 or NA.
 }
 \description{
 \code{findExtrema} identifies local (or global) peaks and valleys of a
 vector (or subviews of a matrix or array).
 }
 \details{
-There are three special features of \code{findExtrema}. First,
+There are four special features of \code{findExtrema}. First,
 repeated neighbouring values ('plateaus') are treated as if they were a
 single data point. This has two consequences: 1) If the plateau is a local
 extrema, all points of the plateau are considered as extrema. 2) The
@@ -85,21 +90,23 @@ x <- c(10, 7, -1, 6, 2, -1, 5, 4, 3)
 
 # findExtrema() always returns an integer vector or matrix
 stopifnot(is.integer(x_extr))
-
+\dontshow{
 # check results
-stopifnot(identical(x[x_extr < 0L], c(-1, -1)))
-stopifnot(identical(x[x_extr > 0L], c(6, 5)))
-stopifnot(identical(x[x_extr2 != 0L], c(-1, -1, 5)))
-stopifnot(identical(x[x_extr3 != 0L], c(-1, 6, -1)))
-
+stopifnot(identical(x[x_extr == 1L], c(-1, -1)))
+stopifnot(identical(x[x_extr == 2L], c(6, 5)))
+stopifnot(identical(x[x_extr2 > 0L], c(-1, -1, 5)))
+stopifnot(identical(x[x_extr3 > 0L], c(-1, 6, -1)))
+}
 # look for global extrema
 (x_global <- findExtrema(x, global = TRUE))
-stopifnot(identical(x[x_global != 0L], c(-1, -1)))
-
+\dontshow{
+stopifnot(identical(x[x_global > 0L], c(-1, -1)))
+}
 # the same with large 'n'
 (x_global2 <- findExtrema(x, length(x)))
+\dontshow{
 stopifnot(identical(x_global, x_global2))
-
+}
 # modify the vector to have a plateau at the start, and a missing value at
 # the position 8; consider only the nearest neighbours
 x <- c(10, x)
@@ -110,25 +117,40 @@ x
 # but the second local minimum is not a local minimum any more because
 # there is a missing value in its neighbourhood
 (x_extr <- findExtrema(x))
-stopifnot(all(x_extr[1:2] == 1L))
+\dontshow{
+stopifnot(all(x_extr[1:2] == 2L))
 stopifnot(all(is.na(x_extr[7:9])))
-
+}
 # visualize the results (blue: local minimum, red: local maximum)
 plot(x, type = "l", lty = 3)
-points(x, pch = 16, col = c("blue", "grey", "red")[findExtrema(x) + 2L])
+points(x, pch = 16, col = c("grey", "blue", "red")[findExtrema(x) + 1L])
 
 # however, if 'tail' is set to "never", the first two elements are not
 # extrema
 (x_extr <- findExtrema(x, tail = "n"))
+\dontshow{
 stopifnot(all(x_extr[1:2] == 0L))
-
+}
+# how to treat constant vectors is ambiguous -> by default, findExtrema()
+# assigns a special value (3L) to such data points, but this can be
+# overridden
+(x <- rep_len(10, 8))
+findExtrema(x)
+findExtrema(x, constant = 0)
+\dontshow{
+stopifnot(identical(findExtrema(x, constant = 0), rep_len(0L, 8L)))
+stopifnot(identical(findExtrema(c(NA, x), constant = 0),
+                    c(NA, NA, rep_len(0L, 7L))))
+stopifnot(identical(findExtrema(c(x, NA), constant = 0),
+                    c(rep_len(0L, 7L), NA, NA)))
+}
 # x can be a matrix (or even an array)
 x <- cbind(sin(seq(0, 3*pi, pi/4)), cos(seq(0, 3*pi, pi/4)))
 (x_extr <- findExtrema(x))
 matplot(x, type = "l", lty = 3, col = 1)
 points(x[, 1L], pch = 16,
-       col = c("blue", "grey", "red")[x_extr[, 1L] + 2L])
+       col = c("grey", "blue", "red")[x_extr[, 1L] + 1L])
 points(x[, 2L], pch = 16,
-       col = c("blue", "grey", "red")[x_extr[, 2L] + 2L])
+       col = c("grey", "blue", "red")[x_extr[, 2L] + 1L])
 }
 

@@ -864,6 +864,12 @@ isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE,
     assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
     options. <- list(...)
+    if (is.null(options.$constant)) {
+        options.$constant <- switch(what.,
+                                    both = 3L,
+                                    min = 1L,
+                                    max = 2L)
+    }
     assertList(options., names = "unique", .var.name = "arguments in '...'")
     # return
     structure(
@@ -871,9 +877,9 @@ isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE,
             tempfn <- function(x, options., negate., what.) {
                 out <- do("findExtrema", x, arg_list = options.)
                 out <- switch(what.,
-                              max = out == 1L,
-                              min = out == -1L,
-                              both = (out == 1L) | (out == -1L))
+                              both = out > 0L,
+                              min = out == 1L,
+                              max = out == 2L)
                 if (!negate.) out else !out
             }
             #

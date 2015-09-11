@@ -4,7 +4,7 @@
 \alias{findExtremaMatrix}
 \title{Find local extrema in column vectors}
 \usage{
-findExtremaMatrix(x, n, tail, topN, has_NA)
+findExtremaMatrix(x, n, tail, constant, topN, has_NA)
 }
 \arguments{
 \item{x}{a numeric matrix}
@@ -18,6 +18,9 @@ abbreviated): "if_plateau" (the default) means extrema at the tails of the
 vector are only valid if they are part of a plateau; "never" means no
 extrema at the tails; "do_not_care" means no special treatment of extrema
 at the tails}
+
+\item{constant}{the value (an integer value between 0 and 3 or NA) which
+should be assigned to the elements of constant vectors (default: 3L)}
 
 \item{topN}{a positive integer scalar; if not NULL (the default), the local
 extrema must be among the top N highest/lowest extrema to be marked as such.
@@ -35,4 +38,5 @@ exported function \code{\link{findExtrema}}.
 \seealso{
 \code{\link{findExtrema}}
 }
+\keyword{internal}
 
