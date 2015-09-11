@@ -2031,49 +2031,48 @@ prepare2plot <- function(dat, datid,
 #' 
 #' \code{fun(y[d1, d2], fun_args) ~ . - d3 | d4 + d5}\cr
 #' 
-#' where 
+#' where
 #' \describe{
-#'  \item{\code{fun }}{optional; an arbitrary function whose first argument is 
-#'  the data, and returns an array (optional)}
-#'  \item{\code{y }}{the name of the variable which holds the values in the 
-#'  returned data.frame (if 'datfr' is TRUE). See also \code{\link{array2df}}.}
-#'  \item{\code{[d1,d2] }}{optional; the dimensions of the data array whose 
-#'  levels should be treated as separate value-variables in the returned 
-#'  data.frame should be listed between squared brackets after the general 
-#'  name of the value variable. If you do not want to have a general name, 
-#'  place a dot (\code{.}) before the brackets. See also 
-#'  \code{\link{array2df}}.}
-#'  \item{\code{. }}{a dot on the right-hand side [RHS] of the formula means
-#'  'all dimensions of the data array which are not explicitly mentioned in
-#'  the formula'. The dimension names can be explicitly provided as well, 
-#'  separated by \code{+}.}
-#'  \item{\code{d3 }}{optional; any dimension of the data array which is 
-#'  preceeded by a minus sign or any dimension which is not present in the 
-#'  formula will be collapsed (averaged over)}
-#'  \item{\code{d4,d5 }}{dimensions after the \code{|} sign are treated as
-#'  conditioning (grouping) dimensions, and shall be separated by \code{+} or 
-#'  \code{*}.}
+#' \item{\code{fun }}{optional; an arbitrary function whose first argument is 
+#' the data, and returns an array (optional)}
+#' \item{\code{y }}{the name of the variable which holds the values in the 
+#' returned data.frame (if 'datfr' is TRUE). See also \code{\link{array2df}}.}
+#' \item{\code{[d1,d2] }}{optional; the dimensions of the data array whose 
+#' levels should be treated as separate value-variables in the returned 
+#' data.frame should be listed between squared brackets after the general 
+#' name of the value variable. If you do not want to have a general name, 
+#' place a dot (\code{.}) before the brackets. See also 
+#' \code{\link{array2df}}.}
+#' \item{\code{. }}{a dot on the right-hand side [RHS] of the formula means
+#' 'all dimensions of the data array which are not explicitly mentioned in
+#' the formula'. The dimension names can be explicitly provided as well, 
+#' separated by \code{+}.}
+#' \item{\code{d3 }}{optional; any dimension of the data array which is 
+#' preceeded by a minus sign or any dimension which is not present in the 
+#' formula will be collapsed (averaged over)}
+#' \item{\code{d4,d5 }}{dimensions after the \code{|} sign are treated as
+#' conditioning (grouping) dimensions, and shall be separated by \code{+} or 
+#' \code{*}.}
 #' }
-#' \cr
 #' \code{transformArray} performs the following actions:
 #' \enumerate{
-#'  \item Takes the input array ('data') and subsets it if 'subset' is not NULL
-#'  or an empty list.
-#'  \item Calls \code{\link{avgDims}} on the (subsetted) data, and collapses
-#'  over all dimensions which are preceeded by \code{-} in the formula or are
-#'  not present in any other part of the formula.
-#'  \item Calls \code{\link{splitArray}} on the averaged data with the
-#'  conditioning dimensions in the formula. The 'group' argument is 
-#'  passed to the \code{\link{splitArray}} as the grouping argument ('f' in 
-#'  \code{splitArray}). For each data array which is returned after splitting,
-#'  \code{group_fun} is called with the character vector of the grouping
-#'  dimension names as its second argument. The resulting arrays are merged 
-#'  back to form one array.
-#'  \item If the left-hand side of the formula contains a function (see 
-#'  \code{fun} above), this function is called on the merged array with its
-#'  arguments as given in \code{fun_args}.
-#'  \item If 'datfr' is TRUE (the default), the resulting array is transformed
-#'  to a data.frame by calling \code{array2df}.
+#' \item Takes the input array ('data') and subsets it if 'subset' is not NULL
+#' or an empty list.
+#' \item Calls \code{\link{avgDims}} on the (subsetted) data, and collapses
+#' over all dimensions which are preceeded by \code{-} in the formula or are
+#' not present in any other part of the formula.
+#' \item Calls \code{\link{splitArray}} on the averaged data with the
+#' conditioning dimensions in the formula. The 'group' argument is 
+#' passed to the \code{\link{splitArray}} as the grouping argument ('f' in 
+#' \code{splitArray}). For each data array which is returned after splitting,
+#' \code{group_fun} is called with the character vector of the grouping
+#' dimension names as its second argument. The resulting arrays are merged 
+#' back to form one array.
+#' \item If the left-hand side of the formula contains a function (see 
+#' \code{fun} above), this function is called on the merged array with its
+#' arguments as given in \code{fun_args}.
+#' \item If 'datfr' is TRUE (the default), the resulting array is transformed
+#' to a data.frame by calling \code{array2df}.
 #' }
 #' @export
 #' @return The function returns a data.frame if 'datfr' is TRUE, and an array 
