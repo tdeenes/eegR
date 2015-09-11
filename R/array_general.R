@@ -855,9 +855,6 @@ selectValues <- function(dat, condition, return_index = TRUE,
     setattr(out, "names", nam)
     # cbind the values
     out[[value_label]] <- dat[ind]
-    if (auto_convert) {
-        out <- autoConvert(out, conversion = "character")
-    }
     # attach index matrix if requested
     if (return_index) {
         setattr(ind, "dimnames", list(NULL, colnames(ind)))
