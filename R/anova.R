@@ -34,12 +34,13 @@ anovaTfce <- function(x, target_dim, has_neg, nr_chan, nr_time, tfce) {
 #' @param seed an integer value which specifies a seed (default: NULL), or a
 #' list of arguments passed to \code{\link{set.seed}}
 #' @param stat_obs a numeric array of the observed test statistic
+#' @param parallel a list as returned by \ocde{\link{parallelParams}}
 #' @param tfce NULL (default) or a list of the TFCE parameters
 #' @return \code{\link{permPvalues}} returns a logical array whose elements
 #' indicate whether the absolute observed test statistic in the given chanXtime
 #' cell is smaller than the absolute randomized test statistic
 #' @keywords internal
-permPvalues <- function(obj, nperm, seed, stat_obs, tfce = NULL) {
+permPvalues <- function(obj, nperm, seed, stat_obs, parallel, tfce = NULL) {
     # helper function
     permfn <- function(obj, perm_vec, tfce,
                        stat_fun, abs_stat_obs, has_neg) {
@@ -83,9 +84,18 @@ permPvalues <- function(obj, nperm, seed, stat_obs, tfce = NULL) {
     # avoid code-style warning
     xi <- NULL; rm(xi)
     # compute sig
+    export <- 
+        if (!is.null(parallel$cl)) {
+            c("iter", "foreach", "%do%", "colMaxs", "anovaTfce")
+        } else {
+            NULL
+        }
     sig <-
         foreach(x = iter(rand_sample, by = "col", chunksize = chunks),
-                .combine = "+", .inorder = FALSE) %dopar%
+                .combine = "+", .inorder = FALSE,
+                .options.snow = parallel$snow_options,
+                .options.multicore = parallel$mc_options,
+                .export = export) %dopar%
             {
                 foreach(xi = iter(x, by = "col", chunksize = 1L),
                         .combine = "+", .inorder = FALSE) %do%
@@ -1219,7 +1229,7 @@ arrayTtestAnova <- function(test,
     # permutations
     if (nperm > 1L) {
         obs <- if (use_tfce) tfce_obs else stat_obs
-        perm_pvalues <- permPvalues(input, nperm, seed, obs, tfce)
+        perm_pvalues <- permPvalues(input, nperm, seed, obs, parallel, tfce)
     }
     #
     # prepare output
@@ -1589,11 +1599,18 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
         randind <- anovaRandomIndices(input, perm$n, seed)
         # run calculations
         chunks <- min(10L, ceiling(perm$n/max(1L, getDoParWorkers())))
+        export <- 
+            if (!is.null(parallel$cl)) {
+                c("iter", "foreach", "%do%", "colMaxs", "compTanovaEffect")
+            } else {
+                NULL
+            }
         es_perm <-
             foreach(x = iter(randind, by = "col", chunksize = chunks),
                     .combine = c, .inorder = FALSE,
                     .options.snow = parallel$snow_options,
-                    .options.multicore = parallel$mc_options) %dopar%
+                    .options.multicore = parallel$mc_options,
+                    .export = export) %dopar%
                     {
                         foreach(i = 1:ncol(x)) %do%
                             compTanovaEffect(input, x[,i])
