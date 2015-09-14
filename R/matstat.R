@@ -212,7 +212,7 @@ findExtremaMatrix <- function(x, n, tail, constant, topN, has_NA) {
         # replicate external elements if x is a multi-column matrix
         if (ncol(x) > 1L) {
             ins <- diff(rle_x$matrixcolumn)
-            ins <- 1L + n * c(0L, ins) + c(ins, 0L)
+            ins <- 1L + n * (c(0L, ins) + c(ins, 0L))
             rle_x_ins <- lapply(rle_x[2:3], rep.int, ins)
             ins_ind <- which(diff(rle_x_ins$matrixcolumn) > 0L)
             ins_ind <- as.vector( outer((1-n):n, ins_ind, "+") )
