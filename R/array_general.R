@@ -790,7 +790,7 @@ scaleArray <- function(dat, by_dims = NULL, along_dims = NULL,
 #' 
 #' # find the most negative peak at Fz between 80 and 200 ms, and also select
 #' # the corresponding time points on the two other channels
-#' cond <- isMinimum(along_dim = "time", 
+#' cond <- isMinimum(options. = list(along_dim = "time"),
 #'                   subset. = list(time = isBetween(80, 200)),
 #'                   expand. = list(chan = "Fz")) &
 #'         isNegative(expand. = list(chan = "Fz"))

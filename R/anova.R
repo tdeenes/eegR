@@ -34,7 +34,7 @@ anovaTfce <- function(x, target_dim, has_neg, nr_chan, nr_time, tfce) {
 #' @param seed an integer value which specifies a seed (default: NULL), or a
 #' list of arguments passed to \code{\link{set.seed}}
 #' @param stat_obs a numeric array of the observed test statistic
-#' @param parallel a list as returned by \ocde{\link{parallelParams}}
+#' @param parallel a list as returned by \code{\link{parallelParams}}
 #' @param tfce NULL (default) or a list of the TFCE parameters
 #' @return \code{\link{permPvalues}} returns a logical array whose elements
 #' indicate whether the absolute observed test statistic in the given chanXtime

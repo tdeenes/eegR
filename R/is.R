@@ -464,8 +464,8 @@ isMainCompFn <- function(FUN., x, subset., expand.,
 #' unnamed list, it must have an attribute 'dim_index', referring to the numeric
 #' indices of the dimensions to subset or expand on. Use it only if you are
 #' \emph{absolutely sure} about the datasets you want to test later on!
-#' @param ... further arguments passed to the wrapped function (see Functions
-#' for details)
+#' @param options. a list of further arguments passed to the wrapped function 
+#' (see Functions for details)
 #' @details All \code{is*} functions return a function of the class
 #' \code{IsFunction} which has only one argument, '\code{x}' (the data object
 #' to test). '\code{x}' can be an atomic vector, matrix, or array; all other
@@ -530,7 +530,7 @@ NULL
 #' #
 #' # note how we pass the 'ignore.case' argument to the internally used
 #' # grepl() function (see ?grepl)
-#' check_start_a <- isPattern("^a", ignore.case = TRUE)
+#' check_start_a <- isPattern("^a", options. = list(ignore.case = TRUE))
 #' check_start_a(c("a", "A", "ba"))
 #' \dontshow{
 #' # check the results -> note that the class and the attribute has to be
@@ -541,13 +541,12 @@ NULL
 #' ))
 #' }
 isPattern <- function(pattern., strict. = TRUE, negate. = FALSE,
-                      subset. = list(), expand. = list(), ...) {
+                      subset. = list(), expand. = list(), options. = list()) {
     assertString(pattern., na.ok = FALSE, .var.name = "pattern.")
     assertFlag(strict., .var.name = "strict.")
     assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
-    options. <- list(...)
-    assertList(options., names = "unique", .var.name = "arguments in '...'")
+    assertList(options., names = "unique", .var.name = "options.")
     structure(
         function(x) {
             tempfn <- function(dat, options., negate., pattern.) {
@@ -651,14 +650,14 @@ isPattern <- function(pattern., strict. = TRUE, negate. = FALSE,
 #' }
 isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
                     strict. = TRUE, negate. = FALSE,
-                    subset. = list(), expand. = list(), ...) {
+                    subset. = list(), expand. = list(), 
+                    options. = list()) {
     ref. <- as.Numeric_(ref.)
     tol. <- as.Numeric_(tol.)
     assertFlag(strict., .var.name = "strict.")
     assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
-    options. <- list(...)
-    assertList(options., names = "unique", .var.name = "arguments in '...'")
+    assertList(options., names = "unique", .var.name = "options.")
     structure(
         function(x) {
             tempfn <- function(dat, options., negate., ref., tol.) {
@@ -709,12 +708,11 @@ isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
 #' ))
 #' }
 isSame <- function(ref., strict. = TRUE, negate. = FALSE,
-                   subset. = list(), expand. = list(), ...) {
+                   subset. = list(), expand. = list(), options. = list()) {
     assertFlag(strict., .var.name = "strict.")
     assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
-    options. <- list(...)
-    assertList(options., names = "unique", .var.name = "arguments in '...'")
+    assertList(options., names = "unique", .var.name = "options.")
     structure(
         function(x) {
             tempfn <- function(dat, options., negate., ref.) {
@@ -761,15 +759,15 @@ isSame <- function(ref., strict. = TRUE, negate. = FALSE,
 isBetween <- function(lwr. = -Inf, upr. = Inf,
                       open. = c("none", "both", "lwr", "upr"),
                       strict. = TRUE, negate. = FALSE,
-                      subset. = list(), expand. = list(), ...) {
+                      subset. = list(), expand. = list(), 
+                      options. = list()) {
     lwr. <- as.Numeric_(lwr.)
     upr. <- as.Numeric_(upr.)
     open. <- match.arg(open.)
     assertFlag(strict., .var.name = "strict.")
     assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
-    options. <- list(...)
-    assertList(options., names = "unique", .var.name = "arguments in '...'")
+    assertList(options., names = "unique", .var.name = "options.")
     #
     lwr <- lwr.; upr <- upr.
     lwr. <- pmin(lwr, upr)
@@ -820,8 +818,8 @@ isBetween <- function(lwr. = -Inf, upr. = Inf,
 #' does not fail (see the documentation of \code{\link{as.Numeric}}).
 #' @export
 isNegative <- function(strict. = TRUE, negate. = FALSE,
-                       subset. = list(), expand. = list(), ...) {
-    isBetween(-Inf, 0, "upr", strict., negate., subset., expand., ...)
+                       subset. = list(), expand. = list(), options. = list()) {
+    isBetween(-Inf, 0, "upr", strict., negate., subset., expand., options.)
 }
 
 #' @describeIn is produces a function to test whether the values in an atomic
@@ -830,8 +828,8 @@ isNegative <- function(strict. = TRUE, negate. = FALSE,
 #' does not fail (see the documentation of \code{\link{as.Numeric}}).
 #' @export
 isPositive <- function(strict. = TRUE, negate. = FALSE,
-                       subset. = list(), expand. = list(), ...) {
-    isBetween(0, Inf, "lwr", strict., negate., subset., expand., ...)
+                       subset. = list(), expand. = list(), options. = list()) {
+    isBetween(0, Inf, "lwr", strict., negate., subset., expand., options.)
 }
 
 #' @describeIn is produces a function to test whether the the values in an
@@ -848,7 +846,8 @@ isPositive <- function(strict. = TRUE, negate. = FALSE,
 #' #
 #' # note how we can pass the 'global' and 'tail' arguments to the internal
 #' # findExtrema() function (see ?findExtrema)
-#' check_global_extr <- isExtremum(global = TRUE, tail = "do_not_care")
+#' check_global_extr <- isExtremum(options. = list(global = TRUE, 
+#'                                                 tail = "do_not_care"))
 #' check_global_extr(c(-1, 1, 0, 100, 50))
 #' \dontshow{
 #' stopifnot(identical(
@@ -858,19 +857,18 @@ isPositive <- function(strict. = TRUE, negate. = FALSE,
 #' }
 isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE,
                        negate. = FALSE,
-                       subset. = list(), expand. = list(), ...) {
+                       subset. = list(), expand. = list(), options. = list()) {
     what. <- match.arg(what.)
     assertFlag(strict., .var.name = "strict.")
     assertFlag(negate., .var.name = "negate.")
     which_dims. <- checkSubsetExpand(subset., expand.)
-    options. <- list(...)
+    assertList(options., names = "unique", .var.name = "options.")
     if (is.null(options.$constant)) {
         options.$constant <- switch(what.,
                                     both = 3L,
                                     min = 1L,
                                     max = 2L)
     }
-    assertList(options., names = "unique", .var.name = "arguments in '...'")
     # return
     structure(
         function(x) {
@@ -895,16 +893,18 @@ isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE,
 #' \code{\link{findExtrema}} for additional details and further arguments.
 #' @export
 isLocalMaximum <- function(strict. = TRUE, negate. = FALSE,
-                           subset. = list(), expand. = list(), ...) {
-    isExtremum("max", strict., negate., subset., expand., ...)
+                           subset. = list(), expand. = list(), 
+                           options. = list()) {
+    isExtremum("max", strict., negate., subset., expand., options.)
 }
 
 #' @describeIn is a shorthand for \code{isExtremum("min", ...)}. See
 #' \code{\link{findExtrema}} for additional details and further arguments.
 #' @export
 isLocalMinimum <- function(strict. = TRUE, negate. = FALSE,
-                           subset. = list(), expand. = list(), ...) {
-    isExtremum("min", strict., negate., subset., expand., ...)
+                           subset. = list(), expand. = list(), 
+                           options. = list()) {
+    isExtremum("min", strict., negate., subset., expand., options.)
 }
 
 #' @describeIn is a shorthand for
@@ -912,8 +912,10 @@ isLocalMinimum <- function(strict. = TRUE, negate. = FALSE,
 #' \code{\link{findExtrema}} for additional details and further arguments.
 #' @export
 isMaximum <- function(strict. = TRUE, negate. = FALSE,
-                      subset. = list(), expand. = list(), ...) {
-    isExtremum("max", strict., negate., subset., expand., global = TRUE, ...)
+                      subset. = list(), expand. = list(), options. = list()) {
+    assertList(options., names = "unique", .var.name = "options.")
+    options.$global <- TRUE
+    isExtremum("max", strict., negate., subset., expand., options.)
 }
 
 #' @describeIn is a shorthand for
@@ -921,8 +923,10 @@ isMaximum <- function(strict. = TRUE, negate. = FALSE,
 #' \code{\link{findExtrema}} for additional details and further arguments.
 #' @export
 isMinimum <- function(strict. = TRUE, negate. = FALSE,
-                      subset. = list(), expand. = list(), ...) {
-    isExtremum("min", strict., negate., subset., expand., global = TRUE, ...)
+                      subset. = list(), expand. = list(), options. = list()) {
+    assertList(options., names = "unique", .var.name = "options.")
+    options.$global <- TRUE
+    isExtremum("min", strict., negate., subset., expand., options.)
 }
 
 

@@ -4,7 +4,7 @@
 \alias{permPvalues}
 \title{Permutation of the test statistic}
 \usage{
-permPvalues(obj, nperm, seed, stat_obs, tfce = NULL)
+permPvalues(obj, nperm, seed, stat_obs, parallel, tfce = NULL)
 }
 \arguments{
 \item{obj}{a list returned by \code{preAnova}}
@@ -15,6 +15,8 @@ permPvalues(obj, nperm, seed, stat_obs, tfce = NULL)
 list of arguments passed to \code{\link{set.seed}}}
 
 \item{stat_obs}{a numeric array of the observed test statistic}
+
+\item{parallel}{a list as returned by \code{\link{parallelParams}}}
 
 \item{tfce}{NULL (default) or a list of the TFCE parameters}
 }

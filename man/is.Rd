@@ -16,38 +16,40 @@
 \title{Test logical statements on data points}
 \usage{
 isPattern(pattern., strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), ...)
+  expand. = list(), options. = list())
 
 isEqual(ref., tol. = .Machine$double.eps^0.5, strict. = TRUE,
-  negate. = FALSE, subset. = list(), expand. = list(), ...)
+  negate. = FALSE, subset. = list(), expand. = list(),
+  options. = list())
 
 isSame(ref., strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), ...)
+  expand. = list(), options. = list())
 
 isBetween(lwr. = -Inf, upr. = Inf, open. = c("none", "both", "lwr",
   "upr"), strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), ...)
+  expand. = list(), options. = list())
 
 isNegative(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), ...)
+  expand. = list(), options. = list())
 
 isPositive(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), ...)
+  expand. = list(), options. = list())
 
 isExtremum(what. = c("both", "min", "max"), strict. = TRUE,
-  negate. = FALSE, subset. = list(), expand. = list(), ...)
+  negate. = FALSE, subset. = list(), expand. = list(),
+  options. = list())
 
 isLocalMaximum(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), ...)
+  expand. = list(), options. = list())
 
 isLocalMinimum(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), ...)
+  expand. = list(), options. = list())
 
 isMaximum(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), ...)
+  expand. = list(), options. = list())
 
 isMinimum(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), ...)
+  expand. = list(), options. = list())
 }
 \arguments{
 \item{pattern.}{a character regexp pattern, see the 'pattern' argument in
@@ -69,8 +71,8 @@ unnamed list, it must have an attribute 'dim_index', referring to the numeric
 indices of the dimensions to subset or expand on. Use it only if you are
 \emph{absolutely sure} about the datasets you want to test later on!}
 
-\item{...}{further arguments passed to the wrapped function (see Functions
-for details)}
+\item{options.}{a list of further arguments passed to the wrapped function
+(see Functions for details)}
 
 \item{ref.}{the reference value or a vector (or matrix/array) of reference
 values.}
@@ -203,7 +205,7 @@ the time range may be different).
 #
 # note how we pass the 'ignore.case' argument to the internally used
 # grepl() function (see ?grepl)
-check_start_a <- isPattern("^a", ignore.case = TRUE)
+check_start_a <- isPattern("^a", options. = list(ignore.case = TRUE))
 check_start_a(c("a", "A", "ba"))
 \dontshow{
 # check the results -> note that the class and the attribute has to be
@@ -315,7 +317,8 @@ stopifnot(identical(
 #
 # note how we can pass the 'global' and 'tail' arguments to the internal
 # findExtrema() function (see ?findExtrema)
-check_global_extr <- isExtremum(global = TRUE, tail = "do_not_care")
+check_global_extr <- isExtremum(options. = list(global = TRUE,
+                                                tail = "do_not_care"))
 check_global_extr(c(-1, 1, 0, 100, 50))
 \dontshow{
 stopifnot(identical(
