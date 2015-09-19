@@ -66,5 +66,12 @@ new_rules <- rules[setdiff(names(rules), "character")]
 \dontshow{
 stopifnot(identical(x$C, x_simplified2$C))
 }
+
+# you can also convert an atomic object
+autoConvert(c("1.12", "3.4"))
+\dontshow{
+stopifnot(identical(autoConvert(c("1.12", "3.4")),
+                    as.numeric(c("1.12", "3.4"))))
+}
 }
 

@@ -2292,6 +2292,13 @@ transformArray <- function(formula, data, group = NULL, group_fun = "avgDims",
 #' \dontshow{
 #' stopifnot(identical(x$C, x_simplified2$C))
 #' }
+#' 
+#' # you can also convert an atomic object
+#' autoConvert(c("1.12", "3.4"))
+#' \dontshow{
+#' stopifnot(identical(autoConvert(c("1.12", "3.4")),
+#'                     as.numeric(c("1.12", "3.4"))))
+#' }
 autoConvert <- function(dat, select = NULL, conversion = "ANY",  
                         rules = convertParams(), keep_dim = TRUE) {
     #
@@ -2402,5 +2409,9 @@ autoConvert <- function(dat, select = NULL, conversion = "ANY",
         )
     }
     # return
-    dat
+    if (dat_type == "other") {
+        dat[[1L]]
+    } else {
+        dat
+    }
 }
