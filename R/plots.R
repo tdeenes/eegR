@@ -669,7 +669,8 @@ imageValues <- function(dat, grid = NULL, wrap = NULL, bar_title = "effect",
             geom_tile(aes_string(fill = "effect"), size = 0)} + 
         scale_fill_gradient2(name = bar_title, 
                              low = low, mid = mid, high = high, 
-                             midpoint = midpoint, ...) +               
+                             midpoint = midpoint, space = "Lab", 
+                             ...) +               
         scale_y_discrete(limits = rev(chans), expand = c(0.05, 0),
                          name = channel_label) + 
         scale_x_continuous(breaks = timebreaks, expand = c(0.05, 0.1),
@@ -702,13 +703,15 @@ imageValues <- function(dat, grid = NULL, wrap = NULL, bar_title = "effect",
 #' @param ... additional arguments to be passed to \code{link[ggplot2]{scale_fill_gradient2}}
 #' @export
 #' @return a ggplot object
-colorize <- function(obj, low=scales::muted("blue"), mid="white",
-                     high=scales::muted("red"), ...) {
+colorize <- function(obj, low = scales::muted("blue"), mid = "white",
+                     high = scales::muted("red"), ...) {
     if (!inherits(obj, "ggplot")) {
         stop("The object must be a ggplot")
     }
     suppressMessages(
-        obj + scale_fill_gradient2(low = low, mid = mid, high = high, ...))
+        obj + 
+            scale_fill_gradient2(low = low, mid = mid, high = high, 
+                                 space = "Lab", ...))
 }
 
 ###
