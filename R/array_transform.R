@@ -87,7 +87,7 @@
 #'
 apermArray <- function(a, perm = NULL, resize = TRUE, first = perm,
                        keep_attributes. = FALSE) {
-    assertArray(a, min.d = 2L, .var.name = "input array ('a')")
+    assertArray(a, min.d = 1L, .var.name = "input array ('a')")
     dims <- dim(a)
     num_dims <- length(dims)
     orig_attribs <- attributes(a)
@@ -206,7 +206,7 @@ apermArray <- function(a, perm = NULL, resize = TRUE, first = perm,
 #' stopifnot(identical(dimnames(mat4), list(rows = NULL, columns = NULL)))
 #'
 decorateDims <- function(dat, .names = TRUE, .dimnames = TRUE) {
-    assertArray(dat, min.d = 2L, .var.name = "dat")
+    assertArray(dat, min.d = 1L, .var.name = "dat")
     new_dimn <- fillMissingDimnames(dimnames(dat), dim(dat),
                                     .names, .dimnames)
     # return
@@ -221,7 +221,7 @@ decorateDims <- function(dat, .names = TRUE, .dimnames = TRUE) {
 #' @rdname decorateDims
 #' @export
 decorateDims_ <- function(dat, .names = TRUE, .dimnames = TRUE) {
-    assertArray(dat, min.d = 2L, .var.name = "dat")
+    assertArray(dat, min.d = 1L, .var.name = "dat")
     new_dimn <- fillMissingDimnames(dimnames(dat), dim(dat),
                                     .names, .dimnames)
     setattr(dat, "dimnames", new_dimn)
@@ -800,7 +800,7 @@ subsetArray <- function(dat, subset. = list(), which_dims. = NULL,
     if (is.null(dat)) return(NULL)
     #
     # check arguments (dat, subset., which_dims.) and find indices
-    assertArray(dat, min.d = 2L, .var.name = "dat")
+    assertArray(dat, min.d = 1L, .var.name = "dat")
     dat_d <- dim(dat)
     dat_dn <- dimnames(dat)
     dat_dimid <- names(dat_dn)
@@ -881,7 +881,7 @@ subsetArray <- function(dat, subset. = list(), which_dims. = NULL,
                             drop. = NULL, ..., value) {
     #
     # check arguments (dat, subset., which_dims.) and find indices
-    assertArray(dat, min.d = 2L, .var.name = "dat")
+    assertArray(dat, min.d = 1L, .var.name = "dat")
     dat_d <- dim(dat)
     dat_dn <- dimnames(dat)
     dat_dimid <- names(dat_dn)
@@ -1274,7 +1274,7 @@ array2df <- function(dat, value_name = "values", value_dim = NULL,
                      auto_convert = FALSE,
                      na_omit = FALSE, ...) {
     # argument checks
-    assertArray(dat, min.d = 2L, .var.name = "dat")
+    assertArray(dat, min.d = 1L, .var.name = "dat")
     assertString(value_name, .var.name = "value_name")
     assertChoice(value_type, 
                  c(typeof(dat), "logical", "character", "integer",
@@ -1557,7 +1557,7 @@ splitArray <- function(dat, whichdim, f = NULL, drop = FALSE) {
     } else {
         whichdim_num <- whichdim
     }
-    assertArray(dat, min.d = 2L, .var.name = "dat")
+    assertArray(dat, min.d = 1L, .var.name = "dat")
     dimn <- fillMissingDimnames(dimnames(dat), dim(dat))
     if (is.null(f)) {
         f <- dimn[whichdim_num]
@@ -2111,7 +2111,7 @@ transformArray <- function(formula, data, group = NULL, group_fun = "avgDims",
                            subset = NULL, datfr = TRUE, 
                            auto_convert = TRUE, ...) {
     # checks
-    assertArray(data, mode = "atomic", min.d = 2L, .var.name = "data")
+    assertArray(data, mode = "atomic", min.d = 1L, .var.name = "data")
     group_fun <- match.fun(group_fun)
     opt <- list(...)
     dimn <- dimnames(data)

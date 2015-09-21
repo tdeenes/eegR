@@ -700,7 +700,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
     #
     # check if .arraydat is an array
     if (is.data.frame(.arraydat)) .arraydat <- as.matrix(.arraydat)
-    assertArray(.arraydat, mode = "numeric", min.d = 2L,
+    assertArray(.arraydat, mode = "numeric", min.d = 1L,
                 .var.name = ".arraydat")
     has_NA <- anyNA(.arraydat)
     if (has_NA) {

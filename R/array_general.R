@@ -256,7 +256,7 @@ compareLevels <- function(dat, which_dim = 1L, contr = NULL, ...) {
     assertAtomic(dat, .var.name = "dat")
     vec <- testVector(dat, strict = TRUE)
     if (vec) dat <- as.matrix(dat)
-    assertArray(dat, mode = "numeric", min.d = 2L, .var.name = "dat")
+    assertArray(dat, mode = "numeric", min.d = 1L, .var.name = "dat")
     out <- copy(dat)
     decorateDims_(out, .dimnames = FALSE)
     dims <- dim(out)
@@ -313,7 +313,7 @@ compareLevels <- function(dat, which_dim = 1L, contr = NULL, ...) {
 #' @return An array (or matrix) with averaged data (the number of dimensions of
 #' dat is decreased by the length of dims)
 avgDims <- function(dat, dims, na_rm = TRUE) {
-    assertArray(dat, mode = "numeric", min.d = 2L, .var.name = "dat")
+    assertArray(dat, mode = "numeric", min.d = 1L, .var.name = "dat")
     if (is.character(dims)) dims <- match(dims, names(dimnames(dat)))
     out <- apermArray(dat, first = dims, keep_attributes. = TRUE)
     out <- colMeans(out, na.rm = na_rm, dims = length(dims))
@@ -672,7 +672,7 @@ scaleArray <- function(dat, by_dims = NULL, along_dims = NULL,
         FUN(x, stats)
     }
     #
-    assertArray(dat, mode = "numeric", min.d = 2L)
+    assertArray(dat, mode = "numeric", min.d = 1L)
     if (!center & !scale) return(dat)
     if (!is.null(base_subset) & is.null(center_subset)) {
         center_subset <- base_subset

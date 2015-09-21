@@ -52,7 +52,7 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
              frame.plot = FALSE, xlab = "", ylab = "")
     }
     #
-    assertArray(dat, mode = "numeric", min.d = 2L, .var.name = "dat")
+    assertArray(dat, mode = "numeric", min.d = 1L, .var.name = "dat")
     plot_args <- list(...)
     dat <- decorateDims(dat)
     if (!is.character(xdim)) xdim <- names(dimnames(dat))[xdim]

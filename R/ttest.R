@@ -268,7 +268,7 @@ preTtest <- function(.arraydat, .arraydat2, paired, groups,
     if (is.data.frame(.arraydat)) .arraydat <- as.matrix(.arraydat)
     # TODO: should be possible to allow missing values, but what about
     # the permutation?
-    assertArray(.arraydat, mode = "numeric", min.d = 2L, any.missing = FALSE,
+    assertArray(.arraydat, mode = "numeric", min.d = 1L, any.missing = FALSE,
                 .var.name = ".arraydat")
     # dimnames
     pre_dimnames <- dimnames(.arraydat)
@@ -310,7 +310,7 @@ preTtest <- function(.arraydat, .arraydat2, paired, groups,
         # check format
         if (is.data.frame(.arraydat2)) .arraydat2 <- as.matrix(.arraydat2)
         assertArray(.arraydat2, mode = "numeric", any.missing = FALSE, 
-                    min.d = 2L, .var.name = ".arraydat2")
+                    min.d = 1L, .var.name = ".arraydat2")
         # check dimension names
         full_dimnames2 <- fillMissingDimnames(dimnames(.arraydat2),
                                               dim(.arraydat2))
