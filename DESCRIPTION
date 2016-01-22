@@ -47,6 +47,7 @@ Suggests:
     microbenchmark,
     plotrix,
     rgl,
+    rmarkdown,
     shiny,
     shinyRGL,
     zoo
