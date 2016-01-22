@@ -140,7 +140,9 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
 #' the GFP curve if 'gfp' data are provided (with proper names or dimnames 
 #' attribute).
 #' @param ampl_range numeric vector, the minimum and maximum value of the 
-#' amplitudes (default: c(-5, 5))
+#' amplitudes. If NULL (default), it is computed from the data. Data values
+#' outside the \code{ampl_range} interval are winsorized (set to equal to the
+#' minimum or maximum limit).
 #' @param type the type of the topoplot, either "contour" (the default) or 
 #' "raster". The latter is faster for very high resolution topoplots.
 #' @param resol integer value, the resolution of the projection locations for
@@ -163,10 +165,12 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
 #' @param title title of the plot
 #' @param gfp a numeric vector of the GFP values in the whole time window
 #' @param gfp_max the upper limit if gfp is provided
-#' @param color_scale function which creates a color scale with \code{n} values
+#' @param colour_scale function which creates a colour scale with \code{n} values
 #' (\code{n} is defined by \code{resolcol}). The default is to use the 
 #' \code{\link[gplots]{colorpanel}} function, with blue > white > red 
-#' color scale.
+#' colour scale.
+#' @param colour_midpoint a number to which the middle colour of the colour scale
+#' corresponds
 #' @param ... arguments to \code{\link{chanInterp}}
 #' @export
 #' @examples
@@ -194,12 +198,13 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
                        plot_bar = TRUE, plot_ch = TRUE, plot_chnames = TRUE, 
                        title = NULL,
                        gfp = NULL, gfp_max = NULL, 
-                       color_scale = function(n) gplots::colorpanel(n, "blue", "white", "red"), 
-                       ...) {
+                       colour_scale = function(n) gplots::colorpanel(n, "blue", "white", "red"), 
+                       colour_midpoint = 0, ...) {
     #
     type <- match.arg(type)
     projref <- match.arg(projref)
-    colors <- do.call(match.fun(color_scale), list(resolcol))
+    assertFunction(colour_scale, .var.name = "color_scale")
+    assertNumber(colour_midpoint, .var.name = "color_midpoint")
     #
     ch_pos <- as.data.frame(ch_pos)
     if (all(c("x", "y", "z") %in% colnames(ch_pos))) {
@@ -218,6 +223,7 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
     }
     r <- posgeo$r
     if (is.data.frame(dat)) dat <- as.matrix(dat)
+    assertNumeric(dat, .var.name = "dat")
     if (is.matrix(dat)) {
         if (all(c("chan", "id") %in% names(dimnames(dat))))
             dat <- aperm(dat, c("id", "chan"))
@@ -286,12 +292,26 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
                             projref = projref, origo = origo, inverse = TRUE)
     gridcart <- geo2cart(gridgeo)
     z <- matrix_(NA_real_, resol, resol)
-    z_ind <- chanInterp(dat, ch_pos, gridcart, ...)
-    if (is.null(ampl_range)) ampl_range <- range(z_ind, na.rm = TRUE)
+    z_ind <- suppressMessages(chanInterp(dat, ch_pos, gridcart, ...))
+    if (is.null(ampl_range)) {
+        ampl_range <- range(z_ind, na.rm = TRUE)
+    } else {
+        assert0(ampl_range, checkNumeric, len = 2L)
+        sort(ampl_range)
+    }
     z_ind[z_ind > ampl_range[2]] <- ampl_range[2]
     z_ind[z_ind < ampl_range[1]] <- ampl_range[1]
     z[ind] <- z_ind
     rm(z_ind)
+    #
+    colstep <- diff(ampl_range)/resolcol
+    colrange <- sort(colour_midpoint + 
+                         c(-1, 1) * max(abs(ampl_range - colour_midpoint)))
+    coln <- ceiling(diff(colrange)/colstep/2)*2 + 1L
+    colors <- match.fun(colour_scale)(coln)
+    colindex <- floor((ampl_range[1] - colrange[1])/colstep) + 1L
+    colors <- colors[colindex:(colindex + resolcol)]
+    #
     par(mar = rep(0, 4))
     plot.new()
     plot.window(xlim = xlim, ylim = ylim, xaxs = "i", yaxs = "i")
@@ -412,10 +432,16 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
 #' compared. Can be a vector referring to the timepoints of each topomap.  
 #' @param datgrid arrangement of the grid (number of rows X columns)
 #' @param layout_matrix,heights,widths arguments to be passed to 
-#' \code{\link{layout}}. If given, it overrides \code{datgrid}.
+#' \code{\link{layout}}. If given, it overrides \code{datgrid}. Note that the
+#' layout matrix refers to the whole plot, including the main title, the 
+#' column titles, the row titles, the scalp plots, and the colourbar plot 
+#' (in this order). 
 #' @param title_row,title_col character vectors of the titles of rows and 
 #' columns, respectively. If NULL and dat has dimnames attribute, 
 #' \code{rownames(dat)} and \code{colnames(dat)} are used.
+#' @param title_map character vector; the titles of the individual scalp maps. 
+#' if NULL and \code{dat} has \code{names} attribute, \code{names(dat)} is 
+#' used.
 #' @param title_main character; the title of the plot (default: the timepoint(s))
 #' @param plot_bar logical; should a colour bar be plotted below the maps 
 #' (default: TRUE)
@@ -447,46 +473,132 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
 complexplot2dview <- function(dat, ch_pos, timepoint, 
                               datgrid = NULL, layout_matrix = NULL, 
                               heights = NULL, widths = NULL, 
+                              titles = NULL,
                               title_row = NULL, title_col = NULL, 
+                              title_map = NULL,
                               title_main = paste("Time:", 
                                                  paste(timepoint, 
                                                        collapse = ", "), 
                                                  "ms"), 
                               plot_bar = TRUE, ampl_range = NULL, 
                               gfp = NULL, ...) {
-    #
+    # helper function
     emptyplot <- function() plot(0, 0, xlim = c(-1, 1), type = "n", 
                                  axes = FALSE, frame.plot = FALSE, 
                                  xlab = "", ylab = "")
-    resolcol <- list(...)$resolcol
-    if (is.null(resolcol)) resolcol <- formals(plot2dview)$resolcol
-    if (is.null(layout_matrix)) {
-        if (is.null(datgrid)) {
-            datgrid <- c(floor(sqrt(length(dat))), 
-                         ceiling(sqrt(length(dat))))
+    # argument checks
+    assertList(dat, .var.name = "dat")
+    assertDataFrame(ch_pos, .var.name = "ch_pos")
+    assertAtomicVector(timepoint, any.missing = FALSE, .var.name = "timepoint")
+    assert0(title_main, checkString)
+    assertFlag(plot_bar, .var.name = "plot_bar")
+    assert0(ampl_range, checkNumeric, 
+            finite = TRUE, any.missing = FALSE, len = 2L)
+    assert0(gfp, checkList, types = "numeric", len = length(dat))
+    # layout
+    datnum <- length(dat)
+    if (!is.null(layout_matrix)) {
+        assert0(layout_matrix, checkMatrix, mode = "numeric")
+        rownum <- abs(diff(range(layout_matrix[-(1:2), 1L]))) + 1L
+        colnum <- abs(diff(range(layout_matrix[2L, -1L]))) + 1L
+    } else if (!is.null(datgrid)) {
+        assert0(datgrid, checkIntegerish, any.missing = FALSE, len = 2L)
+        if (prod(datgrid) < datnum) {
+            stop(paste0("in complexplot2dview: ",
+                        "the product of 'datgrid' is less than the ",
+                        "length of 'dat'"), call. = FALSE)
         }
         rownum <- datgrid[1]
         colnum <- datgrid[2]
-        datnum <- prod(datgrid)
-        layout_matrix <- rbind(
-            matrix(c(
-                rep(1, colnum), 0,
-                2:(colnum + 1), 0), 2, colnum + 1, TRUE), 
-            matrix(c(
-                (colnum + rownum + 1) + 1:datnum,
-                (colnum + 2):(colnum + rownum + 1)), rownum, colnum + 1))
-        layout_matrix <- rbind(layout_matrix, 
-                               c(rep(max(layout_matrix) + 1, colnum), 0))
-        if (is.null(heights)) 
-            heights <- c(0.3, 0.2, rep(1, rownum), 0.2)
-        if (is.null(widths)) 
-            widths <- c(rep(1, colnum), 0.2)
+    } else if (!is.null(dim(dat))) {
+        dims <- dim(dat)
+        rownum <- dims[1L]
+        colnum <- datnum/rownum
+    } else if (!is.null(title_row)) {
+        assert0(title_row, checkCharacter, max.len = datnum)
+        rownum <- length(title_row)
+        colnum <- ceiling(datnum/rownum)
+    } else if (!is.null(title_col)) {
+        assert0(title_col, checkCharacter, max.len = datnum)
+        colnum <- length(title_col)
+        rownum <- ceiling(datnum/colnum)
     } else {
-        if (is.null(heights)) heights <- rep(1, nrow(layout_matrix))
-        if (is.null(widths)) widths <- rep(1, ncol(layout_matrix))
+        rownum <- floor(sqrt(ldatnum))
+        colnum <- ceiling(datnum/rownum)
     }
-    if (is.null(title_row)) title_row <- rownames(dat)
-    if (is.null(title_col)) title_col <- colnames(dat)
+    if (is.null(layout_matrix)) {
+        layout_matrix <- rbind(
+            matrix(
+                c(
+                    # main title
+                    rep_len(1L, colnum), 0L,
+                    # column titles
+                    2:(colnum + 1), 0L
+                ), 
+                2L, colnum + 1L, TRUE), 
+            matrix(
+                c(
+                    # scalp maps
+                    c(colnum + rownum + 1L + 1:datnum, 
+                      rep_len(0L, rownum*colnum - datnum)),
+                    # row titles
+                    (colnum + 2L):(colnum + rownum + 1L)
+                ), 
+                rownum, colnum + 1L))
+        layout_matrix <- rbind(layout_matrix, 
+                               c(rep(max(layout_matrix) + 1L, colnum), 0L))
+    }
+    # height and widths
+    heights <- 
+        if (is.null(heights)) {
+            c(0.3, 0.2, rep(1, rownum), 0.2)
+        } else {
+            assert0(heights, checkNumeric)
+            rep_len(heights, rownum + 3L)
+        }
+    widths <- 
+        if (is.null(widths)) {
+            widths <- c(rep(1, colnum), 0.2)
+        } else {
+            assert0(widths, checkNumeric)
+            rep_len(widths, colnum + 1L) 
+        }
+    # row titles 
+    if (is.null(title_row)) {
+        rown <- rownames(dat)
+        title_row <- if (is.null(rown)) rep_len("", rownum) else rown
+    } else {
+        assert0(title_row, checkCharacter, len = rownum)
+    }
+    # column titles
+    if (is.null(title_col)) {
+        dimn <- dimnames(dat)[-1L]
+        title_col <- 
+            if (length(dimn) > 0L) {
+                dimn <- expand.grid(dimn, 
+                                    KEEP.OUT.ATTRS = FALSE, 
+                                    stringsAsFactors = FALSE)
+                do.call(paste, c(dimn, list(sep = ".")))
+            } else {
+                rep_len("", colnum)
+            }
+    } else {
+        assert0(title_col, checkCharacter, len = colnum)
+    }
+    # map titles
+    if (is.null(title_map)) {
+        n <- names(dat)
+        title_map <- 
+            if (!is.null(n) && is.null(title_row) && is.null(title_col)) {
+                n
+            } else {
+                rep_len("", datnum)
+            }
+    } else {
+        assert0(title_map, checkCharacter, len = length(dat))
+    }
+    #
+    # start plotting
     layout(layout_matrix, widths = widths, heights = heights)
     par(mar = rep(0, 4))
     emptyplot(); text(0, 0, title_main, cex = 1.5)
@@ -510,12 +622,15 @@ complexplot2dview <- function(dat, ch_pos, timepoint,
     }
     gfp_max <- if (is.null(gfp)) NULL else max(unlist(gfp, use.names = FALSE))
     timepoint <- rep_len(timepoint, length(dat))
-    for (i in 1:length(dat)) {
+    for (i in 1:datnum) {
         plot2dview(dat[[i]], ch_pos = ch_pos, timepoint = timepoint[i], 
                    gfp = gfp[[i]], gfp_max = gfp_max,
-                   plot_bar = FALSE, ampl_range = ampl_range, title = "", ...)
+                   plot_bar = FALSE, ampl_range = ampl_range, 
+                   title = title_map[i], ...)
     }
     if (plot_bar) {
+        resolcol <- list(...)$resolcol
+        if (is.null(resolcol)) resolcol <- formals(plot2dview)$resolcol
         xpos.bar <- seq(0.4, 0.6, length.out = resolcol)
         ypos.bar <- c(0.45, 0.55)
         image(xpos.bar, ypos.bar,

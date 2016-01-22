@@ -5,9 +5,10 @@
 \title{Plot topography in complex layout}
 \usage{
 complexplot2dview(dat, ch_pos, timepoint, datgrid = NULL,
-  layout_matrix = NULL, heights = NULL, widths = NULL, title_row = NULL,
-  title_col = NULL, title_main = paste("Time:", paste(timepoint, collapse =
-  ", "), "ms"), plot_bar = TRUE, ampl_range = NULL, gfp = NULL, ...)
+  layout_matrix = NULL, heights = NULL, widths = NULL, titles = NULL,
+  title_row = NULL, title_col = NULL, title_map = NULL,
+  title_main = paste("Time:", paste(timepoint, collapse = ", "), "ms"),
+  plot_bar = TRUE, ampl_range = NULL, gfp = NULL, ...)
 }
 \arguments{
 \item{dat}{a list of numeric vectors or matrices, which can be plotted by
@@ -21,11 +22,18 @@ compared. Can be a vector referring to the timepoints of each topomap.}
 \item{datgrid}{arrangement of the grid (number of rows X columns)}
 
 \item{layout_matrix,heights,widths}{arguments to be passed to
-\code{\link{layout}}. If given, it overrides \code{datgrid}.}
+\code{\link{layout}}. If given, it overrides \code{datgrid}. Note that the
+layout matrix refers to the whole plot, including the main title, the
+column titles, the row titles, the scalp plots, and the colourbar plot
+(in this order).}
 
 \item{title_row,title_col}{character vectors of the titles of rows and
 columns, respectively. If NULL and dat has dimnames attribute,
 \code{rownames(dat)} and \code{colnames(dat)} are used.}
+
+\item{title_map}{character vector; the titles of the individual scalp maps.
+if NULL and \code{dat} has \code{names} attribute, \code{names(dat)} is
+used.}
 
 \item{title_main}{character; the title of the plot (default: the timepoint(s))}
 

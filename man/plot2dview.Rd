@@ -11,8 +11,8 @@ plot2dview(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = NULL,
   plot_centroid = TRUE, centroid_circle = 0.5,
   centroid_unitsphere = FALSE, plot_bar = TRUE, plot_ch = TRUE,
   plot_chnames = TRUE, title = NULL, gfp = NULL, gfp_max = NULL,
-  color_scale = function(n) gplots::colorpanel(n, "blue", "white", "red"),
-  ...)
+  colour_scale = function(n) gplots::colorpanel(n, "blue", "white", "red"),
+  colour_midpoint = 0, ...)
 }
 \arguments{
 \item{dat}{a numeric vector or matrix. If a matrix is provided, it must
@@ -30,7 +30,9 @@ the GFP curve if 'gfp' data are provided (with proper names or dimnames
 attribute).}
 
 \item{ampl_range}{numeric vector, the minimum and maximum value of the
-amplitudes (default: c(-5, 5))}
+amplitudes. If NULL (default), it is computed from the data. Data values
+outside the \code{ampl_range} interval are winsorized (set to equal to the
+minimum or maximum limit).}
 
 \item{type}{the type of the topoplot, either "contour" (the default) or
 "raster". The latter is faster for very high resolution topoplots.}
@@ -69,10 +71,13 @@ if they were located on the surface of a unit sphere (default: false)}
 
 \item{gfp_max}{the upper limit if gfp is provided}
 
-\item{color_scale}{function which creates a color scale with \code{n} values
+\item{colour_scale}{function which creates a colour scale with \code{n} values
 (\code{n} is defined by \code{resolcol}). The default is to use the
 \code{\link[gplots]{colorpanel}} function, with blue > white > red
-color scale.}
+colour scale.}
+
+\item{colour_midpoint}{a number to which the middle colour of the colour scale
+corresponds}
 
 \item{...}{arguments to \code{\link{chanInterp}}}
 }
