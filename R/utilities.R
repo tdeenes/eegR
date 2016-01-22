@@ -2,6 +2,22 @@
 # <<< simple utility functions >>> --------
 #
 
+
+#' Assertion with NULL allowed
+#' 
+#' \code{assert0} allows NULL besides other assertion conditions.
+#' @param x argument to check
+#' @param fun a function from the checkmate package (or similar)
+#' @param ... arguments to fun
+#' @param .var.name name for \code{x}. See \code{\link[checkmate]{assert}}
+assert0 <- function(x, fun, ..., .var.name = NULL) {
+    if (!length(.var.name)) .var.name = deparse(substitute(x))
+    fun <- match.fun(fun)
+    assert(checkNull(x),
+           fun(x, ...),
+           .var.name = .var.name)
+}
+
 #' Address in RAM of a variable
 #' 
 #' \code{address} returns the pointer address of its argument.
