@@ -87,10 +87,10 @@ last available, which is the same behavior as
   If \code{TRUE}, dimension names on the concatenated dimension will be
   composed of the argument name and the dimension names of the objects
   being bound.  If a single list argument is supplied, then the names of
-  the components serve as the argument names.
-  \code{use.anon.names}
-is a deprecated synonym for \code{make.names}.
-}
+  the components serve as the argument names.  \code{hier.names} can
+  also have values \code{"before"} or \code{"after"}; these determine
+  the order in which the argument name and the dimension name are put
+  together (\code{TRUE} has the same effect as \code{"before"}).}
 
 \item{along_name}{a character version of \code{along} in
 \code{abind}. Only considered if input arrays have named
