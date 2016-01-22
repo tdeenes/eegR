@@ -20,7 +20,7 @@ plotERParray(dat03, lty = 1, col = "grey70", grid_dim = c(3, 2))
 ## ------------------------------------------------------------------------
 # prepare data
 tempdat <- transformArray(
-    compGfp(amplitude) ~ . + .(id), 
+    compGfp(amplitude) ~ . | id, 
     erps, list(readgroup = id_dat$group))
 
 # create plot
@@ -32,13 +32,13 @@ ggplot(tempdat, aes(x = time, y = amplitude, col = readgroup, lty = pairtype)) +
 ## ------------------------------------------------------------------------
 # subset the data (pairtype = "ident") and average across id based on 
 # reading group membership
-tempdat <- transformArray(y ~ . + .(id), erps, 
+tempdat <- transformArray(y ~ . | id, erps, 
                           group = list(readgroup = id_dat$group), 
                           subset = list(pairtype = "ident"), 
                           datfr = FALSE)
 
 # split the array along the readgroup and stimclass dimensions
-tempdat <- splitArray(tempdat, c("readgroup", "stimclass"))
+tempdat <- splitArray(tempdat, c("readgroup", "stimclass"), drop = TRUE)
 
 # compute GFP
 gfpdat <- lapply(tempdat, compGfp)
@@ -62,7 +62,7 @@ complexplot2dview(
 # function again with the given value
 ChN <- chanNb(chan_pos, alpha = 0.7)
 
-## ----, fig.height=14-----------------------------------------------------
+## ---- fig.height=14------------------------------------------------------
 # do bin averaging
 tempdat <- avgBin(erps, "time", bin_length = 6)
 
@@ -74,12 +74,12 @@ results <- arrayAnova(
                      within = c("stimclass", "pairtype"),
                      observed = "group"),
     bwdat = id_dat, 
-    nperm = 99, 
+    perm = .(n = 99), 
     tfce = .(ChN = ChN),
     parallel = .(ncores = 2))
 
 # plot the results (for now, only the p-values of the TFCE method)
-imagePvalues(extract(results, "p_corr"), grid = "modelterm ~ .")
+modelplot(results, "p-value")
 
 # print the summary
 summary(results)
