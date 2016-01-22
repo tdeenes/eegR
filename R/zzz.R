@@ -17,12 +17,18 @@
 #' @useDynLib eegR
 #' @import abind data.table matrixStats ggplot2 permute proj4
 #' @import parallel doParallel foreach iterators
-#' @importFrom checkmate assertAtomic assertVector assertMatrix assertArray
-#' @importFrom checkmate assertDataFrame assertList assertClass
-#' @importFrom checkmate assertLogical assertCharacter assertNumeric assertIntegerish testIntegerish
+#' @importFrom checkmate assertAtomic assertAtomicVector assertVector assertMatrix assertArray
+#' @importFrom checkmate assertDataFrame assertList assertClass assertChoice
+#' @importFrom checkmate assertLogical assertCharacter assertNumeric assertIntegerish 
 #' @importFrom checkmate assertString assertNumber assertScalar assertCount assertFlag assertInt
-#' @importFrom checkmate testVector
-#' @importFrom checkmate assert checkChoice assertChoice
+#' @importFrom checkmate assertFunction
+#' @importFrom checkmate checkAtomic checkAtomicVector checkVector checkMatrix checkArray
+#' @importFrom checkmate checkDataFrame checkList checkClass checkChoice
+#' @importFrom checkmate checkLogical checkCharacter checkNumeric checkIntegerish 
+#' @importFrom checkmate checkString checkNumber checkScalar checkCount checkFlag checkInt
+#' @importFrom checkmate checkNull
+#' @importFrom checkmate testVector testIntegerish
+#' @importFrom checkmate assert
 #' @importFrom Rcpp evalCpp
 #' @importFrom Kmisc factor_ counts
 #' @importFrom orthopolynom polynomial.values legendre.polynomials
