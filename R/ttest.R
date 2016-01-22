@@ -31,9 +31,7 @@ isTtest <- function(obj, new_group = NULL, attribs = FALSE) {
     res <- lapply(1:2, function(g) {
         datx <- obj$.arraydat[groups == g, , drop = FALSE]
         mm <- colMeans(datx, na.rm = TRUE)
-        vv <- .Call("rowVars", datx, as.integer(dim(datx)), 
-                    TRUE, obj$has_NA, FALSE, 
-                    PACKAGE = "matrixStats")
+        vv <- colVars(datx, na.rm = TRUE)
         if (obj$has_NA) {
             nn <- nrow(datx) - colCounts(datx, value = NA_real_)
             nn[nn < 1L] <- NA
@@ -92,10 +90,7 @@ osTtest <- function(obj, new_sign = NULL, attribs = FALSE) {
     verbose <- if (!attribs) FALSE else obj$verbose
     dat <- if (is.null(new_sign)) obj$.arraydat else obj$.arraydat * new_sign
     m1 <- colMeans(dat, na.rm = TRUE)
-    sd1 <- .Call("rowVars", dat, as.integer(dim(dat)), 
-                 TRUE, obj$has_NA, FALSE, 
-                 PACKAGE = "matrixStats")
-    sd1 <- sqrt(sd1)
+    sd1 <- colSds(dat, na.rm = TRUE)
     if (obj$has_NA) {
         n1 <- nrow(dat) - colCounts(dat, value = NA_real_)
         n1[n1 < 1L] <- NA
