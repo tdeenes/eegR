@@ -10,10 +10,10 @@ modelplot(...)
 
 \method{modelplot}{default}(results, what = c("statistic", "p-value"),
   type = c("corrected", "uncorrected"), pcrit = c(0.001, 0.01, 0.05),
-  grid = NULL, wrap = NULL, bar_title = "Test statistic",
-  time_label = "Time (ms)", channel_label = "Channels", raster = TRUE,
-  cluster_order = FALSE, low = scales::muted("blue"), mid = "white",
-  high = scales::muted("red"), midpoint = 0, ...)
+  grid = NULL, wrap = NULL, time_label = "Time (ms)",
+  channel_label = "Channels", raster = TRUE, cluster_order = FALSE,
+  low = scales::muted("blue"), mid = "white", high = scales::muted("red"),
+  midpoint = 0, ...)
 
 \method{modelplot}{tanova}(results, what = c("statistic", "p-value"),
   type = c("corrected", "uncorrected"), grid = NULL, wrap = NULL,
@@ -41,8 +41,6 @@ p-values. The names can be abbreviated.}
 \item{wrap}{character vector or formula defining the dimension which
 separates panels (only considered if grid is NULL)}
 
-\item{bar_title}{character string; the title of the colour bar}
-
 \item{time_label}{character string; the label of the x (time) axis
 (default: "Time (ms)")}
 
@@ -64,7 +62,7 @@ agglomerative clustering (default: FALSE)}
 (default: 0)}
 }
 \value{
-A ggplot object
+A ggplot object or a list of such objects
 }
 \description{
 \code{modelplot} is a generic function for plotting

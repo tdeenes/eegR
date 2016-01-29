@@ -2,9 +2,9 @@
 % Please edit documentation in R/utilities.R
 \name{setattributes}
 \alias{setattributes}
-\title{Attach dimension and type attributes to test statistics}
+\title{Attach dimension and label attributes to test statistics}
 \usage{
-setattributes(x, obj = NULL, type = NULL, dimorder = NULL)
+setattributes(x, obj = NULL, label = NULL, dimorder = NULL)
 }
 \arguments{
 \item{x}{the vector or matrix of the test statistic}
@@ -12,7 +12,7 @@ setattributes(x, obj = NULL, type = NULL, dimorder = NULL)
 \item{obj}{if not NULL (default), a list object returned by
 \code{\link{preTtest}} or \code{\link{preAnova}}}
 
-\item{type}{if not NULL (default), a character string with a verbose
+\item{label}{if not NULL (default), a character string with a verbose
 description of the test statistic (e.g. "Traditional F-value", "Welch t",
 "Generalized Eta Squared", etc.)}
 
@@ -21,7 +21,7 @@ indicating the order (or subset) of the dimensions}
 }
 \description{
 Used internally in the workhorse functions for arrayAnova, arrayTtest, etc.
-to set the dimension, dimension names and verbose type of the given test
+to set the dimension, dimension names and nice label of the given test
 statistic
 }
 \keyword{internal}

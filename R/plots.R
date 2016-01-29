@@ -848,7 +848,7 @@ colorize <- function(obj, low = scales::muted("blue"), mid = "white",
 #' @param ... arguments passed to \code{\link{extract}}; e.g. use 
 #' arguments 'time_window' and 'term' to display only a subset of the results
 #' @export
-#' @return A ggplot object
+#' @return A ggplot object or a list of such objects
 #' @seealso See the examples for \code{\link{arrayAnova}} and 
 #' \code{\link{tanova}}
 modelplot <- function(...) UseMethod("modelplot")
@@ -864,43 +864,55 @@ modelplot.default <- function(results,
                               type = c("corrected", "uncorrected"),
                               pcrit = c(0.001, 0.01, 0.05),
                               grid = NULL, wrap = NULL, 
-                              bar_title = "Test statistic", 
                               time_label = "Time (ms)", 
                               channel_label = "Channels", 
                               raster = TRUE, 
                               cluster_order = FALSE, 
                               low = scales::muted("blue"), mid = "white", 
-                              high = scales::muted("red"), midpoint = 0, ...) {
+                              high = scales::muted("red"), midpoint = 0, 
+                              ...) {
     #
     if (!inherits(results, c("arrayTtest", "arrayAnova")))
-        stop("'results' does not have class 'arrayTest' or 'arrayAnova' or 'tanova'")
+        stop(paste0("'results' does not have class 'arrayTest' ",
+                    "or 'arrayAnova' or 'tanova'"))
     what <- match.arg(what, several.ok = TRUE)
     type <- match.arg(type)
     which_stat <- if (type == "corrected") "stat_corr" else "stat"
     which_p <- if (type == "corrected") "p_corr" else "p"
-    out <- vector("list", 2)
+    dat <- out <- vector("list", 2)
     if ("statistic" %in% what) {
+        dat <- extract(results, which_stat, ...)
+        subplot_title <- attr(dat, "label")
+        bar_title <- 
+            if (type == "corrected") "TFCE statistic" else "Test statistic"
         out[[1L]] <- imageValues(
-            extract(results, which_stat, ...), 
+            dat, 
             grid = grid, wrap = wrap, bar_title = bar_title,
             time_label = time_label, channel_label = channel_label,
             raster = raster, cluster_order = cluster_order,
-            low = low, mid = mid, high = high, midpoint = midpoint)
+            low = low, mid = mid, high = high, midpoint = midpoint) +
+            ggtitle(subplot_title)
         i <- 1L
     }
     if ("p-value" %in% what) {
+        dat <- extract(results, which_p, ...)
+        subplot_title <- attr(dat, "label")
         out[[2L]] <- imagePvalues(
-            extract(results, which_p, ...), 
+            dat, 
             pcrit = pcrit, grid = grid, wrap = wrap,
             time_label = time_label, channel_label = channel_label,
-            raster = raster, cluster_order = cluster_order)
+            raster = raster, cluster_order = cluster_order) + 
+            ggtitle(subplot_title)
         i <- 2L
     } 
     # return
-    if (length(what) == 2) {
-        out[[1L]] <- out[[1L]] + ggtitle("Test statistic")
-        out[[2L]] <- out[[2L]] + ggtitle("Significant effects")
-        multiplot(plot_list = out, cols = 2)
+    if (length(what) == 2L) {
+        grid::grid.newpage()
+        grid::grid.draw(
+            gtable::gtable_row(
+                "result",
+                list(ggplotGrob(out[[1L]]), ggplotGrob(out[[2L]])),
+                height = unit(1, "npc")))
         invisible(out)
     } else {
         out[[i]]
@@ -924,30 +936,44 @@ modelplot.tanova <- function(results,
     if (!inherits(results, "tanova"))
         stop("'results' does not have class 'tanova'")
     what <- match.arg(what, several.ok = TRUE)
-    dat <- transformArray(effect ~ ., extract(results, "stat", ...))
-    if (identical(what, "statistic")) {
-        dat$pcrit <- factor(1, labels = "ns")
-        colour_pcrit <- "grey60"
+    type <- match.arg(type)
+    # if statistic is in 'what', the (corrected) test statistic will be 
+    # displayed, potentially highlighted (if p-value is also in "what");
+    # otherwise, the raw p-values will be displayed
+    if ("statistic" %in% what) {
+        extract_stat <- if (type == "corrected") "stat_corr" else "stat"
+        dat <- extract(results, extract_stat, ...)
+        ylabel <- attr(dat, "label")
+        dat <- transformArray(y ~ ., dat)
+        if ("p-value" %in% what) {
+            highlight_p <- if (type == "corrected") "p_corr" else "p"
+            hpvals <- extract(results, highlight_p, ...)
+        }
     } else {
-        type <- match.arg(type)
-        highlight_p <- if (type == "corrected") "p_corr" else "p"
+        hpvals <- extract(results, "p", ...)
+        ylabel <- sprintf("-log(%s)", attr(hpvals, "label"))
+        dat <- transformArray(y ~ ., -log(hpvals))
+        # hpvals will be used for highlighting; overwrite with p_corr if needed
+        if (type == "corrected") hpvals <- extract(results, "p_corr", ...)
+    }
+    # highlight with corrected or uncorrected p-values
+    if ("p-value" %in% what) {
+        # alpha-level
         pcrit <- try(eval(as.list(results$call)$pcrit), silent = TRUE)
         if (is.null(pcrit)) {
             pcrit <- formals(tanova)$pcrit
         }
         if (!is.numeric(pcrit) || is.na(pcrit)) {
             pcrit <- 
-                if (identical(highlight_p, "p_corr")) {
-                    unique(as.vector(extract(results, "p_corr", ...)))
+                if (type == "corrected") {
+                    unique(as.vector(hpvals))
                 } else {
                     0.05
                 }
         }
         pcrit <- union(sort(pcrit), 1)
         #
-        dat$pvalue <- -log(as.vector(extract(results, "p", ...)))
-        hpvals <- extract(results, highlight_p, ...)
-        if (identical(highlight_p, "p")) {
+        if (type == "uncorrected") {
             ind <- hpvals <= pcrit[1L]
             hpvals[ind] <- pcrit[1L] 
             for (i in 2:length(pcrit)) {
@@ -955,14 +981,17 @@ modelplot.tanova <- function(results,
                 hpvals[ind] <- pcrit[i] 
             }
         }
-        shiftEdges <- function(x) {
-            dx <- diff(x)
-            dx[dx < 0] <- 0
-            x[-nrow(x), ] <- x[-nrow(x), ] + dx
-            x
-        }
-        hpvals <- fnDims(hpvals, "time", shiftEdges, vectorized = TRUE,
+        # shift edges
+        hpvals <- fnDims(hpvals, "time", 
+                         function(x) {
+                             dx <- diff(x)
+                             dx[dx < 0] <- 0
+                             x[-nrow(x), ] <- x[-nrow(x), ] + dx
+                             x
+                         },
+                         vectorized = TRUE,
                          keep_dimorder = TRUE)
+        # transform to factor
         dat$pcrit <- factor(hpvals, 
                             levels = as.character(pcrit), 
                             labels = c(as.character(pcrit[-length(pcrit)]), 
@@ -972,22 +1001,35 @@ modelplot.tanova <- function(results,
                                        "Reds"))[seq_along(final_pcrit)]
         colour_pcrit[final_pcrit == "n.s."] <- "grey60"
         legendtitle <- "p-value"
+        if (type == "corrected") {
+            legendtitle <- paste(legendtitle, "(corrected)")
+        }
     }
     #
-    if (identical(what, "p-value")) {
-        scales = "fixed"
+    # basic plot
+    scales <- "fixed"
+    if (identical(what, "statistic")) {
+        if (type == "uncorrected") scales <- "free_y"
         qp <- ggplot(dat[order(dat$time),], 
-                     aes_string(x = "time", y = "pvalue", col = "pcrit", 
-                                group = NA)) + 
-            geom_hline(yintercept = -log(pcrit), lty = 3) + 
-            ylab("-log(P-value)")
+                     aes_string(x = "time", y = "y"))
     } else {
-        scales = "free_y"
         qp <- ggplot(dat[order(dat$time),], 
-                     aes_string(x = "time", y = "effect", col = "pcrit", 
+                     aes_string(x = "time", y = "y", col = "pcrit", 
                                 group = NA)) + 
-            ylab("Effect")
+            scale_colour_manual(name = legendtitle,
+                                values = colour_pcrit)
+        if (length(what) == 1L) {
+            pcrit <- setdiff(pcrit, 1)
+            qp <- qp + 
+                geom_hline(yintercept = -log(pcrit), linetype = "dotted") + 
+                annotate("text", x = max(dat$time), y = -log(pcrit),
+                         size = 3, label = paste0("p < ", pcrit),
+                         hjust = "right", vjust = -0.3,
+                         colour = "grey50")
+        }
     }
+    #
+    # facetting
     if (!is.null(grid)) {
         qp <- qp + facet_grid( as.formula(grid) )
     } else if (!is.null(wrap)) {
@@ -1008,16 +1050,13 @@ modelplot.tanova <- function(results,
             }
         }
     }
-    qp <- qp + geom_path() + 
-        xlab(time_label) +  
-        scale_colour_manual(name = legendtitle,
-                            values = colour_pcrit) + 
-        theme(panel.background = element_rect(fill = "white"),
-              panel.grid.major = element_line(color = "grey95"),
-              panel.grid.minor = element_line(color = "grey97"),
-              panel.border = element_rect(color = "grey70", fill = NA))
     #
-    qp
+    # finalize plot
+    qp + 
+        geom_path() + 
+        ylab(ylabel) + 
+        xlab(time_label) +  
+        theme_bw()
 }
 
 

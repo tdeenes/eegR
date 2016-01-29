@@ -60,7 +60,7 @@ extract.default <- function(object, what,
         if (length(subs) > 0L) {
             out <- subsetArray(out, subset. = subs, drop. = params$drop,
                                keep_attributes. = FALSE)
-            setattr(out, "type", attr(x, "type"))
+            setattr(out, "label", attr(x, "label"))
         }
         # return
         out
@@ -157,7 +157,7 @@ extract.arrayAnova <- function(object,
 
 #' @describeIn extract
 extract.tanova <- function(object,
-                           what = c("all", "stat", "p",
+                           what = c("all", "stat", "p", 
                                     "stat_corr", "p_corr",
                                     "means"),
                            time_window = NULL, term = NULL,
@@ -245,7 +245,7 @@ summary.arrayAnova <- function(object,
 #' @rdname summary
 #' @export
 summary.tanova <- function(object,
-                           basis = c("p_corr", "p", "stat"),
+                           basis = c("p_corr", "p", "stat", "stat_corr"),
                            basis_dim = "time",
                            crit = NULL,
                            ...) {
@@ -353,7 +353,7 @@ summary.eegr <- function(object, basis, basis_dim, crit, ...) {
             arg_list = list(size = arg_size),
             newdims = list(descriptives = descr),
             vectorized = TRUE)
-        setattr(temp, "type", attr(out[[i]], "type"))
+        setattr(temp, "label", attr(out[[i]], "label"))
         out[[i]] <- Aperm(temp)
     }
     #
@@ -388,7 +388,7 @@ print.summary.eegr <- function(x, digits = 3L, quote = FALSE, fill_na = "-",
     rD <- function(x) {
         ind <- match("descriptives", names(dimnames(x)))
         names(dimnames(x))[ind] <- ""
-        attr(x, "type") <- NULL
+        attr(x, "label") <- NULL
         x
     }
     # check arguments
@@ -399,10 +399,10 @@ print.summary.eegr <- function(x, digits = 3L, quote = FALSE, fill_na = "-",
         paste(deparse(x$call), sep = "\n", collapse = "\n"))
     cat("\n\n----\nDesriptive statistics\n----\n")
     rel <- if (grepl("p", x$basis$basis)) "<" else ">"
-    basis <- attr(x[[x$basis$basis]], "type")
+    basis <- attr(x[[x$basis$basis]], "label")
     cat("\n( Basis:", paste(basis, rel, x$basis$crit, ")\n", sep = " "))
     for (i in seq_along(x[setdiff(names(x), c("call", "basis"))])) {
-        cat("\n<<<", attr(x[[i]], "type"),  ">>>\n")
+        cat("\n<<<", attr(x[[i]], "label"),  ">>>\n")
         print(rD(x[[i]]), digits = digits, quote = quote, na.print = fill_na,
               ...)
     }

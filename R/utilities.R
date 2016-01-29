@@ -393,28 +393,28 @@ matchArg <- function(arg, choices = NULL, several_ok = TRUE) {
     }
 }
 
-#' Attach dimension and type attributes to test statistics
+#' Attach dimension and label attributes to test statistics
 #' 
 #' Used internally in the workhorse functions for arrayAnova, arrayTtest, etc.
-#' to set the dimension, dimension names and verbose type of the given test
+#' to set the dimension, dimension names and nice label of the given test
 #' statistic
 #' @param x the vector or matrix of the test statistic
 #' @param obj if not NULL (default), a list object returned by 
 #' \code{\link{preTtest}} or \code{\link{preAnova}}
-#' @param type if not NULL (default), a character string with a verbose 
+#' @param label if not NULL (default), a character string with a verbose 
 #' description of the test statistic (e.g. "Traditional F-value", "Welch t", 
 #' "Generalized Eta Squared", etc.)
 #' @param dimorder if not NULL (default), a numeric or character vector 
 #' indicating the order (or subset) of the dimensions
 #' @keywords internal
-setattributes <- function(x, obj = NULL, type = NULL, dimorder = NULL) {
+setattributes <- function(x, obj = NULL, label = NULL, dimorder = NULL) {
     if (!is.null(obj)) {
         if (is.null(dimorder)) dimorder <- seq_along(obj$teststat_dimid)
         array_(x, obj$full_dims[obj$teststat_dimid][dimorder], 
                arg_check = FALSE)    
     }
-    if (!is.null(type))
-        setattr(x, "type", type)
+    if (!is.null(label))
+        setattr(x, "label", label)
     # return
     invisible(x)
 }

@@ -102,14 +102,14 @@ permPvalues <- function(obj, nperm, seed, stat_obs, parallel, tfce = NULL) {
                     permfn(obj, xi, tfce, stat_fun, stat_obs, has_neg)
             }
     sig <- (sig + 1) / (nperm + 1)
-    # set type
-    attr_type <-
+    # set label
+    attr_label <-
         if (use_tfce) {
             "Permuted P-value (with TFCE correction)"
         } else {
             "Permuted P-value (with max(Channel X Time) correction)"
         }
-    setattr(sig, "type", attr_type)
+    setattr(sig, "label", attr_label)
 }
 
 #' Compute marginal means in an ANOVA design
@@ -378,9 +378,11 @@ forceOrthogonal <- function(model_matrix, between = character()) {
         orth <- orth[lower.tri(orth)]
         if (max(abs(orth)) > .Machine$double.eps) {
             if (length(between) > 1L)
-                warning("The design is unbalanced, and this function calculates
-sequential (type-I) tests. Consider re-running the test
-with reordered between-subject factors (see ?arrayAnova).")
+                warning(paste0(
+                    "The design is unbalanced, and this function calculates ",
+                    "sequential (type-I) tests. Consider re-running the test ",
+                    "with reordered between-subject factors (see ?arrayAnova)."
+                ))
             model_matrix[, 2L] <- model_matrix[, 2L] - mean(model_matrix[, 2L])
             for (i in 3:ncol(model_matrix)) {
                 mmi <- model_matrix[,1:(i-1L)]
@@ -646,7 +648,7 @@ compF <- function(obj, new_indices = NULL, attribs = FALSE, verbose = FALSE) {
             Df <- cbind(Df_model = model_df,
                         Df_residual = rep_len(resid_df, length(model_df)))
             names(dimnames(Df)) <- c("modelterm", "")
-            setattr(Df, "type", "Degrees of freedom")
+            setattr(Df, "label", "Degrees of freedom")
             setattr(Fvals, "p_value", pvalues)
             setattr(Fvals, "effect_size", ges)
             setattr(Fvals, "Df", Df)
@@ -1216,14 +1218,14 @@ arrayTtestAnova <- function(test,
     # TFCE correction
     if (use_tfce) {
         has_neg <- if (test == "ANOVA") FALSE else TRUE
-        verbose_type <- sprintf(
+        verbose_label <- sprintf(
             "TFCE-corrected %s statistic",
             if (test == "ANOVA") "F" else "t")
         tfce_obs <- anovaTfce(stat_obs, 1:2,
                               has_neg = has_neg,
                               nr_chan = input$nr_chan,
                               nr_time = input$nr_time, tfce = tfce)
-        setattr(tfce_obs, "type", verbose_type)
+        setattr(tfce_obs, "label", verbose_label)
     }
     #
     # permutations
@@ -1396,7 +1398,7 @@ compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
         }
     }
     if (attribs) {
-        setattributes(out, obj, "Effect (generalized GFP)", outdimn)
+        setattributes(out, obj, "Generalized GFP", outdimn)
         dimn <-  setNames(vector("list", length(outdimn)), outdimn)
         setattr(out, "dimnames", dimn)
     }
@@ -1429,7 +1431,7 @@ compPvalueTanova <- function(effect_perm, pcrit) {
     pvalues_perm <- (nperm + 1 - pvalues_perm) / nperm
     pvalues <- subsetArray(pvalues_perm, list(perm = 1L))
     setattr(pvalues, "dimnames", dimnames(pvalues_perm)[-1L])
-    setattr(pvalues, "type", "Permuted P-value")
+    setattr(pvalues, "label", "Permuted P-value")
     out <- list(p = pvalues)
     # consecutive sign. criterion
     if ("time" %in% names(dims)) {
@@ -1450,10 +1452,27 @@ compPvalueTanova <- function(effect_perm, pcrit) {
             pvalues_consec[temp > 0] <- alpha
         }
         pvalues_consec <- apermArray(pvalues_consec, names(dimnames(pvalues)))
-        setattr(pvalues_consec, "type",
+        setattr(pvalues_consec, "label",
                 "Permuted P-value (with min. length correction)")
         out[["p_corr"]] <- pvalues_consec
     }
+    # return
+    out
+}
+
+#' Compute effect size in TANOVA
+#'
+#' \code{compZTanova} is a helper function to compute corrected test statistic
+#' in the high-level \code{\link{tanova}} function. It is actually the z-scored 
+#' generalized GFP statistic.
+#' @param effect_perm an array of permuted effects (including the observed
+#' effect as the first level of the 'perm' dimension)
+#' @keywords internal
+compZTanova <- function(effect_perm) {
+    out <- scaleArray(effect_perm, by_dims = "perm",
+                      base_subset = list(perm = -1L))
+    out <- subsetArray(out, list(perm = 1L))
+    setattr(out, "label", "Z-scored generalized GFP")
     # return
     out
 }
@@ -1622,11 +1641,16 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
         setattr(es_perm, "dimnames", dimn)
         # p-values
         pvals <- compPvalueTanova(es_perm, pcrit)
+        # standardized GFP
+        zgfp <- compZTanova(es_perm)
     }
     # back-transform to original dimorder
     out$stat <- backFn(es_obs, input)
     rm(es_obs)
     if (perm$n > 1L) {
+        # zgfp
+        out$stat_corr <- backFn(zgfp, input)
+        # p-values
         pvals <- lapply(pvals, backFn, obj = input)
         setattr(out$stat, "p_value", pvals[["p"]])
         if (!is.null(pvals[["p_corr"]]))
