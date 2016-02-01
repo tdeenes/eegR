@@ -18,7 +18,8 @@ plot2dview(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = NULL,
 \item{dat}{a numeric vector or matrix. If a matrix is provided, it must
 contain the participants in rows and the channels in columns}
 
-\item{ch_pos}{a data.frame with the channel coordinates}
+\item{ch_pos}{a data.frame of electrode positions,
+see \code{\link{coordinates}}}
 
 \item{r}{a numeric value; the radius of the head (not used if ch_pos contains
 a column \code{r})}

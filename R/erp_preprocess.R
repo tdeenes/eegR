@@ -632,7 +632,7 @@ scaleChan <- function(dat, keep_dimorder = TRUE) {
 #' positive values)
 #' @param dat numeric vector of amplitudes at a given sampling point
 #' @param ch_pos matrix or data.frame containing channel positions (in the same
-#' order as dat)
+#' order as dat), see \code{\link{coordinates}}
 #' @param proj2map logical value; if TRUE (default), the centroids are projected
 #' onto a 2D plane
 #' @param proj_unitsphere logical value; if TRUE, and proj2map is also TRUE, the 

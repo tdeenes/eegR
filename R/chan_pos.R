@@ -4,14 +4,19 @@
 
 #' Transformation between spherical, cartesian and geographical coordinates
 #'
-#' \code{sph2cart}, \code{sph2geo}, \code{cart2sph}, \code{cart2geo},
-#' \code{geo2sph}, \code{geo2cart} transform spherical (sph), cartesian (cart),
-#' or geographical (geo) coordinates into the respective coordinate system.
+#' This package contains several functions which require a data.frame of the 
+#' exact channel positions (e.g., \code{\link{plot2dview}}, 
+#' \code{\link{chanNb}}). To facilitate the transformation between various
+#' coordinate systems, \code{sph2cart}, \code{sph2geo}, \code{cart2sph}, 
+#' \code{cart2geo}, \code{geo2sph}, \code{geo2cart} transform spherical (sph), 
+#' cartesian (cart), or geographical (geo) coordinates into the respective 
+#' coordinate system.
 #' @name coordinates
 #' @param ch_pos a data frame or matrix containing the spherical, cartesian,
 #' or geographical coordinates of the electrode positions. It should contain
 #' at least the following (named) columns, respectively: theta and phi;
-#' x, y, and z; or lat and long.
+#' x, y, and z; or lat and long. The rownames attribute of \code{ch_pos} is
+#' interpreted as the names of the electrodes.
 #' @param r radius (default = 1)
 #' @param deg logical variable indicating whether spherical or geographical
 #' coordinates are or should be given in degrees (TRUE, default)
@@ -168,7 +173,8 @@ cart2geo <- function(ch_pos, deg = TRUE) {
 #' Find channel neighbours
 #'
 #' \code{chanNb} finds neighbouring channels
-#' @param ch_pos electrode positions
+#' @param ch_pos a data.frame of electrode positions, 
+#' see \code{\link{coordinates}}
 #' @param check_alpha a two-element numeric vector defining the range which is
 #' supposed to contain the optimal value of alpha
 #' @param alpha a numeric value which influences the allowed distance between

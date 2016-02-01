@@ -14,7 +14,8 @@ complexplot2dview(dat, ch_pos, timepoint, datgrid = NULL,
 \item{dat}{a list of numeric vectors or matrices, which can be plotted by
 \code{\link{plot2dview}}}
 
-\item{ch_pos}{channel position matrix}
+\item{ch_pos}{a data.frame of electrode positions,
+see \code{\link{coordinates}}}
 
 \item{timepoint}{integer; the timepoint at which the scalp distributions are
 compared. Can be a vector referring to the timepoints of each topomap.}

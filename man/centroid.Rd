@@ -10,7 +10,7 @@ centroid(dat, ch_pos, proj2map = TRUE, proj_unitsphere = FALSE, ...)
 \item{dat}{numeric vector of amplitudes at a given sampling point}
 
 \item{ch_pos}{matrix or data.frame containing channel positions (in the same
-order as dat)}
+order as dat), see \code{\link{coordinates}}}
 
 \item{proj2map}{logical value; if TRUE (default), the centroids are projected
 onto a 2D plane}

@@ -131,7 +131,8 @@ plotERParray <- function(dat, xdim = "time", sepdim = "chan",
 #' \code{plot2dview} creates 2D topoplots
 #' @param dat a numeric vector or matrix. If a matrix is provided, it must 
 #' contain the participants in rows and the channels in columns
-#' @param ch_pos a data.frame with the channel coordinates
+#' @param ch_pos a data.frame of electrode positions, 
+#' see \code{\link{coordinates}}
 #' @param r a numeric value; the radius of the head (not used if ch_pos contains
 #' a column \code{r})
 #' @param timepoint an integer value representing the time point at which the 
@@ -427,7 +428,8 @@ plot2dview <- function(dat, ch_pos, r = 1, timepoint = NULL,
 #' matrices
 #' @param dat a list of numeric vectors or matrices, which can be plotted by
 #' \code{\link{plot2dview}}
-#' @param ch_pos channel position matrix
+#' @param ch_pos a data.frame of electrode positions, 
+#' see \code{\link{coordinates}}
 #' @param timepoint integer; the timepoint at which the scalp distributions are
 #' compared. Can be a vector referring to the timepoints of each topomap.  
 #' @param datgrid arrangement of the grid (number of rows X columns)

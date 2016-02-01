@@ -7,7 +7,8 @@
 chanNb(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...)
 }
 \arguments{
-\item{ch_pos}{electrode positions}
+\item{ch_pos}{a data.frame of electrode positions,
+see \code{\link{coordinates}}}
 
 \item{check_alpha}{a two-element numeric vector defining the range which is
 supposed to contain the optimal value of alpha}
