@@ -4,16 +4,18 @@
 \alias{compZTanova}
 \title{Compute effect size in TANOVA}
 \usage{
-compZTanova(effect_perm)
+compZTanova(effect_perm, label = "")
 }
 \arguments{
 \item{effect_perm}{an array of permuted effects (including the observed
 effect as the first level of the 'perm' dimension)}
+
+\item{label}{the label of the observed test statistic}
 }
 \description{
 \code{compZTanova} is a helper function to compute corrected test statistic
 in the high-level \code{\link{tanova}} function. It is actually the z-scored
-generalized GFP statistic.
+generalized dissimilarity statistic.
 }
 \keyword{internal}
 

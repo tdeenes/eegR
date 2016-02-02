@@ -797,11 +797,11 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
     #
     # if gfp or dissimilarity, modify the input array
     if (tanova) {
-        if (tanova_type == "gfp") {
+        if (tanova_type == "intensity") {
             .arraydat <- compGfp(.arraydat)
             full_dimnames <- dimnames(.arraydat)
         }
-        if (tanova_type == "dissimilarity")
+        if (tanova_type == "topography")
             .arraydat <- scaleChan(.arraydat)
     }
     # set contrasts
@@ -916,7 +916,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
          pre_dimnames = pre_dimnames,
          teststat_dimid = teststat_dimid,
          nr_chan = nr_chan, nr_time = nr_time, nr_chanXtime = nr_chanXtime,
-         otherdims = otherdims)
+         otherdims = otherdims, tanova_type = tanova_type)
 }
 
 
@@ -1346,7 +1346,7 @@ extractInteraction <- function(dat, sep = ".", sep_fixed = TRUE) {
 # TANOVA functions ===========
 
 
-#' Compute generalized GFP-effects
+#' Compute generalized dissimilarity
 #'
 #' \code{compTanovaEffect} computes the generalized effect size measure as
 #' given in Koenig & Melie-Garcia, 2009, p177. This is an internal function
@@ -1398,7 +1398,12 @@ compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
         }
     }
     if (attribs) {
-        setattributes(out, obj, "Generalized GFP", outdimn)
+        label <- switch(
+            obj$tanova_type,
+            both = "Generalized dissimilarity of maps",
+            topography = "Generalized dissimilarity of topographies",
+            intensity = "Generalized dissimilarity of intensites")
+        setattributes(out, obj, label, outdimn)
         dimn <-  setNames(vector("list", length(outdimn)), outdimn)
         setattr(out, "dimnames", dimn)
     }
@@ -1409,10 +1414,10 @@ compTanovaEffect <- function(obj, new_indices = NULL, attribs = FALSE) {
 #' Compute p-values and length-corrected p-values in TANOVA
 #'
 #' \code{compPvalueTanova} is a helper function to compute p-values and
-#' length-corrected p-values in the high-level \code{\link{tanova}} function.
+#' duration-corrected p-values in the high-level \code{\link{tanova}} function.
 #' @param effect_perm an array of permuted effects (including the observed
 #' effect as the first level of the 'perm' dimension)
-#' @param pcrit a vector of p-value limits for consecutive length correction
+#' @param pcrit a vector of p-value limits for correction
 #' @return a list of two arrays: the p-values and the corrected p-values
 #' @keywords internal
 compPvalueTanova <- function(effect_perm, pcrit) {
@@ -1453,7 +1458,7 @@ compPvalueTanova <- function(effect_perm, pcrit) {
         }
         pvalues_consec <- apermArray(pvalues_consec, names(dimnames(pvalues)))
         setattr(pvalues_consec, "label",
-                "Permuted P-value (with min. length correction)")
+                "Permuted P-value (with min. duration correction)")
         out[["p_corr"]] <- pvalues_consec
     }
     # return
@@ -1464,15 +1469,16 @@ compPvalueTanova <- function(effect_perm, pcrit) {
 #'
 #' \code{compZTanova} is a helper function to compute corrected test statistic
 #' in the high-level \code{\link{tanova}} function. It is actually the z-scored 
-#' generalized GFP statistic.
+#' generalized dissimilarity statistic.
 #' @param effect_perm an array of permuted effects (including the observed
 #' effect as the first level of the 'perm' dimension)
+#' @param label the label of the observed test statistic
 #' @keywords internal
-compZTanova <- function(effect_perm) {
+compZTanova <- function(effect_perm, label = "") {
     out <- scaleArray(effect_perm, by_dims = "perm",
                       base_subset = list(perm = -1L))
     out <- subsetArray(out, list(perm = 1L))
-    setattr(out, "label", "Z-scored generalized GFP")
+    setattr(out, "label", paste0("Z-scored ", tolower(label)))
     # return
     out
 }
@@ -1497,8 +1503,13 @@ compZTanova <- function(effect_perm) {
 #' @param bwdat a data.frame which contains the identification codes
 #' (factordef$w_id) and all subject-level variables (usually factors) listed in
 #' 'factordef$between'. Missing values are not allowed.
-#' @param type a character value of "tanova" (default), "dissimilarity", or
-#' "gfp"
+#' @param type a character value of "both" (default), "topography", or
+#' "intensity". For "both", the analysis is based on the raw amplitude maps,
+#' and thereby, it is sensitive to both topographic and intensity differences
+#' between the conditions. For "topography", the analysis is based on the 
+#' normalized maps, thereby, it can reveal topographic differences. For 
+#' "intensity", only the intensity (as measured by the GFP) of the scalp maps 
+#' is analyzed. 
 #' @param verbose logical value indicating if p-values should be computed
 #' @param perm either 1) NULL or FALSE (the same as NULL),
 #' both of which mean no permutation, or 2) TRUE, which means
@@ -1519,7 +1530,7 @@ compZTanova <- function(effect_perm) {
 #' @param seed an integer value which specifies a seed (default: NULL), or a
 #' list of arguments passed to \code{\link{set.seed}}
 #' @param pcrit the significance level (or a vector of multiple levels) for the
-#' consecutive length correction (default: 0.05)
+#' minimum duration correction (default: 0.05)
 #' @details The function assumes that the input array contains at least two
 #' named dimensions: chan (corresponding to the channels [electrodes]) and time
 #' (corresponding to time points). All dimensions which are not listed as
@@ -1529,8 +1540,8 @@ compZTanova <- function(effect_perm) {
 #' is fully balanced and orthogonal (if the number of between-subject
 #' factors is one, it may have slightly unequal group sizes).
 #' @export
-#' @return A list object with effect statistics, uncorrected p-values, and
-#' two types of corrected p-values: length correction or global correction
+#' @return A list object with z-scores and raw effect statistics, and 
+#' uncorrected and corrected p-values.
 #' @seealso See also the related methods to explore the results, e.g.
 #' \code{\link{extract.tanova}}, \code{\link{summary.tanova}}, and the plotting
 #' function \code{\link{modelplot.tanova}}.
@@ -1568,7 +1579,7 @@ compZTanova <- function(effect_perm) {
 #' # plot results (for now, only p-values and only for time > 0)
 #' modelplot(result_tanova, what = "p", time_window = c(0, Inf))
 tanova <- function(.arraydat, factordef, bwdat = NULL,
-                   type = c("tanova", "dissimilarity", "gfp"),
+                   type = c("both", "topography", "intensity"),
                    verbose = TRUE, perm = TRUE, parallel = NULL,
                    seed = NULL, pcrit = 0.05) {
     # helper function for back-transform to original
@@ -1642,7 +1653,7 @@ tanova <- function(.arraydat, factordef, bwdat = NULL,
         # p-values
         pvals <- compPvalueTanova(es_perm, pcrit)
         # standardized GFP
-        zgfp <- compZTanova(es_perm)
+        zgfp <- compZTanova(es_perm, attr(es_obs, "label"))
     }
     # back-transform to original dimorder
     out$stat <- backFn(es_obs, input)

@@ -10,14 +10,14 @@ compPvalueTanova(effect_perm, pcrit)
 \item{effect_perm}{an array of permuted effects (including the observed
 effect as the first level of the 'perm' dimension)}
 
-\item{pcrit}{a vector of p-value limits for consecutive length correction}
+\item{pcrit}{a vector of p-value limits for correction}
 }
 \value{
 a list of two arrays: the p-values and the corrected p-values
 }
 \description{
 \code{compPvalueTanova} is a helper function to compute p-values and
-length-corrected p-values in the high-level \code{\link{tanova}} function.
+duration-corrected p-values in the high-level \code{\link{tanova}} function.
 }
 \keyword{internal}
 

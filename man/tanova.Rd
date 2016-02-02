@@ -4,8 +4,8 @@
 \alias{tanova}
 \title{Topographical ANOVA (TANOVA) and related methods}
 \usage{
-tanova(.arraydat, factordef, bwdat = NULL, type = c("tanova",
-  "dissimilarity", "gfp"), verbose = TRUE, perm = TRUE, parallel = NULL,
+tanova(.arraydat, factordef, bwdat = NULL, type = c("both", "topography",
+  "intensity"), verbose = TRUE, perm = TRUE, parallel = NULL,
   seed = NULL, pcrit = 0.05)
 }
 \arguments{
@@ -25,8 +25,13 @@ elements:
 (factordef$w_id) and all subject-level variables (usually factors) listed in
 'factordef$between'. Missing values are not allowed.}
 
-\item{type}{a character value of "tanova" (default), "dissimilarity", or
-"gfp"}
+\item{type}{a character value of "both" (default), "topography", or
+"intensity". For "both", the analysis is based on the raw amplitude maps,
+and thereby, it is sensitive to both topographic and intensity differences
+between the conditions. For "topography", the analysis is based on the
+normalized maps, thereby, it can reveal topographic differences. For
+"intensity", only the intensity (as measured by the GFP) of the scalp maps
+is analyzed.}
 
 \item{verbose}{logical value indicating if p-values should be computed}
 
@@ -52,11 +57,11 @@ given parameters).}
 list of arguments passed to \code{\link{set.seed}}}
 
 \item{pcrit}{the significance level (or a vector of multiple levels) for the
-consecutive length correction (default: 0.05)}
+minimum duration correction (default: 0.05)}
 }
 \value{
-A list object with effect statistics, uncorrected p-values, and
-two types of corrected p-values: length correction or global correction
+A list object with z-scores and raw effect statistics, and
+uncorrected and corrected p-values.
 }
 \description{
 \code{tanova} performs point-to-point topographical ANOVA on arrays. Related

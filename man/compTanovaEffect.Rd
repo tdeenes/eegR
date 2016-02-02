@@ -2,7 +2,7 @@
 % Please edit documentation in R/anova.R
 \name{compTanovaEffect}
 \alias{compTanovaEffect}
-\title{Compute generalized GFP-effects}
+\title{Compute generalized dissimilarity}
 \usage{
 compTanovaEffect(obj, new_indices = NULL, attribs = FALSE)
 }

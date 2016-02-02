@@ -36,7 +36,7 @@ the slots to extract are found by partial matching to the following choices:
 \code{arrayAnova})}
 \item{p: }{Uncorrected P-values}
 \item{p_corr: }{Corrected P-values (e.g. TFCE-corrected P-values in
-\code{arrayAnova}, or consecutive length correction in \code{tanova})}
+\code{arrayAnova}, or minimum duration correction in \code{tanova})}
 \item{es: }{Effect size statistic (e.g. Generalized Eta Squared in
 \code{arrayAnova})}
 \item{means: }{Marginal means for each model term} (TODO! Temporarily removed...)
