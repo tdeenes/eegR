@@ -314,54 +314,75 @@ splitMarker <- function(marker, header, type = NULL, splitchar = "_") {
 
 #' Baseline correction 
 #' 
-#' \code{baselineCorr} performs baseline correction
-#' @param dat numeric array containing the ERPs
-#' @param along_dims numeric or character vector identifying the dimensions of 
-#' dat along which separate baseline averaging should occur (default: "chan")
-#' @param by_dims numeric or character vector identifying the dimensions of 
-#' dat across which separate baseline averaging should occur (default: NULL).
-#' See \code{\link{scaleArray}} for further explanation.
-#' @param base_time numeric or character vector identifying time points which
-#' form the baseline. If NULL (default), dat must have named dimension names,
-#' and \code{base_time} is the vector of levels of the time dimension which 
-#' are below 0.
+#' \code{baselineCorr} performs baseline correction, that is, it removes the
+#' average of the baseline amplitudes from the data.
+#' @param dat numeric vector, matrix, or array containing the ERPs
+#' @param pool_dim,sep_dim numeric or character vector identifying the 
+#' dimensions of \code{dat} whose dimension levels should be pooled or treated 
+#' separately, respectively. Provide only \code{pool_dim} or \code{sep_dim}, but
+#' not both (the default is: \code{pool_dim = "time"}). See Details and Examples.
+#' @param base_timerange numeric or character vector, or a subsetting function 
+#' from the \code{\link{is}} family of functions identifying time points which
+#' form the baseline. The default is \code{isPositive(negate. = TRUE)}, which
+#' uses all time points up to zero. If NULL, all time points are included.
+#' @param return_call logical value whether the function call should be returned
+#' with additional informations (default: TRUE)
+#' @details Baseline correction is a standard step in ERP preprocessing. It 
+#' means the subtraction of the average prestimulus voltage from the whole 
+#' waveform. Usually baseline correction is done separately for each channel in 
+#' each epoch, that is, each single ERP curve is corrected independently. 
+#' \code{baselineCorr} allows to provide non-standard time windows and the
+#' pooling of dimensions (e.g., a common baseline is computed for all 
+#' conditions). 
 #' @export
-#' @return A numeric array with the same attributes as dat
+#' @return The function returns a numeric array with the same attributes as dat.
 #' @seealso \code{\link{scaleArray}} for the function behind the scenes
 #' @examples
 #' # example dataset
 #' data(erps)
 #' 
-#' # remove baseline activity separately for each stimulus class, pairtype and 
-#' # channel in each subject; now we use the by_dims argument because it needs 
-#' # less typing
-#' bc <- baselineCorr(erps, by_dims = "time")
+#' # remove baseline activity - separately for each single time curve 
+#' # (this is the default, but we explicitly include it for now) 
+#' bc0 <- baselineCorr(erps, pool_dim = "time")
 #' 
-#' # remove baseline activity separately for each channel in each subject;
-#' # now we choose the along_dims argument 
-#' bc <- baselineCorr(erps, along_dims = c("chan", "id"))
-baselineCorr <- function(dat, along_dims = "chan", by_dims = NULL, 
-                         base_time = NULL) {
+#' # remove baseline activity separately for each stimulus class, pairtype and 
+#' # channel in each subject
+#' bc1 <- baselineCorr(erps, sep_dim = c("stimclass", "pairtype", "chan", "id"))
+#' 
+#' # in the present case, the two calls give the same results, because
+#' # the ERP dataset has these five dimensions
+#' stopifnot(all.equal(bc0, bc1, check.attributes = FALSE)) 
+#' 
+#' # assume that the baseline is from -50 ms to 50 (silly example)
+#' bc3 <- baselineCorr(erps, base_timerange = isBetween(-50, 50))
+#' 
+baselineCorr <- function(dat, pool_dim = "time", sep_dim = NULL, 
+                         base_timerange = isPositive(negate. = TRUE),
+                         return_call = TRUE) {
+    #
     message("\n****\nPerform baseline correction ... ", appendLF = FALSE)
     origattr <- attributes(dat)
-    if (is.null(along_dims)) {
-        if (is.null(by_dims)) {
-            stop("Both along_dims and by_dims are NULL")
-        } else if (is.character(by_dims)) {
-            by_dims <- match(by_dims, names(dimnames(dat)))
+    if (is.null(sep_dim)) {
+        if (is.null(pool_dim)) {
+            stop("Both pool_dim and sep_dim are NULL")
+        } else if (is.character(pool_dim)) {
+            pool_dim <- match(pool_dim, names(dimnames(dat)))
         }
-        along_dims <- setdiff(seq_along(dim(dat)), by_dims)
+        sep_dim <- setdiff(seq_along(dim(dat)), pool_dim)
     }
-    if (is.null(base_time)) base_time <- as.numeric(dimnames(dat)$time)<0
-    out <- scaleArray(dat, along_dims = along_dims, 
-                      center_subset = list(time = base_time),
+    if (is.null(base_timerange)) base_timerange <- dimnames(dat)$time
+    out <- scaleArray(dat, along_dims = sep_dim, 
+                      center_subset = list(time = base_timerange),
                       scale = FALSE)
     attributes(out) <- origattr
-    setattr(out, "processing_steps",
-            c(attr(out, "processing_steps"),
-              list(list(what = "baseline correction", 
-                        call = match.call(), along_dimensions = along_dims, 
-                        base_time = base_time))))
+    if (return_call) {
+        setattr(out, "processing_steps",
+                c(attr(out, "processing_steps"),
+                  list(list(what = "baseline correction", 
+                            call = match.call(), 
+                            separately = names(dimnames(dat))[sep_dim], 
+                            base_timerange = base_timerange))))
+    }
     message("Done")
     # return
     out

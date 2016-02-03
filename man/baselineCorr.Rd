@@ -4,41 +4,59 @@
 \alias{baselineCorr}
 \title{Baseline correction}
 \usage{
-baselineCorr(dat, along_dims = "chan", by_dims = NULL, base_time = NULL)
+baselineCorr(dat, pool_dim = "time", sep_dim = NULL,
+  base_timerange = isPositive(negate. = TRUE), return_call = TRUE)
 }
 \arguments{
-\item{dat}{numeric array containing the ERPs}
+\item{dat}{numeric vector, matrix, or array containing the ERPs}
 
-\item{along_dims}{numeric or character vector identifying the dimensions of
-dat along which separate baseline averaging should occur (default: "chan")}
+\item{pool_dim,sep_dim}{numeric or character vector identifying the
+dimensions of \code{dat} whose dimension levels should be pooled or treated
+separately, respectively. Provide only \code{pool_dim} or \code{sep_dim}, but
+not both (the default is: \code{pool_dim = "time"}). See Details and Examples.}
 
-\item{by_dims}{numeric or character vector identifying the dimensions of
-dat across which separate baseline averaging should occur (default: NULL).
-See \code{\link{scaleArray}} for further explanation.}
+\item{base_timerange}{numeric or character vector, or a subsetting function
+from the \code{\link{is}} family of functions identifying time points which
+form the baseline. The default is \code{isPositive(negate. = TRUE)}, which
+uses all time points up to zero. If NULL, all time points are included.}
 
-\item{base_time}{numeric or character vector identifying time points which
-form the baseline. If NULL (default), dat must have named dimension names,
-and \code{base_time} is the vector of levels of the time dimension which
-are below 0.}
+\item{return_call}{logical value whether the function call should be returned
+with additional informations (default: TRUE)}
 }
 \value{
-A numeric array with the same attributes as dat
+The function returns a numeric array with the same attributes as dat.
 }
 \description{
-\code{baselineCorr} performs baseline correction
+\code{baselineCorr} performs baseline correction, that is, it removes the
+average of the baseline amplitudes from the data.
+}
+\details{
+Baseline correction is a standard step in ERP preprocessing. It
+means the subtraction of the average prestimulus voltage from the whole
+waveform. Usually baseline correction is done separately for each channel in
+each epoch, that is, each single ERP curve is corrected independently.
+\code{baselineCorr} allows to provide non-standard time windows and the
+pooling of dimensions (e.g., a common baseline is computed for all
+conditions).
 }
 \examples{
 # example dataset
 data(erps)
 
-# remove baseline activity separately for each stimulus class, pairtype and
-# channel in each subject; now we use the by_dims argument because it needs
-# less typing
-bc <- baselineCorr(erps, by_dims = "time")
+# remove baseline activity - separately for each single time curve
+# (this is the default, but we explicitly include it for now)
+bc0 <- baselineCorr(erps, pool_dim = "time")
 
-# remove baseline activity separately for each channel in each subject;
-# now we choose the along_dims argument
-bc <- baselineCorr(erps, along_dims = c("chan", "id"))
+# remove baseline activity separately for each stimulus class, pairtype and
+# channel in each subject
+bc1 <- baselineCorr(erps, sep_dim = c("stimclass", "pairtype", "chan", "id"))
+
+# in the present case, the two calls give the same results, because
+# the ERP dataset has these five dimensions
+stopifnot(all.equal(bc0, bc1, check.attributes = FALSE))
+
+# assume that the baseline is from -50 ms to 50 (silly example)
+bc3 <- baselineCorr(erps, base_timerange = isBetween(-50, 50))
 }
 \seealso{
 \code{\link{scaleArray}} for the function behind the scenes
