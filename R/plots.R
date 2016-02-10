@@ -524,7 +524,7 @@ complexplot2dview <- function(dat, ch_pos, timepoint,
         colnum <- length(title_col)
         rownum <- ceiling(datnum/colnum)
     } else {
-        rownum <- floor(sqrt(ldatnum))
+        rownum <- floor(sqrt(datnum))
         colnum <- ceiling(datnum/rownum)
     }
     if (is.null(layout_matrix)) {
