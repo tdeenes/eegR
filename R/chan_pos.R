@@ -196,28 +196,31 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
     ch_pos <- ch_pos[, c("x", "y", "z")]
     channames <- paste(1:nrow(ch_pos), rownames(ch_pos), sep = ". ")
     if (is.null(alpha)) {
-        require("shiny")
-        require("shinyRGL")
-        alpha <- runApp(list(
-            ui = pageWithSidebar(
+        if (!(requireNamespace("shiny") & requireNamespace("shinyRGL"))) {
+            stop(paste0(
+                "If you wish to determine alpha by an interactive plot, ",
+                "install the 'shinyRGL' package first."), call. = FALSE)
+        }
+        alpha <- shiny::runApp(list(
+            ui = shiny::pageWithSidebar(
                 # Application title
-                headerPanel("Find channel neighbours"),
+                shiny::headerPanel("Find channel neighbours"),
                 # Sidebar with a slider input for number of points
-                sidebarPanel(
-                    sliderInput("alpha",
+                shiny::sidebarPanel(
+                    shiny::sliderInput("alpha",
                                 "Alpha value: ",
                                 min = min(check_alpha),
                                 max = max(check_alpha),
                                 value = 1, step = 0.1),
-                    actionButton("submit", "Use selected alpha")
+                    shiny::actionButton("submit", "Use selected alpha")
                 ),
                 # Show the generated 3d scatterplot
-                mainPanel(
-                    webGLOutput("chanPlot", height = "700px")
+                shiny::mainPanel(
+                    shinyRGL::webGLOutput("chanPlot", height = "700px")
                 )
             ),
             server = function(input, output) {
-                output$chanPlot <- renderWebGL({
+                output$chanPlot <- shinyRGL::renderWebGL({
                     #bg3d("grey40")
                     a <- suppressWarnings(alphashape3d::ashape3d(as.matrix(ch_pos),
                                                                  input$alpha, pert = TRUE))
@@ -229,7 +232,7 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
                 observe({
                     if (input$submit == 0)
                         return()
-                    stopApp(input$alpha)
+                    shiny::stopApp(input$alpha)
                 })
             }
         ))

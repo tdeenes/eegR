@@ -275,7 +275,7 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
 modelMeans <- function(...) UseMethod("modelMeans")
 
 #' @export
-#' @describeIn modelMeans
+#' @describeIn modelMeans Default method
 modelMeans.default <- function(.arraydat, factordef,
                                bwdat = NULL, term = NULL,
                                adjusted = FALSE, ...) {
@@ -350,7 +350,7 @@ modelMeans.default <- function(.arraydat, factordef,
 }
 
 #' @export
-#' @describeIn modelMeans
+#' @describeIn modelMeans Method for \code{arrayAnova} objects
 modelMeans.arrayAnova <- function(model = NULL, term = NULL, adjusted = FALSE,
                                   ...) {
     mcall <- model$call
@@ -361,7 +361,7 @@ modelMeans.arrayAnova <- function(model = NULL, term = NULL, adjusted = FALSE,
 }
 
 #' @export
-#' @describeIn modelMeans
+#' @describeIn modelMeans Method for \code{tanova} objects
 modelMeans.tanova <- modelMeans.arrayAnova
 
 

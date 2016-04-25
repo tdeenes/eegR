@@ -129,7 +129,7 @@ extract.default <- function(object, what,
     out
 }
 
-#' @describeIn extract
+#' @describeIn extract Method for \code{arrayTtest} objects
 extract.arrayTtest <- function(object,
                                what = c("all", "stat", "p", "es",
                                         "stat_corr", "p_corr",
@@ -142,7 +142,7 @@ extract.arrayTtest <- function(object,
                chan = chan, drop = drop, ...)
 }
 
-#' @describeIn extract
+#' @describeIn extract Method for \code{arrayAnova} objects
 extract.arrayAnova <- function(object,
                                what = c("all", "stat", "p", "es",
                                         "stat_corr", "p_corr",
@@ -155,7 +155,7 @@ extract.arrayAnova <- function(object,
                chan = chan, drop = drop, ...)
 }
 
-#' @describeIn extract
+#' @describeIn extract Method for \code{tanova} objects
 extract.tanova <- function(object,
                            what = c("all", "stat", "p", 
                                     "stat_corr", "p_corr",

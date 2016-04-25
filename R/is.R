@@ -88,7 +88,7 @@ as.Numeric <- function(x, keep_dim = FALSE) {
     x
 }
 
-#' @describeIn as.Numeric
+#' @describeIn as.Numeric Modify by reference
 #' @export
 as.Numeric_ <- function(x) {
     if (is.numeric(x) || inherits(x, c("POSIXt", "Date"))) {
