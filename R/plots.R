@@ -2,6 +2,54 @@
 # <<< plotting functions >>> -----------
 #
 
+#' Helper function to create customized ggplot2 theme
+#' 
+#' \code{theme_ndys} modifies the base ggplot2 theme for figures in Leppanen et 
+#' al.
+#' @param base_fontsize size of texts
+#' @param legend_direction the direction of the various levels of a legend key
+#' (default: "vertical")
+#' @param panel_aspect_ratio the ratio of the y and x axes on the plot
+#' @export
+#' @examples
+#' library(ggplot2)
+#' ggplot(mtcars, aes(x = wt, y = mpg, colour = factor(cyl))) + 
+#'     geom_point() + facet_grid(~ am) + 
+#'     theme_ndys(12, "h", 1.5)
+#'     
+theme_ndys <- function(base_fontsize = 8, 
+                       legend_direction = c("vertical", "horizontal"), 
+                       panel_aspect_ratio = NULL) {
+    # check argument
+    assertNumber(base_fontsize, .var.name = "base_fontsize")
+    legend_direction <- match.arg(legend_direction)
+    if (!is.null(panel_aspect_ratio)) {
+        assertNumber(panel_aspect_ratio, .var.name = "panel_aspect_ratio")
+    }
+    #
+    theme_bw(base_size = base_fontsize) + 
+        theme(axis.title.x = element_text(vjust = -0.3, size = rel(1)), 
+              axis.title.y = element_text(vjust = -1, size = rel(1)), 
+              strip.text = element_text(size = rel(1),
+                                        lineheight = 0.9),
+              axis.text.x = element_text(size = rel(0.9)),
+              axis.text.y = element_text(size = rel(0.8)),
+              plot.title = element_text(size = rel(1)),
+              legend.title = element_text(size = rel(0.85)),
+              legend.text = element_text(size = rel(0.85)),
+              legend.key = element_blank(),
+              legend.key.height = unit(11, "pt"),
+              legend.key.width = unit(10, "pt"),
+              legend.position = "top", 
+              legend.box = "horizontal", 
+              legend.direction = legend_direction,
+              panel.border = element_rect(colour = "grey60", size = 0.3,
+                                          linetype = 1),
+              strip.background = element_rect(colour = NA, fill = "grey80"),
+              plot.margin = unit(c(1, 1, 1, 1), "cm"),
+              aspect.ratio = panel_aspect_ratio)
+}
+
 #' Plot ERP curves
 #' 
 #' \code{plotERParray} is a generalization of \code{\link{matplot}} onto array 
@@ -860,7 +908,7 @@ modelplot <- function(...) UseMethod("modelplot")
 #' \code{modelplot.default} plots the result of the \code{\link{arrayTtest}} or
 #' \code{\link{arrayAnova}} function.
 #' @export
-#' @describeIn modelplot
+#' @describeIn modelplot Default method
 modelplot.default <- function(results, 
                               what = c("statistic", "p-value"), 
                               type = c("corrected", "uncorrected"),
@@ -927,7 +975,7 @@ modelplot.default <- function(results,
 #' \code{modelplot.tanova} plots the result of the \code{\link{tanova}} function.
 #' @export
 #' @keywords internal
-#' @describeIn modelplot
+#' @describeIn modelplot Method for \code{tanova} objects
 modelplot.tanova <- function(results, 
                              what = c("statistic", "p-value"),
                              type = c("corrected", "uncorrected"), 
@@ -1062,6 +1110,707 @@ modelplot.tanova <- function(results,
 }
 
 
+
+
+#' Add caption to plot, and print it to the console
+#' 
+#' \code{addCaption} appends a string to a ggplot object as attribute 'caption',
+#' and prints it to the console. No copy is made.
+#' @param x a ggplot object
+#' @param caption a character string
+#' @keywords internal
+addCaption <- function(x, caption) {
+    assertClass(x, "ggplot", .var.name = "x")
+    assertString(caption, .var.name = "caption")
+    setattr(x, "caption", caption)
+    cat(paste0("\nCaption: ", caption, "\n"), 
+        file = stdout())
+    invisible(x)
+}
+
+#' Create butterfly plot with extras: highlighting and peak topographies
+#' 
+#' \code{plotButterfly} creates a multi-channel (a.k.a butterfly) plot. 
+#' Additionally, significant time windows can be highlighted, and peak 
+#' topographies can be displayed above the ERP curves.
+#' @inheritParams plotComplex
+#' @param caption logical flag indicating if caption should be also returned
+#' (default: TRUE)
+#' @return \code{plotButterfly} returns a ggplot object.
+#' @export
+#' @examples
+#' # load example data
+#' data(erps)
+#' 
+#' # extract channel positions and participants' group memberships
+#' chan_pos <- attr(erps, "chan")
+#' dat_id <- attr(erps, "id")
+#' 
+#' # collapse pairtypes and participants
+#' tempdat <- avgDims(erps, c("pairtype", "id"))
+#' 
+#' # plot butterfly with topo-maps
+#' plotButterfly(tempdat, topo_time = seq(24, 476, by = 50),
+#'               chan_pos = chan_pos)
+#' 
+plotButterfly <- function(
+    dat, sig = NULL, topo_time = NULL, 
+    chan_pos = NULL, subset = list(),
+    pcrit = 0.05, aspect_ratio = 0.5, scalp_ratio = 0.5, ampl_range = NULL,
+    caption = TRUE, ...) {
+    #
+    # check arguments and prepare data
+    #
+    # subset (use also for creating the caption)
+    assertList(subset, .var.name = "subset")
+    #
+    # caption
+    assertFlag(caption, .var.name = "caption")
+    if (caption) {
+        cap <- "Grand averages and GFP curves"
+        if (!is.null(topo_time)) {
+            cap <- paste0(cap, 
+                          ", and representative scalp topographies")
+        }
+        modterm <- if (!is.null(sig)) dimnames(sig)$modelterm else NULL
+        cap <- paste0(cap,
+                      " of the ",
+                      if (is.null(modterm)) {
+                          "effect"
+                      } else if (grepl(":", modterm)) {
+                          paste0(modterm, " interaction")
+                      } else {
+                          paste0(modterm, " main effect")
+                      })
+        if (!is.null(sig)) {
+            cap <- paste0(
+                cap,
+                ". Statistically significant time windows are highlighted ",
+                "(shaded rectangles depict time windows where the effect ",
+                "was persistent according to the minimum duration criterion).")
+        }
+        if (length(subset)) {
+            cap <- paste0(cap,
+                          "Only a subset of the data is shown: ", 
+                          deparse(substitute(subset)))
+        }
+    }
+    #
+    # create plot
+    #
+    qp <- plotComplex(dat, sig = sig, topo_time = topo_time, 
+                      chan_pos = chan_pos, plot_curves = TRUE, 
+                      subset = subset, pcrit = pcrit, 
+                      aspect_ratio = aspect_ratio, scalp_ratio = scalp_ratio, 
+                      ampl_range = ampl_range, ...)
+    #
+    # caption
+    if (caption) addCaption(qp, cap)
+    #
+    # return
+    qp
+}
+
+
+
+#' Plot scalp topographies 
+#' 
+#' \code{plotMap} takes an array (or a vector) of ERP amplitudes and plots 
+#' scalp topographies at user-defined time points. 
+#' @param dat either a numeric vector or a numeric array of ERP amplitudes. If
+#' 'dat' is a named vector, its names are taken as channel names. If unnamed,
+#' the order of the data must correspond to the order of channels in 'chan_pos'.
+#' If 'dat' is an array, it must have at least 'time' and 'chan' dimensions.
+#' @param aspect_ratio the ratio of \code{y} and \code{x} axes on the figure. 
+#' If \code{NULL} (the default), it is set automatically. A user-defined 
+#' 'aspect_ratio' might be adjusted to avoid overlapping scalp maps.
+#' @inheritParams plotComplex
+#' @return \code{plotMap} returns a ggplot object.
+#' @export
+#' @examples
+#' # load example data
+#' data(erps)
+#' 
+#' # extract channel positions and participants' group memberships
+#' chan_pos <- attr(erps, "chan")
+#' dat_id <- attr(erps, "id")
+#' 
+#' # collapse pairtypes and participants
+#' tempdat <- avgDims(erps, c("pairtype", "id"))
+#' 
+#' # plot topo-maps of stimclass differences from 0 to 500 in 50 ms steps
+#' map <- plotMap(compareLevels(tempdat, "stimclass"),
+#'                topo_time = seq(0, 500, by = 50),
+#'                chan_pos = chan_pos)
+#' 
+#' # add title
+#' library(ggplot2)
+#' map + ggtitle("Pairwise differences between stimulus classes")
+#'          
+plotMap <- function(dat, chan_pos, topo_time = NULL, subset = list(),
+                    aspect_ratio = NULL, ampl_range = NULL, 
+                    map_marker_colour = "grey10", map_marker_shape = "|", 
+                    map_marker_size = 1.2, ...) {
+    assertNumeric(dat, finite = TRUE, any.missing = FALSE)
+    assertDataFrame(chan_pos, min.rows = 10L, row.names = "unique")
+    # if dat is a vector, it must be transformed to an array 
+    if (is.vector(dat)) {
+        if (testNamed(dat)) {
+            common_channels <- intersect(rownames(chan_pos), names(dat))
+            if (length(common_channels) <= 10L) {
+                stop(paste0(
+                    "If 'dat' is a named vector, it must have at least ",
+                    "10 channel names as provided in 'chan_pos'"),
+                    call. = FALSE)
+            }
+            dat <- array(dat[common_channels], 
+                         dim = length(common_channels),
+                         dimnames = list(chan = common_channels))
+        } else if (length(dat) == nrow(chan_pos)) {
+            dat <- array(dat, 
+                         dim = length(dat),
+                         dimnames = list(chan = rownames(chan_pos)))
+        } else {
+            stop(paste0(
+                "If 'dat' is an unnamed vector, its length must equal ",
+                "the number of channels as provided in 'chan_pos'"), 
+                call. = FALSE)
+        }
+    }
+    # if dat has no "time" dimension, create it 
+    # (without copy, dat might be large)
+    if (!"time" %in% names(dimnames(dat))) {
+        if (length(topo_time) == 0L) {
+            topo_time <- "0"
+        } else if (length(topo_time) > 1L) {
+            stop(paste0("If 'dat' has no time dimension, ",
+                        "'topo_time' must be a single value"),
+                 call. = FALSE)
+        }
+        origdims <- dim(dat)
+        origdimnames <- dimnames(dat)
+        on.exit({
+            setattr(dat, "dim", origdims)
+            setattr(dat, "dimnames", origdimnames)})
+        setattr(dat, "dim", c(1L, origdims))
+        setattr(dat, "dimnames", c(list(time = topo_time), origdimnames))
+    }
+    # call plotComplex
+    out <- plotComplex(dat = dat, topo_time = topo_time, chan_pos = chan_pos,
+                       subset = subset, ampl_range = ampl_range, 
+                       plot_curves = FALSE, 
+                       aspect_ratio = aspect_ratio,
+                       scalp_ratio = 100, 
+                       map_marker_colour = map_marker_colour, 
+                       map_marker_shape = map_marker_shape, 
+                       map_marker_size = map_marker_size,
+                       ...)
+    # return
+    out
+}
+
+
+#' Compute projections for plotting scalp topographies
+#' 
+#' \code{topoCoord} computes the topographic projection of the amplitudes at 
+#' the given peaks.
+#' @param dat array of ERP data
+#' @param peak_df data.frame of peaks (time and potentially other facetting
+#' variables)
+#' @param ch_pos data.frame of channel positions
+#' @param size_x the width of the topoplot in time units
+#' @param size_y the height of the topoplot in amplitude units
+#' @param shift_y the vertical center of the topoplot in amplitude units
+#' @param r radius of the channel positions if \code{ch_pos} does not contain 
+#' it (default: 1)
+#' @param ampl_range numeric vector of length 2 containing the minimum and 
+#' maximum values. If NULL, it is computed from the data. Values outside the
+#' \code{ampl_range} interval are set equal to the corresponding limit.
+#' @param resol an integer value; the resolution of the grid topographic map in
+#' horizontal and vertical direction (default: 30)
+#' @param resolcol integer value, the number of levels (resolution) for 
+#' colouring (default: 101L)
+#' @param projection character value (default = "laea"). See 
+#' \url{http://www.remotesensing.org/geotiff/proj_list/} for common projections.
+#' @param projref projection reference (pole [default] or equator)
+#' @param origo a named character vector of lat and long coordinates of the 
+#' origo
+#' @param ... arguments passed to \code{\link{chanInterp}}. You might consider
+#' setting the argument \code{N} for dense electrode caps.
+#' @note This function is called by \code{\link{plotButterfly}}.
+#' @return The function returns a named list of two data.table objects (topo
+#' and boundary).
+#' @keywords internal
+topoCoord <- function(
+    dat, peak_df, ch_pos, size_x, size_y, shift_y,
+    r = 1,
+    ampl_range = NULL, resol = 50L, resolcol = 101L, 
+    projection = "laea", projref = c("pole", "equator"),
+    origo = c(lat = ifelse(projref == "pole", 90, 0),
+              long = ifelse(projref == "pole", 270, 0)),
+    ...) {
+    # helper function to get the interpolated values
+    compInterp <- function(x, resol, grid_interp) {
+        z <- matrix_(NA_real_, resol, resol)
+        z_ind <- chanInterp(x, ch_pos, grid_interp, ...)
+        if (is.null(ampl_range)) ampl_range <- range(z_ind, na.rm = TRUE)
+        z_ind[z_ind > ampl_range[2]] <- ampl_range[2]
+        z_ind[z_ind < ampl_range[1]] <- ampl_range[1]
+        z[ind] <- z_ind
+        rm(z_ind)
+        # return
+        as.vector(z)
+    }
+    #
+    projref <- match.arg(projref)
+    #
+    ch_pos <- as.data.frame(ch_pos)
+    if (all(c("x", "y", "z") %in% colnames(ch_pos))) {
+        ch_pos <- ch_pos[, c("x", "y", "z")]
+        posgeo <- cart2geo(ch_pos)
+    } else if (all(c("theta", "phi") %in% colnames(ch_pos))) {
+        if (!"r" %in% colnames(ch_pos)) ch_pos$r <- r
+        ch_pos <- sph2cart(ch_pos)
+        posgeo <- cart2geo(ch_pos)
+    } else if (all(c("long", "lat") %in% colnames(ch_pos))) {
+        if (!"r" %in% colnames(ch_pos)) ch_pos$r <- r
+        posgeo <- ch_pos[, c("long", "lat", "r")]
+        ch_pos <- geo2cart(ch_pos)
+    } else {
+        stop("Wrong coordinate object")
+    }
+    r <- posgeo$r
+    boundarypos <- 
+        if (projref == "pole") {
+            data.frame(
+                long = seq(-180, 180, length.out = 180),
+                lat = rep(max(-45/(1.11), min(posgeo$lat)), 180))
+        } else {
+            data.frame(
+                long = c(rep(max(abs(posgeo$long)), 90),
+                         rep(-max(abs(posgeo$long)), 90)),
+                lat = c(seq(-90, 90, length.out = 90), 
+                        seq(90, -90, length.out = 90)))
+        }
+    boundarypos <- unique(project3dMap(boundarypos, projection = projection, 
+                                       projref = projref, origo = origo))
+    corr_x <- size_x/diff(range(boundarypos$x)) / 1.1
+    corr_y <- size_y/diff(range(boundarypos$y)) / 1.1
+    xmin <- min(boundarypos$x)
+    xmax <- max(boundarypos$x)
+    ymin <- min(boundarypos$y)
+    ymax <- max(boundarypos$y)
+    boundary_polygon <- 
+        data.table(xcoord = c(1.1*c(xmin, xmax, xmax, xmin, xmin), 
+                              rev(boundarypos$x)),
+                   ycoord = c(1.1*c(ymin, ymin, ymax, ymax, ymin), 
+                              rev(boundarypos$y)))
+    len <- nrow(boundary_polygon)
+    seq_subs <- 1:nrow(peak_df)
+    boundary <- as.data.table(peak_df)[, peak := as.factor(seq_subs)]
+    boundary <- boundary[rep(seq_subs, each = len), ]
+    boundary[, time := as.numeric(as.character(time))]
+    boundary[, xcoord := boundary_polygon$xcoord * corr_x + time]
+    boundary[, ycoord := boundary_polygon$ycoord * corr_y + shift_y]
+    #
+    gridx <- seq(xmin, xmax, length.out = resol)
+    gridy <- seq(ymin, ymax, length.out = resol)
+    gridpos <- expand.grid(x = gridx, y = gridy)
+    ind <- in.polygon(gridpos$x, gridpos$y, 
+                      boundarypos$x*1.1, boundarypos$y*1.1)
+    gridgeo <- project3dMap(gridpos[ind,], projection = projection, 
+                            projref = projref, origo = origo, inverse = TRUE)
+    gridcart <- geo2cart(gridgeo)
+    out <- peak_df
+    out <- setDT(out)[rep(1:nrow(out), each = nrow(gridpos))]
+    temp <- lapply(1:nrow(peak_df), function(i) {
+        x <- subsetArray(dat, subset. = peak_df[i, ])
+        compInterp(as.vector(x), resol, gridcart)
+    })
+    out[, peak := as.factor(rep(seq_subs, each = resol^2))]
+    out[, ampl := unlist(temp, use.names = FALSE)]
+    out[, time := as.numeric(as.character(time))]
+    out[, xcoord := gridpos$x * corr_x + time]
+    out[, ycoord := gridpos$y * corr_y + shift_y]
+    # return
+    list(topo = out, boundary = boundary)
+}
+
+
+
+
+#' Visualize ERP curves and scalp topographies
+#' 
+#' \code{plotComplex} is a workhorse function called by 
+#' \code{\link{plotButterfly}} and \code{\link{plotMap}}.
+#' @param dat the array of ERP curves which must have at least 'time' and/or 
+#' 'chan' dimensions
+#' @param sig [optional] a corresponding array to \code{dat} which is used 
+#' to highlight significant time windows. It must have at least 'time' and 
+#' measure' dimensions. The 'measure' dimension must have 'p' and 'p_corr' 
+#' levels indicating the uncorrected ('p') and corrected ('p_corr') p-values.
+#' @param topo_time [optional] an object which describes the time points at 
+#' which the scalp topographies should be plotted. Can be a simple atomic vector
+#' or a data.frame if the time points are not identical across the faceting
+#' dimension(s).
+#' @param chan_pos a data.frame of channel positions. Obligatory if 
+#' \code{topo_time} is not \code{NULL}.
+#' @param subset a named list to subset the input arrays; see 
+#' \code{\link[eegR]{subsetArray}} 
+#' @param pcrit the level of alpha to highlight significant effects
+#' @param aspect_ratio the ratio of \code{y} and \code{x} axes (default: 0.5) 
+#' on the figure. If NULL, it is set automatically. If 'topo_time' is provided,
+#' user-defined 'aspect_ratio' might be adjusted to avoid overlapping scalp
+#' maps.
+#' @param scalp_ratio the ratio of the diameter of the scalp and the vertical
+#' range of the ERP curves on the figure
+#' @param ampl_range the range of amplitudes to plot. If \code{NULL} (default), 
+#' it is computed from the data.
+#' @param map_marker_colour,map_marker_shape,map_marker_size the colour, shape,
+#' and size of the marker used to mark the exact time points of the maps
+#' @param ggplot_theme a function which produces a ggplot theme 
+#' (default: theme_ndys)
+#' @param ... additional arguments passed to \code{\link{topoCoord}}
+#' @keywords internal
+#' 
+plotComplex <- function(
+    dat, sig = NULL, topo_time = NULL, chan_pos = NULL, subset = list(),
+    plot_curves = TRUE, pcrit = 0.05, aspect_ratio = 0.5, scalp_ratio = 0.5, 
+    ampl_range = NULL, 
+    map_marker_colour = "red", map_marker_shape = 16, map_marker_size = 1,
+    ggplot_theme = theme_ndys,
+    ...) {
+    #
+    # small helper functions
+    #
+    # subset and drop dimension(s)
+    subsetAndDrop <- function(x, subset. = NULL, keep. = c("time", "chan")) {
+        if (is.null(subset.)) {
+            dropDims(dat, keep = keep.)
+        } else {
+            dropDims(
+                subsetArray(dat, subset. = subset., drop. = FALSE),
+                keep = keep.)
+        }
+    }
+    # set xbreaks and ybreaks
+    breakSetter <- function(limits) {
+        breaks <- pretty(limits)
+        if (max(breaks) > round(limits[2])) {
+            breaks <- breaks[-length(breaks)]
+        }
+        if (min(breaks) < round(limits[1])) {
+            breaks <- breaks[-1]
+        }
+        breaks_minor <- (breaks - diff(breaks)[1]/2)[-1]
+        list(major = breaks, minor = breaks_minor)
+    }
+    #
+    # check arguments and prepare data
+    #
+    # theme
+    assertFunction(ggplot_theme)
+    # aspect_ratio
+    if (!is.null(aspect_ratio)) {
+        assertNumber(aspect_ratio, lower = .Machine$double.eps,
+                     .var.name = "aspect_ratio")
+    }
+    # subset
+    assertList(subset, .var.name = "subset")
+    if (!length(subset)) subset <- NULL
+    # dat (curvedata)
+    assertArray(dat, mode = "numeric", any.missing = FALSE, min.d = 2L,
+                .var.name = "dat")
+    if (!all(c("time", "chan") %in% names(dimnames(dat)))) {
+        stop("no 'time' and 'chan' dimensions in 'dat'", call. = FALSE)
+    }
+    dat <- subsetAndDrop(dat, subset)
+    singletime <- length(dimnames(dat)$time) == 1L
+    if (plot_curves) {
+        curvedata <- 
+            if ("GFP" %in% toupper(dimnames(dat)$chan)) {
+                transformArray(ampl ~ ., dat)
+            } else {
+                transformArray(compGfp(ampl, keep_channels = TRUE) ~ ., dat)
+            }
+        curvedata$channel <- factor(toupper(curvedata$chan) == "GFP", 
+                                    labels = c("electrodes", "GFP"))
+    }
+    #
+    # faceting dimensions
+    griddims <- setdiff(names(dimnames(dat)), c("time", "chan"))
+    # concatenate
+    facets <- 
+        if (length(griddims) > 1L) {
+            gr <- paste(griddims, collapse = "__+__")
+            gsub("__+__", " + ", 
+                 sub("__+__", " ~ ", gr, fixed = TRUE), 
+                 fixed = TRUE)
+        } else {
+            paste0(griddims, "~.")
+        }
+    #
+    # ampl_range
+    if (is.null(ampl_range)) {
+        ampl_range <- range(dat)
+    } else {
+        assertNumeric(ampl_range, any.missing = FALSE, len = 2L,
+                      .var.name = "ampl_range")
+        ampl_range <- sort(ampl_range)
+    }
+    ylim_orig <- ampl_range + 0.05 * c(-1, 1) * diff(ampl_range)
+    ylim_ext <- ampl_range + 0.09 * c(-1, 1) * diff(ampl_range)
+    #
+    # time range
+    xlim <- range(as.numeric(dimnames(dat)$time))
+    #
+    # sig (sigdata)
+    if (!is.null(sig)) {
+        assertArray(sig, mode = "numeric", any.missing = FALSE, min.d = 2L,
+                    .var.name = "sig")
+        if (!all(c("time", "measure") %in% names(dimnames(sig)))) {
+            stop("no 'time' and 'measure' dimensions in 'sig'",
+                 call. = FALSE)
+        }
+        if (!all(c("p", "p_corr") %in% dimnames(sig)$measure)) {
+            stop(paste0("the 'measure' dimension of 'sig' must have ",
+                        "both 'p' and 'p_corr' levels"), call. = FALSE)
+        }
+        assertNumber(pcrit, lower = 0, upper = 1, .var.name = "pcrit")
+        if (length(subset)) {
+            sig <- subsetAndDrop(sig, subset)
+        }
+        sigdata <- sigPhases(sig, pcrit, ylim_orig[1:2])
+    }
+    #
+    # topo_time (topodata)
+    if (!is.null(topo_time)) {
+        if (is.null(chan_pos)) {
+            stop("'chan_pos' must be provided", call. = FALSE)
+        }
+        assertDataFrame(chan_pos, row.names = "unique")
+        coln <- colnames(chan_pos)
+        if (!all(c("x", "y", "z") %in% coln) &&
+            !all(c("theta", "phi") %in% coln) &&
+            !all(c("long", "lat"))) {
+            stop("'chan_pos' is not a valid channel position object", 
+                 call. = FALSE)
+        }
+        chan_pos <- chan_pos[rownames(chan_pos) %in% dimnames(dat)$chan, ]
+        if (nrow(chan_pos) == 0) {
+            stop("'chan_pos' contains no common channel with 'dat'")
+        }
+        topodata <- subsetAndDrop(dat,
+                                  list(chan = rownames(chan_pos)))
+        topo_time <- 
+            if (is.vector(topo_time) && is.atomic(topo_time)) {
+                if (length(griddims)) {
+                    expand.grid(c(list(time = as.character(topo_time)),
+                                  autoConvert(dimnames(topodata)[griddims])),
+                                KEEP.OUT.ATTRS = FALSE,
+                                stringsAsFactors = FALSE)
+                } else {
+                    data.frame(time = as.character(topo_time), 
+                               stringsAsFactors = FALSE)
+                }
+            } else if (is.data.frame(topo_time)) {
+                if (!"time" %in% colnames(topo_time)) {
+                    stop(paste0("if 'topo_time' is a data.frame, ",
+                                "it must contain a 'time' variable"), 
+                         .call = FALSE)
+                }
+                topo_time$time <- as.character(topo_time$time)
+                for (n in names(subset)) {
+                    topo_time <- topo_time[topo_time[[n]] %in% subset[[n]], ]
+                }
+                for (g in griddims) {
+                    if (!g %in% colnames(topo_time)) {
+                        lev <- autoConvert(dimnames(topodata)[[g]])
+                        topo_time <- topo_time[rep(1:nrow(topo_time), 
+                                                   each = length(lev)), ]
+                        topo_time[[g]] <- lev
+                    }
+                }
+                topo_time
+            } else {
+                stop(paste0(
+                    "'topo_time' must be an atomic object representing ",
+                    "time points or a data.frame"), call. = FALSE)
+            }
+        if (singletime) xlim <- c(xlim[1] - 10, xlim[2] + 10)
+        if (!plot_curves && is.null(sig)) {
+            xlim <- range(as.numeric(topo_time$time))
+        }
+        extra_y <- diff(ylim_orig)*scalp_ratio
+        ylim_ext[2] <- ylim_orig[2] + extra_y * 1.05
+        scalpcenter_y <- ylim_orig[2] + extra_y * 1.05/2
+        scalpsize_y <- abs(extra_y)
+        topotime_diff <- 
+            if (length(griddims) == 0L) {
+                min(diff(as.numeric(topo_time$time)))
+            } else {
+                min(tapply(as.numeric(topo_time$time), 
+                           topo_time[, griddims], 
+                           function(x) {
+                               if (length(x) == 1L) {
+                                   Inf
+                               } else {
+                                   min(diff(x))   
+                               }
+                           }))
+            }
+        ideal_aspect_ratio <- 
+            topotime_diff/diff(xlim)*diff(ylim_ext)/scalpsize_y
+        if (is.null(aspect_ratio) || (aspect_ratio > ideal_aspect_ratio)) {
+            aspect_ratio <- ideal_aspect_ratio
+        } 
+        scalpsize_x <- diff(xlim)*aspect_ratio*scalpsize_y/diff(ylim_ext)
+        topodata <- suppressMessages(
+            topoCoord(topodata, 
+                      topo_time[, c("time", griddims), drop = FALSE], 
+                      chan_pos,
+                      scalpsize_x, scalpsize_y, scalpcenter_y,
+                      ampl_range = ampl_range, ...))
+        if (!singletime) {
+            topo_time$time <- as.numeric(topo_time$time)
+            if (plot_curves) {
+                topo_time$ampl <- NULL
+                topo_time <- merge(topo_time, 
+                                   curvedata[curvedata$chan == "GFP",], 
+                                   by = c("time", griddims))
+            } else {
+                topo_time$ampl <- ylim_ext[1]
+            }
+        }
+        xlim0 <- xlim
+        xlim <- c(min(xlim[1], min(topodata$boundary$xcoord)),
+                  max(xlim[2], max(topodata$boundary$xcoord)))
+        aspect_ratio <- aspect_ratio * diff(xlim0) / diff(xlim)
+    }
+    #
+    # faceted plots
+    #
+    # set breaks on x and y axes
+    xbreaks <- breakSetter(xlim)
+    ybreaks <- breakSetter(ylim_orig)
+    # start plot
+    qp <- ggplot() 
+    # highlight significant phases
+    if (!is.null(sig)) {
+        if (!is.null(sigdata)) {
+            sig_fill <- alpha(brewer.pal(4, "Oranges")[2], 0.1)
+            sig_col <- alpha(brewer.pal(4, "Oranges")[2], 0.9)
+            ymin <- mean(c(ylim_orig[1], ylim_ext[1]))
+            qp <- qp + 
+                geom_rect(
+                    data = sigdata, 
+                    aes(xmin = time1, xmax = time2, ymax = ymax,
+                        colour = Significant), 
+                    fill = sig_fill,
+                    ymin = ymin) + 
+                geom_segment(
+                    data = sigdata,
+                    aes(x = time1, xend = time2, linetype = Significant),
+                    colour = sig_col, size = 1,
+                    y = ymin, yend = ymin) + 
+                scale_linetype_manual(
+                    name = paste("Significant at", "\u03B1", "=", 
+                                 sub("^0.", "\\.", 
+                                     formatC(pcrit, digits = 3))),
+                    values = c(1, 0), 
+                    drop = FALSE,
+                    guide = guide_legend(order = 2)) + 
+                scale_colour_manual(
+                    name = paste("Significant at", "\u03B1", "=", 
+                                 sub("^0.", "\\.", 
+                                     formatC(pcrit, digits = 3))),
+                    values = c("white", sig_col),
+                    drop = FALSE,
+                    guide = guide_legend(order = 2))
+        } else {
+            message("no significant phase has been found")
+        }
+    }
+    # butterfly plot
+    if (plot_curves) {
+        qp <- qp +
+            geom_line(aes(x = time, y = ampl, group = chan, 
+                          size = channel, alpha = channel),
+                      colour = "grey10",
+                      data = curvedata) + 
+            scale_alpha_manual(
+                name = "Channel", values = c(0.3, 1),
+                guide = guide_legend(order = 1)) + 
+            scale_size_manual(
+                name = "Channel", values = c(0.2, 0.5),
+                guide = guide_legend(order = 1)) + 
+            scale_y_continuous(breaks = ybreaks$major,
+                               minor_breaks = ybreaks$minor,
+                               limits = ylim_ext) + 
+            xlab("Time (ms)") + 
+            ylab(paste0("Voltage (", "\u03BC", "V)")) + 
+            ggplot_theme(panel_aspect_ratio = aspect_ratio)
+    } else {
+        qp <- qp + 
+            ggplot_theme(panel_aspect_ratio = aspect_ratio) + 
+            theme(axis.ticks.y = element_blank(),
+                  axis.text.y = element_blank(),
+                  axis.title.y = element_blank(),
+                  panel.grid = element_blank())
+        if (singletime && is.null(sig)) {
+            qp <- qp +
+                theme(axis.ticks.x = element_blank(),
+                      axis.text.x = element_blank(),
+                      axis.title.x = element_blank())
+        }
+    }
+    # facetting
+    if (length(griddims) > 0L) {
+        qp <- qp + facet_grid( as.formula(facets) )
+    }
+    #
+    # plot maps
+    if (!is.null(topo_time)) {
+        if (!singletime) {
+            qp <- qp + 
+                geom_point(
+                    aes(x = time, y = ampl), data = topo_time,
+                    colour = map_marker_colour, 
+                    shape = map_marker_shape, 
+                    size = map_marker_size)
+        }
+        qp <- qp + 
+            geom_raster(
+                aes(xcoord, ycoord, fill = ampl), 
+                data = topodata$topo) + 
+            geom_polygon(
+                aes(xcoord, ycoord, group = peak), fill = "white", 
+                data = topodata$boundary) + 
+            scale_fill_gradient2(
+                name = paste0("Scalp voltage (", "\u03BC", "V)"),
+                guide = guide_colourbar(direction = "horizontal",
+                                        title.position = "top",
+                                        barheight = unit(5, "pt"),
+                                        order = 3),
+                low = "blue", mid = "grey97", high = "red", 
+                midpoint = 0, 
+                space = "Lab")
+    }
+    #
+    # add x scale
+    qp <- qp + 
+        scale_x_continuous(breaks = xbreaks$major, limits = xlim) + 
+        coord_cartesian(xlim = xlim, ylim = ylim_ext)
+    #
+    # return
+    qp
+}
+
+
+
+
+
+
 #' Multiple plot function
 #'
 #' \code{multiplot} plots multiple ggplot objects on one page
@@ -1073,7 +1822,7 @@ modelplot.tanova <- function(results,
 #' @export
 #' @keywords internal
 multiplot <- function(..., plot_list = NULL, cols = 1L, layout = NULL) {
-    require("grid")
+    requireNamespace("grid")
     # Make a list from the ... arguments and plotlist
     plots <- c(list(...), plot_list)
     numPlots = length(plots)

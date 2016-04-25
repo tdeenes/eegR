@@ -329,6 +329,71 @@ fillMissingDimnames <- function(dimn, .dim, .names = TRUE, .dimnames = TRUE) {
     dimn
 }
 
+
+#' Recode dimension names
+#'
+#' \code{recodeDimnames} renames dimension identifiers and dimension levels
+#' (useful before plotting). \code{recodeDimnames_} does the same in place, 
+#' thus without making any copy. 
+#' @param dat an array with dimension names
+#' @param dim_levels a named list of named character vectors. The name of the 
+#' list element identifies the dimension, the names of the character vector 
+#' refer to the original dimension levels, and the values of the character
+#' vector correspond to the new dimension levels. See also Details.
+#' @param dim_ids a named character vector which is used to rename the dimension
+#' identifiers
+#' @details \code{recodeDimnames} goes through the 'dim_levels' argument first.
+#' If a character vector in 'dim_levels' is not named, it must be of the same
+#' length as the length of the given dimension. 
+#' @note Use \code{recodeDimnames_} with extra care because it modifies in place
+#' all objects which 'dat' refers to.
+#' @export
+#' @examples
+#' ## load example data
+#' data(erps)
+#' 
+#' ## recode the 'subst', 'ident', and 'transp' levels of the 'stimclass' 
+#' ## dimension to 'Substitution', 'Identical', and 'Transposition', 
+#' ## respectively; also rename the 'stimclass' dimension name to 
+#' ## 'Stimulus class'
+#' erps2 <- recodeDimnames(erps, 
+#'                         list(stimclass = c(subst = "Substitution",
+#'                                            ident = "Identical",
+#'                                            transp = "Transposition")),
+#'                         c(stimclass = "Stimulus class"))
+#'  
+recodeDimnames <- function(dat, dim_levels = NULL, dim_ids = NULL) {
+    dat <- copy(dat)
+    recodeDimnames_(dat, dim_levels, dim_ids)
+    # return
+    dat
+}
+
+#' @describeIn recodeDimnames Modify by reference
+#' @export
+recodeDimnames_ <- function(dat, dim_levels = NULL, dim_ids = NULL) {
+    dimn <- dimnames(dat)
+    dimid <- names(dimn)
+    dim_levels <- dim_levels[names(dim_levels) %in% dimid]
+    dim_ids <- dim_ids[names(dim_ids) %in% dimid]
+    if (!is.null(dim_levels)) {
+        dimn[names(dim_levels)] <- lapply(
+            names(dim_levels), 
+            function(n) {
+                old <- names(dim_levels[[n]])
+                if (is.null(old)) old <- dimn[[n]]
+                Replace(dimn[[n]], old, as.vector(dim_levels[[n]])) 
+            })
+    }
+    if (!is.null(dim_ids)) {
+        dimid <- Replace(dimid, names(dim_ids), as.vector(dim_ids))    
+    }
+    setattr(dimn, "names", dimid)
+    setattr(dat, "dimnames", dimn)
+    invisible(dat)
+}
+
+
 #' Drop singleton dimensions of an array
 #'
 #' \code{dropDims} drops singleton dimensions (whose lengths is 1) of a
@@ -1429,12 +1494,12 @@ mergeDims <- function(dat, dims, return_attributes = TRUE,
 
 #' Reverse mergeDims transformation
 #'
-#'  \code{revMergeDims} sets back the original array transformed by
-#'  \code{\link{mergeDims}}
-#'  @param dat numeric matrix or array with merged dimensions
-#'  @export
-#'  @return An array of the same dimension attributes as the array which
-#'  \code{\link{mergeDims}} was called on
+#' \code{revMergeDims} sets back the original array transformed by
+#' \code{\link{mergeDims}}
+#' @param dat numeric matrix or array with merged dimensions
+#' @export
+#' @return An array of the same dimension attributes as the array which
+#' \code{\link{mergeDims}} was called on
 revMergeDims <- function(dat) {
     attribs <- attributes(dat)
     if (!"orig_dimattributes" %in% names(attribs))
