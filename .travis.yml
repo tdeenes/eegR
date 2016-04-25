@@ -1,10 +1,8 @@
 language: r
-sudo: required
+sudo: false
+cache: packages
 apt_packages:
   - libproj-dev
-r_github_packages:
-  - mllg/checkmate
-  - Rdatatable/data.table
 notifications:
   email:
     recipients:
