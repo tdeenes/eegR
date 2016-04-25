@@ -65,9 +65,26 @@ dat_id <- attr(erps, "id")
 # collapse pairtypes and participants
 tempdat <- avgDims(erps, c("pairtype", "id"))
 
-# plot butterfly with topo-maps
+# plot butterfly with topo-maps at specified time points
 plotButterfly(tempdat, topo_time = seq(24, 476, by = 50),
               chan_pos = chan_pos)
+
+# plot butterfly with topo-maps at peaks which are selected 
+# automatically; let's look for local maxima on the GFP curves between
+# 0 and 480 ms
+# 1) add GFP to the dataset
+tempdat2 <- compGfp(tempdat, keep_channels = TRUE)
+
+# 2) provide the peak definition
+peak_def <- isLocalMaximum(
+    subset. = list(time = isBetween(0, 480), chan = "GFP"),
+    options. = list(along_dim = "time", n = 15))
+
+# 3) find the peaks
+peak_data <- selectValues(tempdat2, peak_def)
+
+# 4) create plot
+plotButterfly(tempdat2, topo_time = peak_data, chan_pos = chan_pos)
 
 }
 
