@@ -58,9 +58,8 @@ topographies can be displayed above the ERP curves.
 # load example data
 data(erps)
 
-# extract channel positions and participants' group memberships
+# extract channel positions
 chan_pos <- attr(erps, "chan")
-dat_id <- attr(erps, "id")
 
 # collapse pairtypes and participants
 tempdat <- avgDims(erps, c("pairtype", "id"))
@@ -86,5 +85,22 @@ peak_data <- selectValues(tempdat2, peak_def)
 # 4) create plot
 plotButterfly(tempdat2, topo_time = peak_data, chan_pos = chan_pos)
 
+# highlight time windows where the effect of the 'stimclass' factor is
+# statistically significant according to TANOVA
+# 1) run TANOVA
+result_tanova <- tanova(
+    avgDims(erps, "pairtype"),
+    list(within = "stimclass", w_id = "id"),
+    parallel = .(ncores = 2),
+    perm = .(n = 499))
+    
+# 2) extract p-values and bind them to a single array
+pvalues <- extract(result_tanova, c("p", "p_corr"))
+pvalues <- bindArrays(pvalues, along_name = "measure")
+
+# 3) plot
+plotButterfly(tempdat2, sig = pvalues, topo_time = peak_data, 
+              chan_pos = chan_pos)
+  
 }
 

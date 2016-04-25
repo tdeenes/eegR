@@ -1912,6 +1912,10 @@ peakAnova <- function(.arraydat, factordef, peakdef, bwdat = NULL,
     out
 }
 
+
+# P-value utilities ===========
+
+
 #' Correct p-values in time-series
 #'
 #' \code{pvalueConsec} sets a minimal consecutive length criterion on the
@@ -1944,3 +1948,50 @@ pvalueConsec <- function(dat, sig_level = 0.05, min_length = 10) {
     # return
     out
 }
+
+
+#' Internal function to create time ranges of significant effects
+#' 
+#' \code{sigPhases} is an internal function which extracts significant
+#' time ranges from the array of p-values. Used for highlighting significant
+#' phases in butterfly plots
+#' @param dat a numeric array of corrected and uncorrected p-values
+#' @param pcrit numeric value of the level of alpha (e.g., 0.05)
+#' @param ymax y coordinate used for setting the highlighted region
+#' @keywords internal
+sigPhases <- function(dat, pcrit, ymax) {
+    sigdata_corr <- subsetArray(dat, measure = "p_corr")
+    sigdata_uncorr <- subsetArray(dat, measure = "p")
+    sigdata <- array(0L, dim(sigdata_corr), dimnames(sigdata_corr))
+    sigdata[sigdata_uncorr <= pcrit] <- 1L
+    sigdata[sigdata_corr <= pcrit] <- 2L
+    dimn <- dimnames(sigdata)
+    timep <- as.Numeric(dimn$time)
+    dimn <- expand.grid(dimn[-match("time", names(dimn))])
+    out <- matrixRle(array2mat(sigdata, "time"))
+    setDT(out)
+    out[, time1 := c(1L, 1L + cumsum(lengths[-.N])), by = matrixcolumn]
+    out[, time2 := (cumsum(lengths)), by = matrixcolumn]
+    out <- out[values > 0L,]
+    if (nrow(out)) {
+        out[, (colnames(dimn)) := dimn[matrixcolumn,]]
+        out[, time1 := timep[time1]]
+        out[, time2 := timep[time2]]
+        out[, Significant := factor(values,
+                                    levels = c(1, 2),
+                                    labels = c("before correction",
+                                               "after correction"))]
+        out[, 
+            ymax := if (values == 1) ymax[1L] else if (values == 2L) ymax[2L],
+            by = values]
+        out[, values := NULL]
+        out[, matrixcolumn := NULL]
+        # return
+        setDF(out)
+        out
+    } else {
+        # return
+        NULL
+    }
+}
+

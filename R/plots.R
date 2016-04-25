@@ -1142,9 +1142,8 @@ addCaption <- function(x, caption) {
 #' # load example data
 #' data(erps)
 #' 
-#' # extract channel positions and participants' group memberships
+#' # extract channel positions
 #' chan_pos <- attr(erps, "chan")
-#' dat_id <- attr(erps, "id")
 #' 
 #' # collapse pairtypes and participants
 #' tempdat <- avgDims(erps, c("pairtype", "id"))
@@ -1170,6 +1169,23 @@ addCaption <- function(x, caption) {
 #' # 4) create plot
 #' plotButterfly(tempdat2, topo_time = peak_data, chan_pos = chan_pos)
 #' 
+#' # highlight time windows where the effect of the 'stimclass' factor is
+#' # statistically significant according to TANOVA
+#' # 1) run TANOVA
+#' result_tanova <- tanova(
+#'     avgDims(erps, "pairtype"),
+#'     list(within = "stimclass", w_id = "id"),
+#'     parallel = .(ncores = 2),
+#'     perm = .(n = 499))
+#'     
+#' # 2) extract p-values and bind them to a single array
+#' pvalues <- extract(result_tanova, c("p", "p_corr"))
+#' pvalues <- bindArrays(pvalues, along_name = "measure")
+#' 
+#' # 3) plot
+#' plotButterfly(tempdat2, sig = pvalues, topo_time = peak_data, 
+#'               chan_pos = chan_pos)
+#'   
 plotButterfly <- function(
     dat, sig = NULL, topo_time = NULL, 
     chan_pos = NULL, subset = list(),
@@ -1244,13 +1260,13 @@ plotButterfly <- function(
 #' @inheritParams plotComplex
 #' @return \code{plotMap} returns a ggplot object.
 #' @export
+#' @seealso \code{\link{plotButterfly}} for a more complex way of visualizaton
 #' @examples
 #' # load example data
 #' data(erps)
 #' 
-#' # extract channel positions and participants' group memberships
+#' # extract channel positions
 #' chan_pos <- attr(erps, "chan")
-#' dat_id <- attr(erps, "id")
 #' 
 #' # collapse pairtypes and participants
 #' tempdat <- avgDims(erps, c("pairtype", "id"))
@@ -1855,14 +1871,17 @@ multiplot <- function(..., plot_list = NULL, cols = 1L, layout = NULL) {
         print(plots[[1]])   
     } else {
         # Set up the page
-        grid.newpage()
-        pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+        grid::grid.newpage()
+        grid::pushViewport(
+            grid::viewport(
+                layout = grid::grid.layout(nrow(layout), ncol(layout))))
         # Make each plot, in the correct location
         for (i in 1:numPlots) {
             # Get the i,j matrix positions of the regions that contain this subplot
             matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))        
-            print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                            layout.pos.col = matchidx$col))
+            print(plots[[i]], 
+                  vp = grid::viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
         }
     }
 }

@@ -54,9 +54,8 @@ scalp topographies at user-defined time points.
 # load example data
 data(erps)
 
-# extract channel positions and participants' group memberships
+# extract channel positions
 chan_pos <- attr(erps, "chan")
-dat_id <- attr(erps, "id")
 
 # collapse pairtypes and participants
 tempdat <- avgDims(erps, c("pairtype", "id"))
@@ -70,5 +69,8 @@ map <- plotMap(compareLevels(tempdat, "stimclass"),
 library(ggplot2)
 map + ggtitle("Pairwise differences between stimulus classes")
          
+}
+\seealso{
+\code{\link{plotButterfly}} for a more complex way of visualizaton
 }
 

@@ -27,7 +27,7 @@
 #' @importFrom checkmate checkLogical checkCharacter checkNumeric checkIntegerish 
 #' @importFrom checkmate checkString checkNumber checkScalar checkCount checkFlag checkInt
 #' @importFrom checkmate checkNull
-#' @importFrom checkmate testVector testIntegerish
+#' @importFrom checkmate testVector testIntegerish testNamed
 #' @importFrom checkmate assert
 #' @importFrom Rcpp evalCpp
 #' @importFrom Kmisc factor_ counts

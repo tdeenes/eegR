@@ -190,7 +190,8 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
         if (all(c("theta", "phi") %in% colnames(ch_pos))) {
             ch_pos <- sph2cart(ch_pos, ...)
         } else {
-            stop("Channel coordinates should be spherical (polar) or cartesian coordinates!")
+            stop(paste0("Channel coordinates should be spherical (polar)",
+                        "or cartesian coordinates!"))
         }
     }
     ch_pos <- ch_pos[, c("x", "y", "z")]
@@ -229,7 +230,7 @@ chanNb <- function(ch_pos, check_alpha = c(0.1, 10), alpha = NULL, ...) {
                     rgl::text3d(ch_pos$x, ch_pos$y, ch_pos$z, cex = 0.6,
                                 channames, col = "black")
                 })
-                observe({
+                shiny::observe({
                     if (input$submit == 0)
                         return()
                     shiny::stopApp(input$alpha)
