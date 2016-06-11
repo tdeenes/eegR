@@ -2407,9 +2407,9 @@ autoConvert <- function(dat, select = NULL, conversion = "ANY",
                 out <- x
                 next
             }
-            # evaluete
+            # evaluate
             ev <- try(EVAL(x, out), silent = TRUE)
-            if (length(eval) > 1L) {
+            if (length(ev) > 1L) {
                 stop(paste0(
                     "autoConvert: ",
                     "the EVAL function must return a logical value (either ",
