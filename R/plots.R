@@ -1370,7 +1370,8 @@ plotMap <- function(dat, chan_pos, topo_time = NULL, subset = list(),
 #' origo
 #' @param ... arguments passed to \code{\link{chanInterp}}. You might consider
 #' setting the argument \code{N} for dense electrode caps.
-#' @note This function is called by \code{\link{plotButterfly}}.
+#' @note This function is called by \code{\link{plotButterfly}} and 
+#' \code{\link{plotMap}}.
 #' @return The function returns a named list of two data.table objects (topo
 #' and boundary).
 #' @keywords internal
@@ -1670,8 +1671,10 @@ plotComplex <- function(
                     "'topo_time' must be an atomic object representing ",
                     "time points or a data.frame"), call. = FALSE)
             }
-        if (singletime) xlim <- c(xlim[1] - 10, xlim[2] + 10)
-        if (!plot_curves && is.null(sig)) {
+        if (uniqueN(topo_time$time) == 1L) singletime <- TRUE
+        if (singletime) {
+            xlim <- c(xlim[1] - 10, xlim[2] + 10)
+        } else if (!plot_curves && is.null(sig)) {
             xlim <- range(as.numeric(topo_time$time))
         }
         extra_y <- diff(ylim_orig)*scalp_ratio
@@ -1679,7 +1682,9 @@ plotComplex <- function(
         scalpcenter_y <- ylim_orig[2] + extra_y * 1.05/2
         scalpsize_y <- abs(extra_y)
         topotime_diff <- 
-            if (length(griddims) == 0L) {
+            if (singletime) {
+                diff(xlim)
+            } else if (length(griddims) == 0L) {
                 min(diff(as.numeric(topo_time$time)))
             } else {
                 min(tapply(as.numeric(topo_time$time), 

@@ -1,8 +1,8 @@
 Package: eegR
 Type: Package
 Title: A package to analyze EEG signals
-Version: 0.0.900
-Date: 2016-04-25
+Version: 0.0.901
+Date: 2016-06-19
 Author: Denes Toth
 Maintainer: Denes Toth <toth.denes@ttk.mta.hu>
 Description: The eegR package has been developed to process

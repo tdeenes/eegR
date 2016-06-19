@@ -56,7 +56,8 @@ and boundary).
 the given peaks.
 }
 \note{
-This function is called by \code{\link{plotButterfly}}.
+This function is called by \code{\link{plotButterfly}} and 
+\code{\link{plotMap}}.
 }
 \keyword{internal}
 
