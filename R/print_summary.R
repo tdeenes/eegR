@@ -386,8 +386,10 @@ print.summary.eegr <- function(x, digits = 3L, quote = FALSE, fill_na = "-",
                                ...) {
     # function to remove "descriptives" header
     rD <- function(x) {
-        ind <- match("descriptives", names(dimnames(x)))
-        names(dimnames(x))[ind] <- ""
+        if (!is.null(names(dimnames(x)))) {
+            ind <- match("descriptives", names(dimnames(x)))
+            names(dimnames(x))[ind] <- ""
+        }
         attr(x, "label") <- NULL
         x
     }
