@@ -336,7 +336,7 @@ summary.eegr <- function(object, basis, basis_dim, crit, ...) {
     #
     # compute summary statistics
     excl <- "means"
-    if (!is.null(dimnames(attr(object$stat, "Df"))))
+    if (!all(basis_dim %in% names(dimnames(out$df))))
         excl  <- c(excl, "df")
     for (i in setdiff(names(out), excl)) {
         if (i != basis) {
