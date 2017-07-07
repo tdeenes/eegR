@@ -39,4 +39,3 @@ where factor A has levels Aa & Ab and factor B has levels Ba, Bb and Bc,
 the function computes the following differences: (Aa-Ab) - (Ba-Bb),
 (Aa-Ab) - (Ba-Bc), (Aa-Ab) - (Bb-Bc).
 }
-

@@ -27,4 +27,3 @@ a t-statistic and FALSE for an F-statistic)}
 \code{arrayTtest} and performs TFCE-correction of the given test statistic
 }
 \keyword{internal}
-

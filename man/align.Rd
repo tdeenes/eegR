@@ -76,4 +76,3 @@ plotERParray(compGfp(x_all), sepdim = "id",
 \seealso{
 \code{\link{warp}}
 }
-

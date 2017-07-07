@@ -20,4 +20,3 @@ a list of two arrays: the p-values and the corrected p-values
 duration-corrected p-values in the high-level \code{\link{tanova}} function.
 }
 \keyword{internal}
-

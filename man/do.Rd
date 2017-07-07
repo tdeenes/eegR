@@ -65,4 +65,3 @@ test(do("head", x, n = 10L))
 test(do("head", n = 10L, arg_list = list(x = x)))
 
 }
-

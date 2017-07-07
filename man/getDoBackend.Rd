@@ -15,4 +15,3 @@ foreach \%dopar\% backend.
 Renaud Gaujoux, Denes Toth
 }
 \keyword{internal}
-

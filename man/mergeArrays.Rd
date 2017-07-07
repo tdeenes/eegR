@@ -31,4 +31,3 @@ the dimension levels of the input arrays.
 \code{mergeArrays} merges multiple arrays or a list of arrays into one large
 array. It can be regarded as the inverse of \code{\link{splitArray}}.
 }
-

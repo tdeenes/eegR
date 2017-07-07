@@ -22,4 +22,3 @@ multiplot(..., plot_list = NULL, cols = 1L, layout = NULL)
 Winston Chang
 }
 \keyword{internal}
-

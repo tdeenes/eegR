@@ -25,4 +25,3 @@ permutations
 \code{\link{arrayAnova}} and \code{\link{tanova}}
 }
 \keyword{internal}
-

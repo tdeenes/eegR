@@ -18,4 +18,3 @@ assert0(x, fun, ..., .var.name = NULL)
 \description{
 \code{assert0} allows NULL besides other assertion conditions.
 }
-

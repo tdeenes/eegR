@@ -26,4 +26,3 @@ arguments which have an "all" option in their choices. Note that the defaults
 are not the same as in \code{\link[base]{match.arg}}.
 }
 \keyword{internal}
-

@@ -40,4 +40,3 @@ stopifnot(!anyDuplicated(temp, MARGIN = 2L))
 }
 }
 \keyword{internal}
-

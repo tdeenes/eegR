@@ -34,6 +34,7 @@ length as the length of the given dimension.
 \itemize{
 \item \code{recodeDimnames_}: Modify by reference
 }}
+
 \note{
 Use \code{recodeDimnames_} with extra care because it modifies in place
 all objects which 'dat' refers to.
@@ -53,4 +54,3 @@ erps2 <- recodeDimnames(erps,
                         c(stimclass = "Stimulus class"))
  
 }
-

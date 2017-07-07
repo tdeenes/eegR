@@ -62,4 +62,3 @@ bc3 <- baselineCorr(erps, base_timerange = isBetween(-50, 50))
 \seealso{
 \code{\link{scaleArray}} for the function behind the scenes
 }
-

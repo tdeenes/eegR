@@ -2,8 +2,8 @@
 % Please edit documentation in R/print_summary.R
 \name{summary}
 \alias{summary}
-\alias{summary.arrayAnova}
 \alias{summary.arrayTtest}
+\alias{summary.arrayAnova}
 \alias{summary.tanova}
 \title{Compute summary statistics for \code{arrayTtest}, \code{arrayAnova}, or
 \code{tanova} objects}
@@ -65,4 +65,3 @@ if no data points meet the given criterion in a particular subview, no
 summaries can be computed, resulting in \code{NA} values in the
 corresponding cells.
 }
-

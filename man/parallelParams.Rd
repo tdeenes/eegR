@@ -85,4 +85,3 @@ stopifnot(identical(unname(ranges_parallel),
                     unname(ranges_single)))
 
 }
-

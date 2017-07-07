@@ -52,4 +52,3 @@ A data.frame if datfr is TRUE, and an array if datfr is FALSE
 \description{
 \code{prepare2plot} is deprecated. Use \code{\link{transformArray}} instead.
 }
-

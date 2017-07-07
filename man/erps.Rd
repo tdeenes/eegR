@@ -20,4 +20,3 @@ substituted, and transposed). The data were downsampled to 500 Hz, and cover
 the following time window: -50 ms to 500 ms.
 }
 \keyword{datasets}
-

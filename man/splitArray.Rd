@@ -59,4 +59,3 @@ stopifnot(identical(dimnames(groups), list(readgroup = c("control", "dl"))))
 }
 
 }
-

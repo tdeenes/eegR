@@ -33,4 +33,3 @@ This way the second level of the list will be represented as an additional
 dimension in the ground level elements (vectors will be matrices, matrices
 will become arrays, arrays recieve an extra dimension)
 }
-

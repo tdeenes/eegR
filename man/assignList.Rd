@@ -24,4 +24,3 @@ elements to the enclosing environment
 Be aware that the function does not check if an object with the same name exists in
 the enclosing environment - if it exists, it will be overwritten.
 }
-

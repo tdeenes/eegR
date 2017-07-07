@@ -62,4 +62,3 @@ plotERParray(plotdat, col = "grey70", lty = 1)
 \seealso{
 \code{\link{matlines}}
 }
-

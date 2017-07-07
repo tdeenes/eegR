@@ -17,4 +17,3 @@ An array of the same dimension attributes as the array which
 \code{revMergeDims} sets back the original array transformed by
 \code{\link{mergeDims}}
 }
-

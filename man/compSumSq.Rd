@@ -22,4 +22,3 @@ the degrees of freedom ('Df'), or a list of such matrices
 \code{\link{compF}} and \code{\link{permPvalues}}.
 }
 \keyword{internal}
-

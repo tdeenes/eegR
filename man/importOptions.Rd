@@ -62,4 +62,3 @@ A list with named parameters
 \description{
 \code{importOptions} allows to set the raw data importation parameters
 }
-

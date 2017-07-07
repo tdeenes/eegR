@@ -43,4 +43,3 @@ temp <- osTtestRandomSigns(obj, 1e4)
 stopifnot(!anyDuplicated(temp, MARGIN = 2L))
 }
 }
-

@@ -80,9 +80,9 @@ objects, each produced by the corresponding function.
 
 \item \code{tanova}: Method for \code{tanova} objects
 }}
+
 \seealso{
 See the examples for \code{\link{arrayAnova}} and 
 \code{\link{tanova}}
 }
 \keyword{internal}
-

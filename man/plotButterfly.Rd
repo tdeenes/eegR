@@ -103,4 +103,3 @@ plotButterfly(tempdat2, sig = pvalues, topo_time = peak_data,
               chan_pos = chan_pos)
   
 }
-

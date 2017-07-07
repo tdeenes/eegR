@@ -18,4 +18,3 @@ attribute is important if the tests are combined, see \code{\link{combine}}.
 \seealso{
 \code{\link[eegR]{is}}, \code{\link{combine}}
 }
-

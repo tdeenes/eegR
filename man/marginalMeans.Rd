@@ -39,4 +39,3 @@ A named list containing the marginal means for each model term
 \code{marginalMeans} computes marginal means in ANOVA designs
 }
 \keyword{internal}
-

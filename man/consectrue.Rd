@@ -18,4 +18,3 @@ computes the longest streak of TRUE values in each column (or row) of a
 two-dimensional input.
 }
 \keyword{internal}
-

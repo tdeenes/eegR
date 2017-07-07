@@ -12,4 +12,3 @@ checkSubsetExpand(subset., expand.)
 \code{is*} functions. It also checks for potential dimension overlaps.
 }
 \keyword{internal}
-

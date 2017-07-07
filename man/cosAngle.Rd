@@ -33,4 +33,3 @@ A symmetric matrix
 between any N-dimensional vectors, or between two sets of electrodes or
 any N-dimensional vectors.
 }
-

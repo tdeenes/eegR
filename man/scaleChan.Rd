@@ -22,4 +22,3 @@ A numeric matrix or array
 each sampling point, the mean of the channel amplitudes is zero and
 the standard deviation is one.
 }
-

@@ -77,4 +77,3 @@ stopifnot(identical(dimnames(mat4), list(rows = NULL, columns = NULL)))
 \seealso{
 \code{\link{provideDimnames}} for a slightly different solution
 }
-

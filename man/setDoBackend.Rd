@@ -18,4 +18,3 @@ returns the internal of the previously registered backend.
 Renaud Gaujoux, Denes Toth
 }
 \keyword{internal}
-

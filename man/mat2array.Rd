@@ -25,4 +25,3 @@ function of array2mat.
 \seealso{
 \code{\link{array2mat}}
 }
-

@@ -132,4 +132,3 @@ res2 <- compGfp(res2, keep_channels = TRUE)
 res2 <- array2df(res2, value_name = "ampl", auto_convert = TRUE)
 stopifnot(identical(res1, res2))
 }
-

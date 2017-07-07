@@ -34,4 +34,3 @@ and the modified input data (dat and markers without contaminated trials)
 \description{
 \code{artifactRejection} performs artifact rejection on segmented data.
 }
-

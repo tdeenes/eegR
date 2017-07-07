@@ -60,4 +60,3 @@ This function is called by \code{\link{plotButterfly}} and
 \code{\link{plotMap}}.
 }
 \keyword{internal}
-

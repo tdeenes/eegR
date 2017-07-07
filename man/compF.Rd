@@ -33,4 +33,3 @@ each model term.
 the high-level function \code{\link{arrayAnova}}.
 }
 \keyword{internal}
-

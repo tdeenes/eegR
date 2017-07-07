@@ -26,4 +26,3 @@ ggplot(mtcars, aes(x = wt, y = mpg, colour = factor(cyl))) +
     theme_ndys(12, "h", 1.5)
     
 }
-

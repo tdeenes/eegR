@@ -75,4 +75,3 @@ which are provided in milliseconds (or /ms) and makes adjustments if needed.
 However, *_mark parameters are not used since only segmented data can be
 analyzed in the present version of artifactRejection().
 }
-

@@ -26,4 +26,3 @@ given in Koenig & Melie-Garcia, 2009, p177. This is an internal function
 called by the high-level function \code{\link{tanova}}.
 }
 \keyword{internal}
-

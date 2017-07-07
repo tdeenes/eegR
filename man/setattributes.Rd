@@ -25,4 +25,3 @@ to set the dimension, dimension names and nice label of the given test
 statistic
 }
 \keyword{internal}
-

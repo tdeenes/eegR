@@ -73,4 +73,3 @@ map + ggtitle("Pairwise differences between stimulus classes")
 \seealso{
 \code{\link{plotButterfly}} for a more complex way of visualizaton
 }
-

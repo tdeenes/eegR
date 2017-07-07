@@ -70,4 +70,3 @@ The function computes type I p-values - this is correct if the design
 is fully balanced and orthogonal (if the number of between-subject
 factors is one, it may have slightly unequal group sizes).
 }
-

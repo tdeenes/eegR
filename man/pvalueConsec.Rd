@@ -22,4 +22,3 @@ An object of the same dimension as the input data
 \code{pvalueConsec} sets a minimal consecutive length criterion on the
 p-values in a time series
 }
-

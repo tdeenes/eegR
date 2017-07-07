@@ -100,4 +100,3 @@ gfpdat <- compGfp(plotdat)
 plot2dview(subsetArray(plotdat, list(time = "200")),
            chan_pos, timepoint = 200, gfp = gfpdat)
 }
-

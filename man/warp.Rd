@@ -66,4 +66,3 @@ are subject to change in the future.
 \code{\link{align}} for time-aligning transformation and examples, 
 and \code{\link{fnDims}} for additional parameters
 }
-

@@ -12,4 +12,3 @@ in the is* functions to transform the arguments like ref., tol., etc.
 to match the input array.
 }
 \keyword{internal}
-

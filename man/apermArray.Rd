@@ -100,4 +100,3 @@ stopifnot(identical(unname(aperm_orig),
                     noresize))
 
 }
-

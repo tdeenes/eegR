@@ -162,4 +162,3 @@ stopifnot(
     all.equal(as.vector(result_ttest$p.value), eegr_p)
 )
 }
-

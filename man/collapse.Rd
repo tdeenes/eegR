@@ -19,4 +19,3 @@ column-wise.}
 \code{collapse} is a fast version of 
 \code{apply(x, along_dim, paste, collapse = "")}. It also works on vectors.
 }
-

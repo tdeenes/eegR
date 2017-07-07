@@ -13,4 +13,3 @@ arrayTtestAnova(test, .arraydat, .arraydat2 = NULL, factordef = NULL,
 United function for \code{\link{arrayTtest}} and \code{\link{arrayAnova}}
 }
 \keyword{internal}
-

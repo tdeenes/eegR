@@ -36,4 +36,3 @@ higher-level function exported to the user, \code{\link{preSumSq}},
 functions relying on the returned object of \code{preAnova}.
 }
 \keyword{internal}
-

@@ -38,4 +38,3 @@ stopifnot(identical(xr[c(2, 3, 5)], c("aa", "aa", "ee")))
 # the missing value is not affected
 stopifnot(is.na(xr[1]))
 }
-

@@ -22,4 +22,3 @@ function on the input vector or on the appropriate slices of the input
 array.
 }
 \keyword{internal}
-

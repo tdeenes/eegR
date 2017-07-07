@@ -30,4 +30,3 @@ cell is smaller than the absolute randomized test statistic
 \code{arrayTtest} and performs permutation analysis.
 }
 \keyword{internal}
-

@@ -2,17 +2,17 @@
 % Please edit documentation in R/is.R
 \name{is}
 \alias{is}
-\alias{isBetween}
+\alias{isPattern}
 \alias{isEqual}
+\alias{isSame}
+\alias{isBetween}
+\alias{isNegative}
+\alias{isPositive}
 \alias{isExtremum}
 \alias{isLocalMaximum}
 \alias{isLocalMinimum}
 \alias{isMaximum}
 \alias{isMinimum}
-\alias{isNegative}
-\alias{isPattern}
-\alias{isPositive}
-\alias{isSame}
 \title{Test logical statements on data points}
 \usage{
 isPattern(pattern., strict. = TRUE, negate. = FALSE, subset. = list(),
@@ -172,6 +172,7 @@ does not fail (see the documentation of \code{\link{as.Numeric}}).
 \code{isExtremum("min", global = TRUE, ...)}. See
 \code{\link{findExtrema}} for additional details and further arguments.
 }}
+
 \section{Use cases}{
 
 \subsection{\code{is*} as simple pre-defined test}{
@@ -199,6 +200,7 @@ an argument in \code{subsetArray} for all data arrays if all of them have a
 the time range may be different).
 }
 }
+
 \examples{
 #
 # example for isPattern #
@@ -331,4 +333,3 @@ stopifnot(identical(
 \code{\link{combine}} how to combine is* tests, and \code{\link{isStrict}}
 how to check afterwards whether a test is strict or optional
 }
-

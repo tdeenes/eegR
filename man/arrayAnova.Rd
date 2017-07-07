@@ -243,4 +243,3 @@ See also the related methods to explore the results, e.g.
 plotting functions \code{\link{modelplot}}, or the lower-level
 \code{\link{imageValues}} and \code{\link{imagePvalues}}.
 }
-

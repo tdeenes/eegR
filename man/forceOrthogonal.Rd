@@ -16,4 +16,3 @@ forceOrthogonal(model_matrix, between = character())
 adjustments if it is not.
 }
 \keyword{internal}
-

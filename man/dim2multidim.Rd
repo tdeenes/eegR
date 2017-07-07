@@ -27,4 +27,3 @@ conceived of as the inverse of expand.grid on the specified dimension.
 \seealso{
 \code{\link{expand.grid}}
 }
-

@@ -31,4 +31,3 @@ The function invisibly returns the input object.
 \code{print.summary.eegr} prints summaries of \code{\link{arrayTtest}},
 \code{\link{arrayAnova}}, or \code{\link{tanova}} objects
 }
-

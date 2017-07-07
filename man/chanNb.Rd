@@ -25,4 +25,3 @@ An electrode neighbourhood matrix
 \description{
 \code{chanNb} finds neighbouring channels
 }
-

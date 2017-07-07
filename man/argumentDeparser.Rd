@@ -54,4 +54,3 @@ stopifnot(identical(tempfn(mymethod = .(y = new_y)),
                     tempfn(mymethod = mymethodParams(y = new_y))))
 }
 \keyword{internal}
-

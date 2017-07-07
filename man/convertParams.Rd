@@ -87,4 +87,3 @@ FALSE if it is not. Usually, the 'EVAL' function is a counterpart of the
 \seealso{
 \code{\link{autoConvert}} for examples
 }
-

@@ -37,4 +37,3 @@ by Pau Coma and adopted to EEG analysis by Armand Mensen. Denes Toth ported
 the C code to C++ (Rcpp) with minor improvements and added the R wrapper.
 }
 \keyword{internal}
-

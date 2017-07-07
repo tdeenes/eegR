@@ -75,4 +75,3 @@ complexplot2dview(plotdat,
 \seealso{
 \code{\link{plot2dview}}
 }
-

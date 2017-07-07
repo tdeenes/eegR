@@ -10,4 +10,3 @@ reqFn(packages)
 Check for availability of packages
 }
 \keyword{internal}
-

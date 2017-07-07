@@ -48,4 +48,3 @@ An object having the same attributes as dat
 bad channels (i.e. channels with missing values) or interpolate to
 artbitrary positions on the scalp.
 }
-

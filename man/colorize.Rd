@@ -20,4 +20,3 @@ a ggplot object
 \description{
 \code{colorize} changes the color scale of \code{\link{imageValues}} plots
 }
-

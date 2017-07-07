@@ -2,8 +2,8 @@
 % Please edit documentation in R/anova.R
 \name{modelMeans}
 \alias{modelMeans}
-\alias{modelMeans.arrayAnova}
 \alias{modelMeans.default}
+\alias{modelMeans.arrayAnova}
 \alias{modelMeans.tanova}
 \title{Compute adjusted or unadjusted cell means in ANOVA designs}
 \usage{
@@ -80,6 +80,7 @@ of the corresponding higher-order means if 'adjusted' is FALSE.
 
 \item \code{tanova}: Method for \code{tanova} objects
 }}
+
 \examples{
 # example data
 data(erps)
@@ -142,4 +143,3 @@ stopifnot(identical(
 )
 
 }
-

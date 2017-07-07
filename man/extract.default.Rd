@@ -13,4 +13,3 @@ Default extractor which is behind \code{\link{extract.arrayTtest}},
 (at the moment) for objects of other classes.
 }
 \keyword{internal}
-

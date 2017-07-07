@@ -74,4 +74,3 @@ stopifnot(identical(autoConvert(c("1.12", "3.4")),
                     as.numeric(c("1.12", "3.4"))))
 }
 }
-

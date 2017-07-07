@@ -70,4 +70,3 @@ str(array2df(erps, value_name = "amplitudes", value_dim = "stimclass",
 \code{\link{autoConvert}} for coercion, and 
 \code{\link{transformArray}} for a higher-level version of \code{array2df}
 }
-

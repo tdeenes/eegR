@@ -37,4 +37,3 @@ in RAM, see \code{\link{address}}).
 \code{\link[data.table]{setattr}} for the original version in the data.table
 package
 }
-

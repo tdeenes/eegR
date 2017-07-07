@@ -25,4 +25,3 @@ the original channels are not retained, the channel dimension is dropped.
 \code{compGfp} computes Global Field Power (the standard deviation of 
 channel values for each sampling point)
 }
-

@@ -56,4 +56,3 @@ and size of the marker used to mark the exact time points of the maps}
 \code{\link{plotButterfly}} and \code{\link{plotMap}}.
 }
 \keyword{internal}
-

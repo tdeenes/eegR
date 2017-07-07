@@ -21,4 +21,3 @@ integer or is* functional indices)}
 subsetArray and `subsetArray<-`.
 }
 \keyword{internal}
-

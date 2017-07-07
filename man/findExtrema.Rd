@@ -154,4 +154,3 @@ points(x[, 2L], pch = 16,
        col = c("grey", "blue", "red")[x_extr[, 2L] + 1L])
        
 }
-

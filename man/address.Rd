@@ -23,4 +23,3 @@ not, programatically.
 This is just an imported and re-exported function (without any 
 modification) from \bold{data.table}.
 }
-

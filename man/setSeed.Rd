@@ -16,4 +16,3 @@ integer value, in which case it is interpreted as the 'seed' argument in
 \code{setSeed} is called for its side effect, namely it specifies a random 
 seed by calling \code{\link{set.seed}}.
 }
-

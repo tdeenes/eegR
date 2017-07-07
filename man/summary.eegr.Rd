@@ -27,4 +27,3 @@ computed}
 \code{\link{summary.arrayAnova}}).
 }
 \keyword{internal}
-

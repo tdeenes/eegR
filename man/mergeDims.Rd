@@ -28,4 +28,3 @@ Array with merged dimensions
 \description{
 \code{mergeDims} reshapes an array by merging user-specified dimensions
 }
-

@@ -76,4 +76,3 @@ if (require(microbenchmark)) {
 (without copy) and \code{\link{matrix}} for creating a new matrix without
 modifying the original input
 }
-

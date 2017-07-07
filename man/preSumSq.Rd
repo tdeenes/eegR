@@ -39,4 +39,3 @@ matrix, and all unique rows of Xs, and also the residuals if residuals are
 permuted instead of raw observations.
 }
 \keyword{internal}
-

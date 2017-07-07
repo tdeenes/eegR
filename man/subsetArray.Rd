@@ -103,4 +103,3 @@ See the \code{\link[eegR]{is}} family of functions for subsetting
 dimensions by functional expressions; see also \code{\link[abind]{asub}}
 for a less general approach.
 }
-

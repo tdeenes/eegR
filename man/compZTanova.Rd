@@ -18,4 +18,3 @@ in the high-level \code{\link{tanova}} function. It is actually the z-scored
 generalized dissimilarity statistic.
 }
 \keyword{internal}
-

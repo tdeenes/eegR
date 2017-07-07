@@ -44,4 +44,3 @@ objects which x refers to. See \code{\link{matrix_}} for further hints.
 (without copy) and \code{\link{array}} for creating a new array without
 modifying the original input
 }
-

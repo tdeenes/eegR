@@ -55,4 +55,3 @@ the user. \code{\link{isTtest}} and \code{\link{osTtest}} are internal
 functions relying on the returned object of \code{preTtest}.
 }
 \keyword{internal}
-

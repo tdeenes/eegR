@@ -24,4 +24,3 @@ dat is decreased by the length of dims)
 \code{avgDims} collapses data in array format across specific dimensions by
 simple averaging
 }
-

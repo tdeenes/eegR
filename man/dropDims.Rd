@@ -94,4 +94,3 @@ stopifnot(is.null(names(x2)))
 stopifnot(identical(unname(x1), x2))
 
 }
-

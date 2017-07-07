@@ -38,6 +38,7 @@ multidimensional inputs.
 \itemize{
 \item \code{as.Numeric_}: Modify by reference
 }}
+
 \examples{
 # if 'x' is double, as.Numeric() simply returns it, just like as.numeric()
 x <- rnorm(10)
@@ -87,4 +88,3 @@ address(x_num3)
 stopifnot(identical(address(x), address(x_num3)))
 
 }
-

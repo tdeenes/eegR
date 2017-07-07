@@ -20,4 +20,3 @@ to the arguments ('n' and 'type')
 \code{permParams} sets the parameters for permutations (randomizations)
 used for example in \code{arrayAnova} or \code{tanova}.
 }
-

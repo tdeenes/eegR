@@ -64,4 +64,3 @@ lines(timepoints_bin, subsetArray(erps_bin, sub), col = 2)
 lines(timepoints, subsetArray(erps_roll, sub), col = 3)
 legend("topright", legend = c("original", "bin", "roll"), col = 1:3, lty = 1)
 }
-

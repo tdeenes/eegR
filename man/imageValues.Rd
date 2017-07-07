@@ -64,4 +64,3 @@ implot + facet_grid(pairtype ~ stimclass) + theme_bw()
 \code{\link{imagePvalues}} for plotting p-values, and 
 \code{\link{plotERParray}} for multiline (butterfly) plots
 }
-

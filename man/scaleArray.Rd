@@ -75,4 +75,3 @@ sds <- apply(subsetArray(scaled_erps, base),
 stopifnot(all.equal(as.vector(means), rep(0, length(means))))
 stopifnot(all.equal(as.vector(sds), rep(1, length(sds))))
 }
-

@@ -22,4 +22,3 @@ A list with substituted names.
 \code{listS} creates a named list where names are substituted with the 
 content of the referenced variable.
 }
-

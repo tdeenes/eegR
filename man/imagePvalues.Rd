@@ -40,4 +40,3 @@ A ggplot object
 \seealso{
 \code{\link{imageValues}} for plotting effects or raw amplitudes
 }
-

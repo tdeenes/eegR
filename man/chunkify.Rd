@@ -44,4 +44,3 @@ Chunking can be based only on those dimensions which are not affected by
 \note{
 This function is experimental.
 }
-

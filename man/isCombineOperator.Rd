@@ -18,4 +18,3 @@ isCombineOperator(lhs, rhs, op)
 for objects of class IsFunction.
 }
 \keyword{internal}
-

@@ -115,4 +115,3 @@ dimension names, their dimensions are permuted before feeding to \code{abind}.
 by \code{\link{splitArray}} or you want to bind on multiple dimensions;
 \code{\link{rearrangeList}} if you want to bind arrays in two-level lists
 }
-

@@ -28,4 +28,3 @@ centroids
 \code{centroid} computes the centroids (separately for the negative and
 positive values)
 }
-

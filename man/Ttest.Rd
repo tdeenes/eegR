@@ -35,4 +35,3 @@ degrees of freedom if requested for independent samples (\code{isTtest}) and
 one-sample or paired-samples (\code{osTest}).
 }
 \keyword{internal}
-

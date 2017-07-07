@@ -122,4 +122,3 @@ See also the related methods to explore the results, e.g.
 \code{\link{extract.tanova}}, \code{\link{summary.tanova}}, and the plotting
 function \code{\link{modelplot.tanova}}.
 }
-

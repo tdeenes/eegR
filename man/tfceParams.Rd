@@ -76,4 +76,3 @@ res <- myAnova2(erps, tfce = tfceParams(ChN = chn, EH = c(0.66, 1)))
 str(res)
 
 }
-

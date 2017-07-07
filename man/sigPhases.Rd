@@ -19,4 +19,3 @@ time ranges from the array of p-values. Used for highlighting significant
 phases in butterfly plots
 }
 \keyword{internal}
-

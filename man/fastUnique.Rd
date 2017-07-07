@@ -49,4 +49,3 @@ system.time(un_x_withfreq <- fastUnique(x, freq = TRUE))
 # check that frequencies add up to the number of rows of x
 stopifnot(sum(attr(un_x_withfreq, "freq")) == nrow(x))
 }
-

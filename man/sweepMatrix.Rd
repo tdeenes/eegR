@@ -49,4 +49,3 @@ stopifnot(all.equal(result,
                     sweep(mat, 2, stat, "-")))
 stopifnot(identical(result[1, ], c(NA, rep(0L, ncol(mat) - 1))))
 }
-

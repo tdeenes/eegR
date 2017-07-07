@@ -28,4 +28,3 @@ A matrix
 \seealso{
 \code{\link{mat2array}} which is the inverse of array2mat
 }
-

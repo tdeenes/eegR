@@ -31,4 +31,3 @@ missing dimension names and identifiers and returns the modified 'dimnames'
 attribute.
 }
 \keyword{internal}
-

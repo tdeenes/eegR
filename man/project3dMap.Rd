@@ -28,4 +28,3 @@ A data.frame containing the projected coordinates
 \description{
 \code{project3dMap} projects 3D coordinates onto a 2D plane or vice versa
 }
-

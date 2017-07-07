@@ -108,4 +108,3 @@ stopifnot(all.equal(max_simple, max_vectorized))
 \code{\link{avgDims}} migth be a better choice if target_fn is one
 of \code{mean}, \code{colMeans}, or \code{rowMeans}.
 }
-

@@ -86,4 +86,3 @@ res_complex <- compareLevels(
 str(res_complex)
 
 }
-

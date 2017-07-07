@@ -21,4 +21,3 @@ numeric array
 \description{
 \code{avgTrials} performs single-trial averaging
 }
-

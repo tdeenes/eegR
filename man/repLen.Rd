@@ -17,4 +17,3 @@ vector so that its length matches a pre-defined length. It throws a warning
 in such cases.
 }
 \keyword{internal}
-

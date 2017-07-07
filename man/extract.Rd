@@ -2,8 +2,8 @@
 % Please edit documentation in R/print_summary.R
 \name{extract}
 \alias{extract}
-\alias{extract.arrayAnova}
 \alias{extract.arrayTtest}
+\alias{extract.arrayAnova}
 \alias{extract.tanova}
 \title{Extract slots from arrayAnova, arrayTtest, or tanova object}
 \usage{
@@ -71,7 +71,7 @@ objects, each produced by the corresponding function.
 
 \item \code{tanova}: Method for \code{tanova} objects
 }}
+
 \seealso{
 See the examples of \code{\link{arrayAnova}}
 }
-

@@ -39,4 +39,3 @@ exported function \code{\link{findExtrema}}.
 \code{\link{findExtrema}}
 }
 \keyword{internal}
-

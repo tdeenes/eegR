@@ -16,4 +16,3 @@ addCaption(x, caption)
 and prints it to the console. No copy is made.
 }
 \keyword{internal}
-

@@ -87,4 +87,3 @@ ggplot(transformArray(value ~ ., avgs),
 \concept{
 find peaks
 }
-
