@@ -220,7 +220,7 @@ sweepMatrix <- function(x, MARGIN, STATS,
                 warning("FUN not implemented - fallback to sweep()")
                 return(sweep(x, MARGIN, STATS, Rfun))
             }
-        out <- .Call(cppFn, PACKAGE = 'eegR', x, STATS, FUN)
+        out <- .Call(eval(cppFn), PACKAGE = 'eegR', x, STATS, FUN)
         out_mode <- storage.mode(Rfun(x[1,1], STATS[1]))
         if (storage.mode(out) != out_mode) {
             warning("conversion was needed - check results")
