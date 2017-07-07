@@ -4,12 +4,11 @@
 
 #' A package to analyze EEG signals
 #' 
-#' The package 'eegR' has been developed to process electroencephalography (EEG)
-#' signals. Beyond common EEG signal processing functionalities, eegR provides 
-#' advanced tools to analyze single-trial and averaged event related potentials 
-#' (ERPs).
-#' IMPORTANT NOTE: This is only a pre-alpha version which will be restructured
-#' substantially in short term. Do not rely on any of the functions.
+#' The eegR package has been developed to process
+#' electroencephalography (EEG) signals. This is only a pre-alpha version
+#' which has basic support for pre-processing EEG signals and provides
+#' some more advanced tools to plot and analyze averaged event related
+#' potentials (ERPs).
 #' @name eegR-package
 #' @aliases eegR-package eegR
 #' @author Denes Toth <\email{toth.denes@@ttk.mta.hu}>
