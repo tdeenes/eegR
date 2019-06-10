@@ -294,7 +294,7 @@ preTtest <- function(.arraydat, .arraydat2, paired, groups,
                 groups <- groups[groups_keep]
             }
             # transform to 1s and 2s
-            groups <- as.integer(factor_(groups))
+            groups <- as.integer(factor(groups))
             if (max(groups) != 2L) 
                 stop("groups must contain two distinct values (e.g. 1 or 2, 'a' or 'b')")
         } else {

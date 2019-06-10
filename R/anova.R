@@ -150,7 +150,7 @@ marginalMeans <- function(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
     marg_means <- vector("list", length(termL))
     if (residualmean && !no_icpt) a_dat <- sweep(a_dat, 2, colMeans(a_dat), "-")
     for (i in 1:length(termL)) {
-        groups <- factor_(interaction(f_dat[,termL[[i]]], drop = TRUE))
+        groups <- factor(interaction(f_dat[,termL[[i]]], drop = TRUE))
         groupfreq <- tabulate(groups)
         names(groupfreq) <- levels(groups)
         marg_means[[i]] <- array_(rowsum(a_dat, groups)/groupfreq,
@@ -833,7 +833,7 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
                     } else {
                         full_dimnames[[n]]
                     }
-                factor_(x, levels = level)
+                factor(x, levels = level)
             } else if (is.numeric(x)) {
                 scale(x)
             } else {
@@ -1845,7 +1845,7 @@ peakAnova <- function(.arraydat, factordef, peakdef, bwdat = NULL,
         factor_means <- data.frame(
             group = peakind_facs[rep(1:nrow(peakind_facs),
                                      length(peakdef)), , drop = F],
-            peak = factor_(rep(seq_along(peakdef), each = nrow(fmeans[[1]]))),
+            peak = factor(rep(seq_along(peakdef), each = nrow(fmeans[[1]]))),
             ampl = c(marginalMeans(mean_formula, dat, .arraydat_peaks,
                                    origdimnames_peaks["peak"],
                                    keep_term_order = !iaterms_last,

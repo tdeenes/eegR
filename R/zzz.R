@@ -29,7 +29,6 @@
 #' @importFrom checkmate testVector testIntegerish testNamed
 #' @importFrom checkmate assert
 #' @importFrom Rcpp evalCpp
-#' @importFrom Kmisc factor_ counts
 #' @importFrom orthopolynom polynomial.values legendre.polynomials
 #' @importFrom sgeostat in.polygon
 #' @importFrom gplots colorpanel redgreen greenred bluered redblue

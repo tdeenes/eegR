@@ -26,7 +26,6 @@ Imports:
     gplots,
     grid,
     gtable,
-    Kmisc,
     matrixStats,
     orthopolynom,
     parallel,
