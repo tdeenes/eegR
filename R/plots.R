@@ -1444,8 +1444,8 @@ topoCoord <- function(
   boundary <- as.data.table(peak_df)[, peak := as.factor(seq_subs)]
   boundary <- boundary[rep(seq_subs, each = len), ]
   boundary[, time := as.numeric(as.character(time))]
-  boundary[, xcoord := boundary_polygon$xcoord * corr_x + time]
-  boundary[, ycoord := boundary_polygon$ycoord * corr_y + shift_y]
+  boundary[, xcoord := rep_len(boundary_polygon$xcoord, .N) * corr_x + time]
+  boundary[, ycoord := rep_len(boundary_polygon$ycoord, .N) * corr_y + shift_y]
   #
   gridx <- seq(xmin, xmax, length.out = resol)
   gridy <- seq(ymin, ymax, length.out = resol)
@@ -1464,8 +1464,8 @@ topoCoord <- function(
   out[, peak := as.factor(rep(seq_subs, each = resol^2))]
   out[, ampl := unlist(temp, use.names = FALSE)]
   out[, time := as.numeric(as.character(time))]
-  out[, xcoord := gridpos$x * corr_x + time]
-  out[, ycoord := gridpos$y * corr_y + shift_y]
+  out[, xcoord := rep_len(gridpos$x, .N) * corr_x + time]
+  out[, ycoord := rep_len(gridpos$y, .N) * corr_y + shift_y]
   # return
   list(topo = out, boundary = boundary)
 }
