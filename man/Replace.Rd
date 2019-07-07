@@ -7,7 +7,7 @@
 Replace(x, from, to, digits = 10L)
 }
 \arguments{
-\item{x}{a raw, integer, character or numeric (double) vector}
+\item{x}{a raw, integer, character or numeric (double) vector, or a factor}
 
 \item{from}{vector of elements to replace}
 
