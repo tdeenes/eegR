@@ -79,7 +79,7 @@ reqFn <- function(packages) {
 #' \code{Replace} replaces the values in \code{x} which are equal to 
 #' \code{from} to the values given in \code{to}. The values in \code{to} are
 #' recycled to match the length of \code{from}.
-#' @param x a raw, integer, character or numeric (double) vector
+#' @param x a raw, integer, character or numeric (double) vector, or a factor
 #' @param from vector of elements to replace
 #' @param to the elements
 #' @param digits integer indicating the number of decimal places to be used in
@@ -100,6 +100,10 @@ reqFn <- function(packages) {
 #' # the missing value is not affected
 #' stopifnot(is.na(xr[1]))
 Replace <- function(x, from, to, digits = 10L) {
+    if (is.factor(x)) {
+        levels(x) <- Replace(levels(x), from = from, to = to, digits = digits)
+        return(x)
+    }
     if (!identical(typeof(x), typeof(from)) || 
         !identical(typeof(x), typeof(to)))
         stop("The type of 'x', 'from', and 'to' must be identical")
