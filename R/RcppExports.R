@@ -2,34 +2,34 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 tfce <- function(input_data, chan_dim, ChN, EH, num_steps, has_negative, has_positive) {
-    .Call('eegR_tfce', PACKAGE = 'eegR', input_data, chan_dim, ChN, EH, num_steps, has_negative, has_positive)
+    .Call('_eegR_tfce', PACKAGE = 'eegR', input_data, chan_dim, ChN, EH, num_steps, has_negative, has_positive)
 }
 
 consectrueRcpp <- function(x) {
-    .Call('eegR_consectrueRcpp', PACKAGE = 'eegR', x)
+    .Call('_eegR_consectrueRcpp', PACKAGE = 'eegR', x)
 }
 
 rleRcpp <- function(x) {
-    .Call('eegR_rleRcpp', PACKAGE = 'eegR', x)
+    .Call('_eegR_rleRcpp', PACKAGE = 'eegR', x)
 }
 
 charmatCollapse <- function(x, along_dim) {
-    .Call('eegR_charmatCollapse', PACKAGE = 'eegR', x, along_dim)
+    .Call('_eegR_charmatCollapse', PACKAGE = 'eegR', x, along_dim)
 }
 
 groupsum <- function(x, g, ug) {
-    .Call('eegR_groupsum', PACKAGE = 'eegR', x, g, ug)
+    .Call('_eegR_groupsum', PACKAGE = 'eegR', x, g, ug)
 }
 
 sweepcol_multitype_cpp <- function(x, y, fun) {
-    .Call('eegR_sweepcol_multitype_cpp', PACKAGE = 'eegR', x, y, fun)
+    .Call('_eegR_sweepcol_multitype_cpp', PACKAGE = 'eegR', x, y, fun)
 }
 
 sweepcol_double_cpp <- function(x, y, fun) {
-    .Call('eegR_sweepcol_double_cpp', PACKAGE = 'eegR', x, y, fun)
+    .Call('_eegR_sweepcol_double_cpp', PACKAGE = 'eegR', x, y, fun)
 }
 
 sweepcol_logical_cpp <- function(x, y, fun) {
-    .Call('eegR_sweepcol_logical_cpp', PACKAGE = 'eegR', x, y, fun)
+    .Call('_eegR_sweepcol_logical_cpp', PACKAGE = 'eegR', x, y, fun)
 }
 

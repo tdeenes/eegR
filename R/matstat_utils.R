@@ -211,11 +211,11 @@ sweepMatrix <- function(x, MARGIN, STATS,
         } 
         cppFn <- 
             if (FUN %in% c("+", "-", "*")) {
-                "eegR_sweepcol_multitype_cpp"
+                "_eegR_sweepcol_multitype_cpp"
             } else if (FUN %in% c("/", "^")) {
-                "eegR_sweepcol_double_cpp"
+                "_eegR_sweepcol_double_cpp"
             } else if (FUN %in% c("==", "!=", "<", "<=", ">", ">=")) {
-                "eegR_sweepcol_logical_cpp"
+                "_eegR_sweepcol_logical_cpp"
             } else {
                 warning("FUN not implemented - fallback to sweep()")
                 return(sweep(x, MARGIN, STATS, Rfun))

@@ -425,6 +425,6 @@ tfceFn <- function(x, chn, eh, nr_steps = 50L, channel_dim = 1L,
         chan_dim <- channel_dim
     }
     # return
-    .Call('eegR_tfce', PACKAGE = 'eegR', 
+    .Call('_eegR_tfce', PACKAGE = 'eegR', 
           x, chan_dim, chn, eh, nr_steps, has_neg, has_pos)
 }

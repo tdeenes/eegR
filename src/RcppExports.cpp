@@ -7,7 +7,7 @@ using namespace Rcpp;
 
 // tfce
 NumericMatrix tfce(NumericMatrix input_data, int chan_dim, IntegerMatrix ChN, NumericVector EH, int num_steps, bool has_negative, bool has_positive);
-RcppExport SEXP eegR_tfce(SEXP input_dataSEXP, SEXP chan_dimSEXP, SEXP ChNSEXP, SEXP EHSEXP, SEXP num_stepsSEXP, SEXP has_negativeSEXP, SEXP has_positiveSEXP) {
+RcppExport SEXP _eegR_tfce(SEXP input_dataSEXP, SEXP chan_dimSEXP, SEXP ChNSEXP, SEXP EHSEXP, SEXP num_stepsSEXP, SEXP has_negativeSEXP, SEXP has_positiveSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -24,7 +24,7 @@ END_RCPP
 }
 // consectrueRcpp
 IntegerVector consectrueRcpp(LogicalMatrix x);
-RcppExport SEXP eegR_consectrueRcpp(SEXP xSEXP) {
+RcppExport SEXP _eegR_consectrueRcpp(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -35,7 +35,7 @@ END_RCPP
 }
 // rleRcpp
 List rleRcpp(NumericMatrix x);
-RcppExport SEXP eegR_rleRcpp(SEXP xSEXP) {
+RcppExport SEXP _eegR_rleRcpp(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -46,7 +46,7 @@ END_RCPP
 }
 // charmatCollapse
 CharacterVector charmatCollapse(CharacterMatrix x, int along_dim);
-RcppExport SEXP eegR_charmatCollapse(SEXP xSEXP, SEXP along_dimSEXP) {
+RcppExport SEXP _eegR_charmatCollapse(SEXP xSEXP, SEXP along_dimSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -58,7 +58,7 @@ END_RCPP
 }
 // groupsum
 NumericMatrix groupsum(NumericMatrix x, IntegerVector g, int ug);
-RcppExport SEXP eegR_groupsum(SEXP xSEXP, SEXP gSEXP, SEXP ugSEXP) {
+RcppExport SEXP _eegR_groupsum(SEXP xSEXP, SEXP gSEXP, SEXP ugSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -71,7 +71,7 @@ END_RCPP
 }
 // sweepcol_multitype_cpp
 SEXP sweepcol_multitype_cpp(SEXP x, SEXP y, std::string fun);
-RcppExport SEXP eegR_sweepcol_multitype_cpp(SEXP xSEXP, SEXP ySEXP, SEXP funSEXP) {
+RcppExport SEXP _eegR_sweepcol_multitype_cpp(SEXP xSEXP, SEXP ySEXP, SEXP funSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -84,7 +84,7 @@ END_RCPP
 }
 // sweepcol_double_cpp
 NumericMatrix sweepcol_double_cpp(NumericMatrix x, NumericVector y, std::string fun);
-RcppExport SEXP eegR_sweepcol_double_cpp(SEXP xSEXP, SEXP ySEXP, SEXP funSEXP) {
+RcppExport SEXP _eegR_sweepcol_double_cpp(SEXP xSEXP, SEXP ySEXP, SEXP funSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -97,7 +97,7 @@ END_RCPP
 }
 // sweepcol_logical_cpp
 LogicalMatrix sweepcol_logical_cpp(SEXP x, SEXP y, std::string fun);
-RcppExport SEXP eegR_sweepcol_logical_cpp(SEXP xSEXP, SEXP ySEXP, SEXP funSEXP) {
+RcppExport SEXP _eegR_sweepcol_logical_cpp(SEXP xSEXP, SEXP ySEXP, SEXP funSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -110,14 +110,14 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"eegR_tfce", (DL_FUNC) &eegR_tfce, 7},
-    {"eegR_consectrueRcpp", (DL_FUNC) &eegR_consectrueRcpp, 1},
-    {"eegR_rleRcpp", (DL_FUNC) &eegR_rleRcpp, 1},
-    {"eegR_charmatCollapse", (DL_FUNC) &eegR_charmatCollapse, 2},
-    {"eegR_groupsum", (DL_FUNC) &eegR_groupsum, 3},
-    {"eegR_sweepcol_multitype_cpp", (DL_FUNC) &eegR_sweepcol_multitype_cpp, 3},
-    {"eegR_sweepcol_double_cpp", (DL_FUNC) &eegR_sweepcol_double_cpp, 3},
-    {"eegR_sweepcol_logical_cpp", (DL_FUNC) &eegR_sweepcol_logical_cpp, 3},
+    {"_eegR_tfce", (DL_FUNC) &_eegR_tfce, 7},
+    {"_eegR_consectrueRcpp", (DL_FUNC) &_eegR_consectrueRcpp, 1},
+    {"_eegR_rleRcpp", (DL_FUNC) &_eegR_rleRcpp, 1},
+    {"_eegR_charmatCollapse", (DL_FUNC) &_eegR_charmatCollapse, 2},
+    {"_eegR_groupsum", (DL_FUNC) &_eegR_groupsum, 3},
+    {"_eegR_sweepcol_multitype_cpp", (DL_FUNC) &_eegR_sweepcol_multitype_cpp, 3},
+    {"_eegR_sweepcol_double_cpp", (DL_FUNC) &_eegR_sweepcol_double_cpp, 3},
+    {"_eegR_sweepcol_logical_cpp", (DL_FUNC) &_eegR_sweepcol_logical_cpp, 3},
     {NULL, NULL, 0}
 };
 
