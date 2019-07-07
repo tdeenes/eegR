@@ -4,9 +4,9 @@
 \alias{tanova}
 \title{Topographical ANOVA (TANOVA) and related methods}
 \usage{
-tanova(.arraydat, factordef, bwdat = NULL, type = c("both", "topography",
-  "intensity"), verbose = TRUE, perm = TRUE, parallel = NULL,
-  seed = NULL, pcrit = 0.05)
+tanova(.arraydat, factordef, bwdat = NULL, type = c("both",
+  "topography", "intensity"), verbose = TRUE, perm = TRUE,
+  parallel = NULL, seed = NULL, pcrit = 0.05)
 }
 \arguments{
 \item{.arraydat}{a numeric array with named dimnames containing the EEG (or

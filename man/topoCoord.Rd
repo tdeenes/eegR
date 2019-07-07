@@ -5,9 +5,10 @@
 \title{Compute projections for plotting scalp topographies}
 \usage{
 topoCoord(dat, peak_df, ch_pos, size_x, size_y, shift_y, r = 1,
-  ampl_range = NULL, resol = 50L, resolcol = 101L, projection = "laea",
-  projref = c("pole", "equator"), origo = c(lat = ifelse(projref == "pole",
-  90, 0), long = ifelse(projref == "pole", 270, 0)), ...)
+  ampl_range = NULL, resol = 50L, resolcol = 101L,
+  projection = "laea", projref = c("pole", "equator"), origo = c(lat
+  = ifelse(projref == "pole", 90, 0), long = ifelse(projref == "pole", 270,
+  0)), ...)
 }
 \arguments{
 \item{dat}{array of ERP data}

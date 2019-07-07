@@ -6,13 +6,13 @@
 \usage{
 plot2dview(dat, ch_pos, r = 1, timepoint = NULL, ampl_range = NULL,
   type = c("contour", "raster"), resol = 30L, resolcol = 101L,
-  projection = "laea", projref = c("pole", "equator"), origo = c(lat =
-  ifelse(projref == "pole", 90, 0), long = ifelse(projref == "pole", 270, 0)),
-  plot_centroid = TRUE, centroid_circle = 0.5,
+  projection = "laea", projref = c("pole", "equator"), origo = c(lat
+  = ifelse(projref == "pole", 90, 0), long = ifelse(projref == "pole", 270,
+  0)), plot_centroid = TRUE, centroid_circle = 0.5,
   centroid_unitsphere = FALSE, plot_bar = TRUE, plot_ch = TRUE,
   plot_chnames = TRUE, title = NULL, gfp = NULL, gfp_max = NULL,
-  colour_scale = function(n) gplots::colorpanel(n, "blue", "white", "red"),
-  colour_midpoint = 0, ...)
+  colour_scale = function(n) gplots::colorpanel(n, "blue", "white",
+  "red"), colour_midpoint = 0, ...)
 }
 \arguments{
 \item{dat}{a numeric vector or matrix. If a matrix is provided, it must 

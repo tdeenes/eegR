@@ -5,8 +5,8 @@
 \title{Create butterfly plot with extras: highlighting and peak topographies}
 \usage{
 plotButterfly(dat, sig = NULL, topo_time = NULL, chan_pos = NULL,
-  subset = list(), pcrit = 0.05, aspect_ratio = 0.5, scalp_ratio = 0.5,
-  ampl_range = NULL, caption = TRUE, ...)
+  subset = list(), pcrit = 0.05, aspect_ratio = 0.5,
+  scalp_ratio = 0.5, ampl_range = NULL, caption = TRUE, ...)
 }
 \arguments{
 \item{dat}{the array of ERP curves which must have at least 'time' and/or 

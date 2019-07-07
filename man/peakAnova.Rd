@@ -5,9 +5,9 @@
 \title{ANOVA on individual peaks}
 \usage{
 peakAnova(.arraydat, factordef, peakdef, bwdat = NULL, verbose = TRUE,
-  avg_around_peak = 2, nperm = 1, useparallel = FALSE, ncores = NULL,
-  par_method = c("snow", "mc"), cl = NULL, iaterms_last = TRUE,
-  seed = NULL)
+  avg_around_peak = 2, nperm = 1, useparallel = FALSE,
+  ncores = NULL, par_method = c("snow", "mc"), cl = NULL,
+  iaterms_last = TRUE, seed = NULL)
 }
 \arguments{
 \item{.arraydat}{a numeric array with named dimnames containing the EEG (or

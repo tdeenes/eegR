@@ -5,8 +5,8 @@
 \title{Data preparation mainly aimed at facilitating plotting in lattice or ggplot2}
 \usage{
 prepare2plot(dat, datid, bwFac = NULL, wiFac = NULL, collFac = NULL,
-  diffFac = NULL, compGFP = TRUE, keep_channels = !compGFP, sc = NULL,
-  datfr = TRUE, iaFac = NULL, ...)
+  diffFac = NULL, compGFP = TRUE, keep_channels = !compGFP,
+  sc = NULL, datfr = TRUE, iaFac = NULL, ...)
 }
 \arguments{
 \item{dat}{an array of ERP data. Must have named dimnames, one of which must

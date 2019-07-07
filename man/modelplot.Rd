@@ -12,8 +12,8 @@ modelplot(...)
   type = c("corrected", "uncorrected"), pcrit = c(0.001, 0.01, 0.05),
   grid = NULL, wrap = NULL, time_label = "Time (ms)",
   channel_label = "Channels", raster = TRUE, cluster_order = FALSE,
-  low = scales::muted("blue"), mid = "white", high = scales::muted("red"),
-  midpoint = 0, ...)
+  low = scales::muted("blue"), mid = "white",
+  high = scales::muted("red"), midpoint = 0, ...)
 
 \method{modelplot}{tanova}(results, what = c("statistic", "p-value"),
   type = c("corrected", "uncorrected"), grid = NULL, wrap = NULL,

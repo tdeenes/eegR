@@ -36,7 +36,7 @@ convertParams(
                   as.integer, 
                   as.Date, 
                   as.double, 
-                  function(x) Kmisc::factor_(x, levels = unique.default(x)),
+                  function(x) factor(x, levels = unique.default(x)),
                   as.factor),
         EVAL = function(x, y) isTRUE(all.equal(as.vector(x), 
                                                as.character(y),

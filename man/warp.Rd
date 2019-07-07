@@ -4,9 +4,9 @@
 \alias{warp}
 \title{Compute time-warping weights}
 \usage{
-warp(erp, align_dim, time_dim = "time", lambda = 0, method = c("mean",
-  "median"), smooth_data = FALSE, smooth_times = 25L, verbose = FALSE,
-  time_points = NULL, ...)
+warp(erp, align_dim, time_dim = "time", lambda = 0,
+  method = c("mean", "median"), smooth_data = FALSE,
+  smooth_times = 25L, verbose = FALSE, time_points = NULL, ...)
 }
 \arguments{
 \item{erp}{a numeric matrix or array of ERPs}

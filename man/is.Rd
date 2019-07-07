@@ -15,8 +15,8 @@
 \alias{isMinimum}
 \title{Test logical statements on data points}
 \usage{
-isPattern(pattern., strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), options. = list())
+isPattern(pattern., strict. = TRUE, negate. = FALSE,
+  subset. = list(), expand. = list(), options. = list())
 
 isEqual(ref., tol. = .Machine$double.eps^0.5, strict. = TRUE,
   negate. = FALSE, subset. = list(), expand. = list(),

@@ -8,10 +8,6 @@
 \alias{|.IsFunction}
 \alias{xor}
 \alias{xor.IsFunction}
-\alias{&.IsFunction}
-\alias{|.IsFunction}
-\alias{xor.IsFunction}
-\alias{xor}
 \alias{xor.default}
 \title{Combination of is* conditions}
 \usage{

@@ -5,7 +5,8 @@
 \title{Transforms an array to a data.frame}
 \usage{
 array2df(dat, value_name = "values", value_dim = NULL,
-  value_type = typeof(dat), auto_convert = FALSE, na_omit = FALSE, ...)
+  value_type = typeof(dat), auto_convert = FALSE, na_omit = FALSE,
+  ...)
 }
 \arguments{
 \item{dat}{a matrix or array}

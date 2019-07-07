@@ -4,7 +4,8 @@
 \alias{isMainCompFn}
 \title{Call the internal function in is* functions on subsets and expand}
 \usage{
-isMainCompFn(FUN., x, subset., expand., which_dims., options., negate., ...)
+isMainCompFn(FUN., x, subset., expand., which_dims., options., negate.,
+  ...)
 }
 \arguments{
 \item{FUN.}{the internal function whose first two arguments are the data (x)

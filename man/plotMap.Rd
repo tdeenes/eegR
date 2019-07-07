@@ -5,8 +5,9 @@
 \title{Plot scalp topographies}
 \usage{
 plotMap(dat, chan_pos, topo_time = NULL, subset = list(),
-  aspect_ratio = NULL, ampl_range = NULL, map_marker_colour = "grey10",
-  map_marker_shape = "|", map_marker_size = 1.2, ...)
+  aspect_ratio = NULL, ampl_range = NULL,
+  map_marker_colour = "grey10", map_marker_shape = "|",
+  map_marker_size = 1.2, ...)
 }
 \arguments{
 \item{dat}{either a numeric vector or a numeric array of ERP amplitudes. If

@@ -84,6 +84,4 @@ ggplot(transformArray(value ~ ., avgs),
 \seealso{
 \code{\link[eegR]{is}}
 }
-\concept{
-find peaks
-}
+\concept{find peaks}

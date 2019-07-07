@@ -4,7 +4,8 @@
 \alias{array_}
 \title{Fast in-place transformation to an array (without copy)}
 \usage{
-array_(x, dim, dimnames = NULL, force_length = TRUE, arg_check = TRUE)
+array_(x, dim, dimnames = NULL, force_length = TRUE,
+  arg_check = TRUE)
 }
 \arguments{
 \item{x}{a data vector, matrix or array}

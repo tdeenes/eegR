@@ -4,8 +4,8 @@
 \alias{preTtest}
 \title{Parameter checks and data preparation in \code{arrayTtest}}
 \usage{
-preTtest(.arraydat, .arraydat2, paired, groups, mu, var_equal, id_dim, verbose,
-  tfce, perm)
+preTtest(.arraydat, .arraydat2, paired, groups, mu, var_equal, id_dim,
+  verbose, tfce, perm)
 }
 \arguments{
 \item{.arraydat}{a numeric array with named dimnames containing EEG (or 

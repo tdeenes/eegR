@@ -4,8 +4,9 @@
 \alias{artifactRejection}
 \title{Artifact rejection}
 \usage{
-artifactRejection(dat, markers = NULL, artrej_options = artrejOptions(),
-  return_data = TRUE, return_details = TRUE, print_result = TRUE)
+artifactRejection(dat, markers = NULL,
+  artrej_options = artrejOptions(), return_data = TRUE,
+  return_details = TRUE, print_result = TRUE)
 }
 \arguments{
 \item{dat}{numeric array (EEG-data) with the following named dimensions 
