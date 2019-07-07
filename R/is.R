@@ -75,42 +75,42 @@
 #' stopifnot(identical(address(x), address(x_num3)))
 #'
 as.Numeric <- function(x, keep_dim = FALSE) {
-    dims <- dim(x)
-    dimn <- dimnames(x)
-    x <- as.Numeric_(copy(x))
-    if (!keep_dim) {
-        setattr(x, "dim", NULL)
-        setattr(x, "dimnames", NULL)
-    } else if (is.null(dim(x)) && !is.null(dims)) {
-        setattr(x, "dim", dims)
-        setattr(x, "dimnames", dimn)
-    }
-    x
+  dims <- dim(x)
+  dimn <- dimnames(x)
+  x <- as.Numeric_(copy(x))
+  if (!keep_dim) {
+    setattr(x, "dim", NULL)
+    setattr(x, "dimnames", NULL)
+  } else if (is.null(dim(x)) && !is.null(dims)) {
+    setattr(x, "dim", dims)
+    setattr(x, "dimnames", dimn)
+  }
+  x
 }
 
 #' @describeIn as.Numeric Modify by reference
 #' @export
 as.Numeric_ <- function(x) {
-    if (is.numeric(x) || inherits(x, c("POSIXt", "Date"))) {
-        x
-    } else if (is.logical(x)) {
-        storage.mode(x) <- "integer"
-        x
-    } else {
-        if (!is.numeric(x)) {
-            ._ok <- TRUE
-            x <- tryCatch(as.numeric(x),
-                          warning = function(w) ._ok <<- FALSE,
-                          error = function(e) ._ok <<- FALSE)
-            if (!._ok) {
-                stop(paste0("if 'x' is not numeric or date, it must be ",
-                            "numeric-like character, e.g. x = c('1', '2') ",
-                            "or any other type for which as.numeric() returns ",
-                            "numeric values"))
-            }
-        }
-        x
+  if (is.numeric(x) || inherits(x, c("POSIXt", "Date"))) {
+    x
+  } else if (is.logical(x)) {
+    storage.mode(x) <- "integer"
+    x
+  } else {
+    if (!is.numeric(x)) {
+      ._ok <- TRUE
+      x <- tryCatch(as.numeric(x),
+                    warning = function(w) ._ok <<- FALSE,
+                    error = function(e) ._ok <<- FALSE)
+      if (!._ok) {
+        stop(paste0("if 'x' is not numeric or date, it must be ",
+                    "numeric-like character, e.g. x = c('1', '2') ",
+                    "or any other type for which as.numeric() returns ",
+                    "numeric values"))
+      }
     }
+    x
+  }
 }
 
 #' Negation for the is* family of functions
@@ -124,7 +124,7 @@ as.Numeric_ <- function(x) {
 #' @export
 #' @keywords internal
 "!.IsFunction" <- function(fn) {
-    function(...) !fn(...)
+  function(...) !fn(...)
 }
 
 #' Internal function which combines is* functions
@@ -136,27 +136,27 @@ as.Numeric_ <- function(x) {
 #' @param op the operator (\code{`&`}, \code{`|`} or \code{xor})
 #' @keywords internal
 isCombineOperator <- function(lhs, rhs, op) {
-    strict_l <- isStrict(lhs)
-    strict_r <- isStrict(rhs)
-    structure(
-        function(x) {
-            out_l <- lhs(x)
-            out_r <- rhs(x)
-            out <- op(out_l, out_r)
-            if ((strict_l & strict_r) || (any(out))) {
-                out
-            } else if (strict_l) {
-                out_l
-            } else if (strict_r) {
-                out_r
-            } else {
-                out[] <- TRUE
-                out
-            }
-        },
-        .MUST = if (strict_l | strict_r) TRUE else FALSE,
-        class = "IsFunction"
-    )
+  strict_l <- isStrict(lhs)
+  strict_r <- isStrict(rhs)
+  structure(
+    function(x) {
+      out_l <- lhs(x)
+      out_r <- rhs(x)
+      out <- op(out_l, out_r)
+      if ((strict_l & strict_r) || (any(out))) {
+        out
+      } else if (strict_l) {
+        out_l
+      } else if (strict_r) {
+        out_r
+      } else {
+        out[] <- TRUE
+        out
+      }
+    },
+    .MUST = if (strict_l | strict_r) TRUE else FALSE,
+    class = "IsFunction"
+  )
 }
 
 
@@ -222,19 +222,19 @@ NULL
 #' @rdname combine
 #' @export
 `&.IsFunction` <- function(x, y) {
-    isCombineOperator(x, y, `&`)
+  isCombineOperator(x, y, `&`)
 }
 
 #' @rdname combine
 #' @export
 `|.IsFunction` <- function(x, y) {
-    isCombineOperator(x, y, `|`)
+  isCombineOperator(x, y, `|`)
 }
 
 #' @rdname combine
 #' @export
 xor.IsFunction <- function(x, y) {
-    isCombineOperator(x, y, xor)
+  isCombineOperator(x, y, xor)
 }
 
 #' @rdname combine
@@ -258,22 +258,22 @@ xor.default <- function(x, y) as.logical(x) != as.logical(y)
 #' \code{\link[eegR]{is}}, \code{\link{combine}}
 #' @export
 isStrict <- function(...) {
-    fn_list <- list(...)
-    if (is.list(fn_list[[1L]])) {
-        if (length(fn_list) > 1L) {
-            stop(paste0("if the functions are provided as a list of ",
-                        "functions, only one such list is allowed"))
-        }
-        fn_list <- fn_list[[1L]]
+  fn_list <- list(...)
+  if (is.list(fn_list[[1L]])) {
+    if (length(fn_list) > 1L) {
+      stop(paste0("if the functions are provided as a list of ",
+                  "functions, only one such list is allowed"))
     }
-    # return
-    vapply(fn_list,
-           function(x) {
-               if (!inherits(x, "IsFunction"))
-                   stop("all input objects must be of class IsFunction")
-               attr(x, ".MUST")
-           },
-           logical(1L))
+    fn_list <- fn_list[[1L]]
+  }
+  # return
+  vapply(fn_list,
+         function(x) {
+           if (!inherits(x, "IsFunction"))
+             stop("all input objects must be of class IsFunction")
+           attr(x, ".MUST")
+         },
+         logical(1L))
 }
 
 
@@ -286,28 +286,28 @@ isStrict <- function(...) {
 #' @param len the desired length
 #' @keywords internal
 repLen <- function(x, len, x_name = NULL) {
-    len_x <- length(x)
-    if (is.null(x_name)) x_name <- deparse(substitute(x))
-    if (len_x > 1L) {
-        if (len_x < len) {
-            warning(sprintf("'%s' recycled to be of length %i", x_name, len),
-                    call. = FALSE)
-            if (!identical(len_x %% len, 0L)) {
-                warning(paste0("and the new length is not a multiple of the ",
-                               "original length"),
-                        call. = FALSE)
-            }
-            rep_len(x, len)
-        } else if (len_x > len) {
-            warning(sprintf("'%s' cropped to be of length %i", x_name, len),
-                    call. = FALSE)
-            rep_len(x, len)
-        } else {
-            x
-        }
+  len_x <- length(x)
+  if (is.null(x_name)) x_name <- deparse(substitute(x))
+  if (len_x > 1L) {
+    if (len_x < len) {
+      warning(sprintf("'%s' recycled to be of length %i", x_name, len),
+              call. = FALSE)
+      if (!identical(len_x %% len, 0L)) {
+        warning(paste0("and the new length is not a multiple of the ",
+                       "original length"),
+                call. = FALSE)
+      }
+      rep_len(x, len)
+    } else if (len_x > len) {
+      warning(sprintf("'%s' cropped to be of length %i", x_name, len),
+              call. = FALSE)
+      rep_len(x, len)
     } else {
-        rep_len(x, len)
+      x
     }
+  } else {
+    rep_len(x, len)
+  }
 }
 
 
@@ -318,21 +318,21 @@ repLen <- function(x, len, x_name = NULL) {
 #' to match the input array.
 #' @keywords internal
 isExpandInto <- function(from, to, from_name) {
-    out <- try(expandInto(from, to, fill = FALSE), silent = TRUE)
-    if (inherits(out, "try-error")) {
-        warning(sprintf(
-            paste0("The expansion of the argument '%s' ",
-                   "as an array was not successful. Probably ",
-                   "the dimension names or identifiers do not match ",
-                   "between '%s' and 'x'. Instead of treating '%s' ",
-                   "as an array, it is regarded as a vector in the ",
-                   "followings. Note that this can lead to painful ",
-                   "bugs later, so it is better to check the arguments. "),
-            from_name, from_name, from_name))
-        out <- repLen(from, length(to), from_name)
-    }
-    # return
-    out
+  out <- try(expandInto(from, to, fill = FALSE), silent = TRUE)
+  if (inherits(out, "try-error")) {
+    warning(sprintf(
+      paste0("The expansion of the argument '%s' ",
+             "as an array was not successful. Probably ",
+             "the dimension names or identifiers do not match ",
+             "between '%s' and 'x'. Instead of treating '%s' ",
+             "as an array, it is regarded as a vector in the ",
+             "followings. Note that this can lead to painful ",
+             "bugs later, so it is better to check the arguments. "),
+      from_name, from_name, from_name))
+    out <- repLen(from, length(to), from_name)
+  }
+  # return
+  out
 }
 
 #' Get 'dim_index' of the subset. and expand. arguments in the is* functions
@@ -342,48 +342,48 @@ isExpandInto <- function(from, to, from_name) {
 #' \code{is*} functions. It also checks for potential dimension overlaps.
 #' @keywords internal
 checkSubsetExpand <- function(subset., expand.) {
-    # helper function
-    checkFn <- function(x, var_name) {
-        if (length(x) > 0) {
-            if (!is.list(x)) {
-                stop(paste0(
-                    "'", var_name, "' must be a list (or NULL)"
-                    ), call. = FALSE)
-            }
-            if (is.null(names(x))) {
-                out <- attr(x, "dim_index")
-                if (is.null(out)) {
-                    stop(paste0(
-                        "if '", var_name, "' is not named, it must ",
-                        "have a non-NULL 'dim_index' attribute"
-                        ), call. = FALSE)
-                }
-                out
-            } else {
-                names(x)
-            }
-        } else {
-            NULL
-        }
-    }
-    # main
-    args <- list(subset. = subset., expand. = expand.)
-    dim_index <- setNames(
-        lapply(names(args), function(x) checkFn(args[[x]], x)),
-        names(args))
-    if (any(vapply(dim_index, length, 1L) == 0L)) {
-        dim_index
-    } else if (!do.call("identical", unname(lapply(dim_index, typeof)))) {
+  # helper function
+  checkFn <- function(x, var_name) {
+    if (length(x) > 0) {
+      if (!is.list(x)) {
         stop(paste0(
-            "both 'subset.' and 'expand.' must be either named lists ",
-            "or unnamed lists with 'dim_index' attribute"
-            ), call. = FALSE)
-    } else if (anyDuplicated(unlist(dim_index, use.names = FALSE))) {
-        stop("dimensions in 'subset.' and 'expand.' may not overlap",
-             call. = FALSE)
+          "'", var_name, "' must be a list (or NULL)"
+        ), call. = FALSE)
+      }
+      if (is.null(names(x))) {
+        out <- attr(x, "dim_index")
+        if (is.null(out)) {
+          stop(paste0(
+            "if '", var_name, "' is not named, it must ",
+            "have a non-NULL 'dim_index' attribute"
+          ), call. = FALSE)
+        }
+        out
+      } else {
+        names(x)
+      }
     } else {
-        lapply(dim_index, function(x) if (is.character(x)) NULL else x)
+      NULL
     }
+  }
+  # main
+  args <- list(subset. = subset., expand. = expand.)
+  dim_index <- setNames(
+    lapply(names(args), function(x) checkFn(args[[x]], x)),
+    names(args))
+  if (any(vapply(dim_index, length, 1L) == 0L)) {
+    dim_index
+  } else if (!do.call("identical", unname(lapply(dim_index, typeof)))) {
+    stop(paste0(
+      "both 'subset.' and 'expand.' must be either named lists ",
+      "or unnamed lists with 'dim_index' attribute"
+    ), call. = FALSE)
+  } else if (anyDuplicated(unlist(dim_index, use.names = FALSE))) {
+    stop("dimensions in 'subset.' and 'expand.' may not overlap",
+         call. = FALSE)
+  } else {
+    lapply(dim_index, function(x) if (is.character(x)) NULL else x)
+  }
 }
 
 #' Call the internal function in is* functions on subsets and expand
@@ -400,45 +400,45 @@ checkSubsetExpand <- function(subset., expand.) {
 #' @keywords internal
 isMainCompFn <- function(FUN., x, subset., expand.,
                          which_dims., options., negate., ...) {
-    do_sub <- length(subset.) > 0L
-    do_exp <- length(expand.) > 0L
-    out <-
-        if (length(dim(x)) > 0L && (do_sub | do_exp)) {
-            if (do_sub) {
-                out <- array_(FALSE, dim(x), dimnames(x))
-                x_sub <- subsetArray(x, subset., which_dims.$subset.,
-                                     drop. = FALSE)
-                subsetArray(out, subset., which_dims.$subset., drop. = FALSE) <-
-                    if (length(expand.) > 0L) {
-                        expandInto(
-                            FUN.(subsetArray(x_sub,
-                                             expand.,
-                                             which_dims.$expand.,
-                                             drop. = FALSE),
-                                 options., negate., ...),
-                            x_sub,
-                            fill = FALSE
-                        )
-                    } else {
-                        FUN.(x_sub, options., negate., ...)
-                    }
-                out
-            } else if (do_exp) {
-                expandInto(
-                    FUN.(subsetArray(x,
-                                     expand.,
-                                     which_dims.$expand.,
-                                     drop. = FALSE),
-                         options., negate., ...),
-                    x,
-                    fill = FALSE
-                )
-            }
-        } else {
-            FUN.(x, options., negate., ...)
-        }
-    # return
-    out
+  do_sub <- length(subset.) > 0L
+  do_exp <- length(expand.) > 0L
+  out <-
+    if (length(dim(x)) > 0L && (do_sub | do_exp)) {
+      if (do_sub) {
+        out <- array_(FALSE, dim(x), dimnames(x))
+        x_sub <- subsetArray(x, subset., which_dims.$subset.,
+                             drop. = FALSE)
+        subsetArray(out, subset., which_dims.$subset., drop. = FALSE) <-
+          if (length(expand.) > 0L) {
+            expandInto(
+              FUN.(subsetArray(x_sub,
+                               expand.,
+                               which_dims.$expand.,
+                               drop. = FALSE),
+                   options., negate., ...),
+              x_sub,
+              fill = FALSE
+            )
+          } else {
+            FUN.(x_sub, options., negate., ...)
+          }
+        out
+      } else if (do_exp) {
+        expandInto(
+          FUN.(subsetArray(x,
+                           expand.,
+                           which_dims.$expand.,
+                           drop. = FALSE),
+               options., negate., ...),
+          x,
+          fill = FALSE
+        )
+      }
+    } else {
+      FUN.(x, options., negate., ...)
+    }
+  # return
+  out
 }
 
 
@@ -542,26 +542,26 @@ NULL
 #' }
 isPattern <- function(pattern., strict. = TRUE, negate. = FALSE,
                       subset. = list(), expand. = list(), options. = list()) {
-    assertString(pattern., na.ok = FALSE, .var.name = "pattern.")
-    assertFlag(strict., .var.name = "strict.")
-    assertFlag(negate., .var.name = "negate.")
-    which_dims. <- checkSubsetExpand(subset., expand.)
-    assertList(options., names = "unique", .var.name = "options.")
-    structure(
-        function(x) {
-            tempfn <- function(dat, options., negate., pattern.) {
-                out <- do("grepl", pattern., as.vector(dat),
-                          arg_list = options.)
-                setattr(out, "dim", dim(dat))
-                setattr(out, "dimnames", dimnames(dat))
-                if (!negate.) out else !out
-            }
-            #
-            assertCharacter(x, .var.name = "x")
-            out <- isMainCompFn(tempfn, x, subset., expand., which_dims.,
-                                options., negate.,
-                                pattern. = pattern.)
-        }, .MUST = strict., class = "IsFunction")
+  assertString(pattern., na.ok = FALSE, .var.name = "pattern.")
+  assertFlag(strict., .var.name = "strict.")
+  assertFlag(negate., .var.name = "negate.")
+  which_dims. <- checkSubsetExpand(subset., expand.)
+  assertList(options., names = "unique", .var.name = "options.")
+  structure(
+    function(x) {
+      tempfn <- function(dat, options., negate., pattern.) {
+        out <- do("grepl", pattern., as.vector(dat),
+                  arg_list = options.)
+        setattr(out, "dim", dim(dat))
+        setattr(out, "dimnames", dimnames(dat))
+        if (!negate.) out else !out
+      }
+      #
+      assertCharacter(x, .var.name = "x")
+      out <- isMainCompFn(tempfn, x, subset., expand., which_dims.,
+                          options., negate.,
+                          pattern. = pattern.)
+    }, .MUST = strict., class = "IsFunction")
 }
 
 #' @describeIn is produces a function to test whether the values in an atomic
@@ -652,41 +652,41 @@ isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
                     strict. = TRUE, negate. = FALSE,
                     subset. = list(), expand. = list(), 
                     options. = list()) {
-    ref. <- as.Numeric_(ref.)
-    tol. <- as.Numeric_(tol.)
-    assertFlag(strict., .var.name = "strict.")
-    assertFlag(negate., .var.name = "negate.")
-    which_dims. <- checkSubsetExpand(subset., expand.)
-    assertList(options., names = "unique", .var.name = "options.")
-    structure(
-        function(x) {
-            tempfn <- function(dat, options., negate., ref., tol.) {
-                len_dat <- length(dat)
-                ref. <-
-                    if (is.array(ref.)) {
-                        isExpandInto(ref., dat, "ref.")
-                    } else {
-                        repLen(ref., len_dat, "ref.")
-                    }
-                tol. <-
-                    if (is.array(tol.)) {
-                        isExpandInto(tol., dat, "tol.")
-                    } else {
-                        repLen(tol., len_dat, "tol.")
-                    }
-                # return
-                if (!negate.) {
-                    abs(dat - ref.) <= tol.
-                } else {
-                    abs(dat - ref.) > tol.
-                }
-            }
-            #
-            x <- as.Numeric_(x)
-            isMainCompFn(tempfn, x, subset., expand., which_dims.,
-                         options., negate.,
-                         ref. = ref., tol. = tol.)
-        }, .MUST = strict., class = "IsFunction")
+  ref. <- as.Numeric_(ref.)
+  tol. <- as.Numeric_(tol.)
+  assertFlag(strict., .var.name = "strict.")
+  assertFlag(negate., .var.name = "negate.")
+  which_dims. <- checkSubsetExpand(subset., expand.)
+  assertList(options., names = "unique", .var.name = "options.")
+  structure(
+    function(x) {
+      tempfn <- function(dat, options., negate., ref., tol.) {
+        len_dat <- length(dat)
+        ref. <-
+          if (is.array(ref.)) {
+            isExpandInto(ref., dat, "ref.")
+          } else {
+            repLen(ref., len_dat, "ref.")
+          }
+        tol. <-
+          if (is.array(tol.)) {
+            isExpandInto(tol., dat, "tol.")
+          } else {
+            repLen(tol., len_dat, "tol.")
+          }
+        # return
+        if (!negate.) {
+          abs(dat - ref.) <= tol.
+        } else {
+          abs(dat - ref.) > tol.
+        }
+      }
+      #
+      x <- as.Numeric_(x)
+      isMainCompFn(tempfn, x, subset., expand., which_dims.,
+                   options., negate.,
+                   ref. = ref., tol. = tol.)
+    }, .MUST = strict., class = "IsFunction")
 }
 
 
@@ -709,26 +709,26 @@ isEqual <- function(ref., tol. = .Machine$double.eps^0.5,
 #' }
 isSame <- function(ref., strict. = TRUE, negate. = FALSE,
                    subset. = list(), expand. = list(), options. = list()) {
-    assertFlag(strict., .var.name = "strict.")
-    assertFlag(negate., .var.name = "negate.")
-    which_dims. <- checkSubsetExpand(subset., expand.)
-    assertList(options., names = "unique", .var.name = "options.")
-    structure(
-        function(x) {
-            tempfn <- function(dat, options., negate., ref.) {
-                ref. <-
-                    if (is.array(ref.)) {
-                        isExpandInto(ref., dat, "ref.")
-                    } else {
-                        repLen(ref., length(dat), "ref.")
-                    }
-                if (!negate.) dat == ref. else dat != ref.
-            }
-            # return
-            isMainCompFn(tempfn, x, subset., expand., which_dims.,
-                         options., negate.,
-                         ref. = ref.)
-        }, .MUST = strict., class = "IsFunction")
+  assertFlag(strict., .var.name = "strict.")
+  assertFlag(negate., .var.name = "negate.")
+  which_dims. <- checkSubsetExpand(subset., expand.)
+  assertList(options., names = "unique", .var.name = "options.")
+  structure(
+    function(x) {
+      tempfn <- function(dat, options., negate., ref.) {
+        ref. <-
+          if (is.array(ref.)) {
+            isExpandInto(ref., dat, "ref.")
+          } else {
+            repLen(ref., length(dat), "ref.")
+          }
+        if (!negate.) dat == ref. else dat != ref.
+      }
+      # return
+      isMainCompFn(tempfn, x, subset., expand., which_dims.,
+                   options., negate.,
+                   ref. = ref.)
+    }, .MUST = strict., class = "IsFunction")
 }
 
 
@@ -761,55 +761,55 @@ isBetween <- function(lwr. = -Inf, upr. = Inf,
                       strict. = TRUE, negate. = FALSE,
                       subset. = list(), expand. = list(), 
                       options. = list()) {
-    lwr. <- as.Numeric_(lwr.)
-    upr. <- as.Numeric_(upr.)
-    open. <- match.arg(open.)
-    assertFlag(strict., .var.name = "strict.")
-    assertFlag(negate., .var.name = "negate.")
-    which_dims. <- checkSubsetExpand(subset., expand.)
-    assertList(options., names = "unique", .var.name = "options.")
-    #
-    lwr <- lwr.; upr <- upr.
-    lwr. <- pmin(lwr, upr)
-    upr. <- pmax(lwr, upr)
-    lwr <- NULL; upr <- NULL
-    #
-    structure(
-        function(x) {
-            tempfn <- function(dat, options., negate., lwr., upr., open.) {
-                len_dat <- length(dat)
-                out <- rep_len(TRUE, len_dat)
-                if (!identical(lwr., -Inf)) {
-                    lwr. <-
-                        if (is.array(lwr.)) {
-                            isExpandInto(lwr., dat, "lwr.")
-                        } else {
-                            repLen(lwr., len_dat, "lwr.")
-                        }
-                    if (open. %in% c("none", "upr")) `>` <- `>=`
-                    out <- out & dat > lwr.
-                }
-                if (!identical(upr., -Inf)) {
-                    upr. <-
-                        if (is.array(upr.)) {
-                            isExpandInto(upr., dat, "upr.")
-                        } else {
-                            repLen(upr., len_dat, "lwr.")
-                        }
-                    if (open. %in% c("none", "lwr")) `<` <- `<=`
-                    out <- out & dat < upr.
-                }
-                setattr(out, "dim", dim(dat))
-                setattr(out, "dimnames", dimnames(dat))
-                if (!negate.) out else !out
+  lwr. <- as.Numeric_(lwr.)
+  upr. <- as.Numeric_(upr.)
+  open. <- match.arg(open.)
+  assertFlag(strict., .var.name = "strict.")
+  assertFlag(negate., .var.name = "negate.")
+  which_dims. <- checkSubsetExpand(subset., expand.)
+  assertList(options., names = "unique", .var.name = "options.")
+  #
+  lwr <- lwr.; upr <- upr.
+  lwr. <- pmin(lwr, upr)
+  upr. <- pmax(lwr, upr)
+  lwr <- NULL; upr <- NULL
+  #
+  structure(
+    function(x) {
+      tempfn <- function(dat, options., negate., lwr., upr., open.) {
+        len_dat <- length(dat)
+        out <- rep_len(TRUE, len_dat)
+        if (!identical(lwr., -Inf)) {
+          lwr. <-
+            if (is.array(lwr.)) {
+              isExpandInto(lwr., dat, "lwr.")
+            } else {
+              repLen(lwr., len_dat, "lwr.")
             }
-            #
-            x <- as.Numeric_(x)
-            # return
-            isMainCompFn(tempfn, x, subset., expand., which_dims.,
-                         options., negate.,
-                         lwr. = lwr., upr. = upr., open. = open.)
-        }, .MUST = strict., class = "IsFunction")
+          if (open. %in% c("none", "upr")) `>` <- `>=`
+          out <- out & dat > lwr.
+        }
+        if (!identical(upr., -Inf)) {
+          upr. <-
+            if (is.array(upr.)) {
+              isExpandInto(upr., dat, "upr.")
+            } else {
+              repLen(upr., len_dat, "lwr.")
+            }
+          if (open. %in% c("none", "lwr")) `<` <- `<=`
+          out <- out & dat < upr.
+        }
+        setattr(out, "dim", dim(dat))
+        setattr(out, "dimnames", dimnames(dat))
+        if (!negate.) out else !out
+      }
+      #
+      x <- as.Numeric_(x)
+      # return
+      isMainCompFn(tempfn, x, subset., expand., which_dims.,
+                   options., negate.,
+                   lwr. = lwr., upr. = upr., open. = open.)
+    }, .MUST = strict., class = "IsFunction")
 }
 
 #' @describeIn is produces a function to test whether the values in an atomic
@@ -819,7 +819,7 @@ isBetween <- function(lwr. = -Inf, upr. = Inf,
 #' @export
 isNegative <- function(strict. = TRUE, negate. = FALSE,
                        subset. = list(), expand. = list(), options. = list()) {
-    isBetween(-Inf, 0, "upr", strict., negate., subset., expand., options.)
+  isBetween(-Inf, 0, "upr", strict., negate., subset., expand., options.)
 }
 
 #' @describeIn is produces a function to test whether the values in an atomic
@@ -829,7 +829,7 @@ isNegative <- function(strict. = TRUE, negate. = FALSE,
 #' @export
 isPositive <- function(strict. = TRUE, negate. = FALSE,
                        subset. = list(), expand. = list(), options. = list()) {
-    isBetween(0, Inf, "lwr", strict., negate., subset., expand., options.)
+  isBetween(0, Inf, "lwr", strict., negate., subset., expand., options.)
 }
 
 #' @describeIn is produces a function to test whether the the values in an
@@ -858,35 +858,35 @@ isPositive <- function(strict. = TRUE, negate. = FALSE,
 isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE,
                        negate. = FALSE,
                        subset. = list(), expand. = list(), options. = list()) {
-    what. <- match.arg(what.)
-    assertFlag(strict., .var.name = "strict.")
-    assertFlag(negate., .var.name = "negate.")
-    which_dims. <- checkSubsetExpand(subset., expand.)
-    assertList(options., names = "unique", .var.name = "options.")
-    if (is.null(options.$constant)) {
-        options.$constant <- switch(what.,
-                                    both = 3L,
-                                    min = 1L,
-                                    max = 2L)
-    }
-    # return
-    structure(
-        function(x) {
-            tempfn <- function(x, options., negate., what.) {
-                out <- do("findExtrema", x, arg_list = options.)
-                out <- switch(what.,
-                              both = out > 0L,
-                              min = out == 1L,
-                              max = out == 2L)
-                if (!negate.) out else !out
-            }
-            #
-            x <- as.Numeric_(x)
-            # return
-            isMainCompFn(tempfn, x, subset., expand., which_dims.,
-                         options., negate.,
-                         what. = what.)
-        }, .MUST = strict., class = "IsFunction")
+  what. <- match.arg(what.)
+  assertFlag(strict., .var.name = "strict.")
+  assertFlag(negate., .var.name = "negate.")
+  which_dims. <- checkSubsetExpand(subset., expand.)
+  assertList(options., names = "unique", .var.name = "options.")
+  if (is.null(options.$constant)) {
+    options.$constant <- switch(what.,
+                                both = 3L,
+                                min = 1L,
+                                max = 2L)
+  }
+  # return
+  structure(
+    function(x) {
+      tempfn <- function(x, options., negate., what.) {
+        out <- do("findExtrema", x, arg_list = options.)
+        out <- switch(what.,
+                      both = out > 0L,
+                      min = out == 1L,
+                      max = out == 2L)
+        if (!negate.) out else !out
+      }
+      #
+      x <- as.Numeric_(x)
+      # return
+      isMainCompFn(tempfn, x, subset., expand., which_dims.,
+                   options., negate.,
+                   what. = what.)
+    }, .MUST = strict., class = "IsFunction")
 }
 
 #' @describeIn is a shorthand for \code{isExtremum("max", ...)}. See
@@ -895,7 +895,7 @@ isExtremum <- function(what. = c("both", "min", "max"), strict. = TRUE,
 isLocalMaximum <- function(strict. = TRUE, negate. = FALSE,
                            subset. = list(), expand. = list(), 
                            options. = list()) {
-    isExtremum("max", strict., negate., subset., expand., options.)
+  isExtremum("max", strict., negate., subset., expand., options.)
 }
 
 #' @describeIn is a shorthand for \code{isExtremum("min", ...)}. See
@@ -904,7 +904,7 @@ isLocalMaximum <- function(strict. = TRUE, negate. = FALSE,
 isLocalMinimum <- function(strict. = TRUE, negate. = FALSE,
                            subset. = list(), expand. = list(), 
                            options. = list()) {
-    isExtremum("min", strict., negate., subset., expand., options.)
+  isExtremum("min", strict., negate., subset., expand., options.)
 }
 
 #' @describeIn is a shorthand for
@@ -913,9 +913,9 @@ isLocalMinimum <- function(strict. = TRUE, negate. = FALSE,
 #' @export
 isMaximum <- function(strict. = TRUE, negate. = FALSE,
                       subset. = list(), expand. = list(), options. = list()) {
-    assertList(options., names = "unique", .var.name = "options.")
-    options.$global <- TRUE
-    isExtremum("max", strict., negate., subset., expand., options.)
+  assertList(options., names = "unique", .var.name = "options.")
+  options.$global <- TRUE
+  isExtremum("max", strict., negate., subset., expand., options.)
 }
 
 #' @describeIn is a shorthand for
@@ -924,9 +924,9 @@ isMaximum <- function(strict. = TRUE, negate. = FALSE,
 #' @export
 isMinimum <- function(strict. = TRUE, negate. = FALSE,
                       subset. = list(), expand. = list(), options. = list()) {
-    assertList(options., names = "unique", .var.name = "options.")
-    options.$global <- TRUE
-    isExtremum("min", strict., negate., subset., expand., options.)
+  assertList(options., names = "unique", .var.name = "options.")
+  options.$global <- TRUE
+  isExtremum("min", strict., negate., subset., expand., options.)
 }
 
 

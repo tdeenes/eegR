@@ -136,38 +136,38 @@
 findExtrema <- function(x, n = 1L, global = FALSE, along_dim = 1L, 
                         tail = c("if_plateau", "never", "do_not_care"), 
                         constant = 3L, topN = NULL, has_NA = NULL) {
-    #
-    # argument checks
-    assertAtomic(x, .var.name = "x")
-    assertInt(n, lower = 1, .var.name = "n")
-    assertFlag(global, .var.name = "global")
-    if (global) n <- length(x)
-    tail <- match.arg(tail)
-    if (!identical(NA, constant)) {
-        assertInt(constant, lower = 0, upper = 3, .var.name = "constant")
-    }
-    storage.mode(constant) <- "integer"
-    if (!is.null(topN) && !identical(topN, Inf)) {
-        assertInt(topN, lower = 1, .var.name = "topN")
-        topN <- as.integer(topN)
-    }
-    if (is.null(has_NA)) {
-        has_NA <- anyNA(x) 
-    } else {
-        assertFlag(has_NA, .var.name = "has_NA")
-    }
-    n <- as.integer(n)
-    # return
-    if (is.vector(x)) {
-        out <- as.vector(
-            findExtremaMatrix(as.matrix(x), n, tail, constant, topN, has_NA))
-        setattr(out, "names", names(x))
-        out
-    } else {
-        fnDims(x, along_dim, findExtremaMatrix, 
-               arg_list = list(n, tail, constant, topN, has_NA),
-               vectorized = TRUE, keep_dimorder = TRUE)
-    }
+  #
+  # argument checks
+  assertAtomic(x, .var.name = "x")
+  assertInt(n, lower = 1, .var.name = "n")
+  assertFlag(global, .var.name = "global")
+  if (global) n <- length(x)
+  tail <- match.arg(tail)
+  if (!identical(NA, constant)) {
+    assertInt(constant, lower = 0, upper = 3, .var.name = "constant")
+  }
+  storage.mode(constant) <- "integer"
+  if (!is.null(topN) && !identical(topN, Inf)) {
+    assertInt(topN, lower = 1, .var.name = "topN")
+    topN <- as.integer(topN)
+  }
+  if (is.null(has_NA)) {
+    has_NA <- anyNA(x) 
+  } else {
+    assertFlag(has_NA, .var.name = "has_NA")
+  }
+  n <- as.integer(n)
+  # return
+  if (is.vector(x)) {
+    out <- as.vector(
+      findExtremaMatrix(as.matrix(x), n, tail, constant, topN, has_NA))
+    setattr(out, "names", names(x))
+    out
+  } else {
+    fnDims(x, along_dim, findExtremaMatrix, 
+           arg_list = list(n, tail, constant, topN, has_NA),
+           vectorized = TRUE, keep_dimorder = TRUE)
+  }
 }
 
 #' Find local extrema in column vectors
@@ -180,108 +180,108 @@ findExtrema <- function(x, n = 1L, global = FALSE, along_dim = 1L,
 #' @keywords internal
 #' @seealso \code{\link{findExtrema}}
 findExtremaMatrix <- function(x, n, tail, constant, topN, has_NA) {
-    # helper function to test near equality
-    test_equal <- function(dat, ref) {
-        if (!identical(dim(dat), dim(ref))) {
-            abs(sweepMatrix(dat, 2, ref, "-")) < .Machine$double.eps^0.5
-        } else {
-            abs(dat - ref) < .Machine$double.eps^0.5
-        }
-    }
-    # find global or local extrema
-    if (n >= (nrow(x) - 1L)) {
-        # if n >= (nrow(x) - 1), rolling statistics are not needed
-        out <- matrix_(0L, nrow(x), ncol(x))
-        stats <- colRanges(x)
-        out[test_equal(x, stats[, 1L])] <- 1L
-        out[test_equal(x, stats[, 2L])] <- 2L
-        out[, stats[, 1L] == stats[, 2L]] <- constant
-        # this is needed later to handle external elements
-        if (tail != "do_not_care") {
-            rle_x <- matrixRle(x)
-            ind <- cumsum(c(1L, rle_x$lengths[-length(rle_x$length)]))
-            rle_x$values <- out[ind]
-            # set out to NULL to signal that we want to use rle_x
-            out <- NULL; ind <- NULL
-        }
+  # helper function to test near equality
+  test_equal <- function(dat, ref) {
+    if (!identical(dim(dat), dim(ref))) {
+      abs(sweepMatrix(dat, 2, ref, "-")) < .Machine$double.eps^0.5
     } else {
-        out <- NULL
-        # main computation (need run-length encoding to handle repeated values
-        # in x)
-        rle_x <- matrixRle(x)
-        # replicate external elements if x is a multi-column matrix
-        if (ncol(x) > 1L) {
-            ins <- diff(rle_x$matrixcolumn)
-            ins <- 1L + n * (c(0L, ins) + c(ins, 0L))
-            rle_x_ins <- lapply(rle_x[2:3], rep.int, ins)
-            ins_ind <- which(diff(rle_x_ins$matrixcolumn) > 0L)
-            ins_ind <- as.vector( outer((1-n):n, ins_ind, "+") )
-        } else {
-            rle_x_ins <- rle_x
-            ins_ind <- NULL
-        }
-        # store values and remove temporary variables
-        values <- rle_x_ins$values
-        rle_x_ins <- NULL; ins <- NULL
-        # find extrema
-        if (uniqueN(na.omit(values)) == 1L) {
-            temp_values <- rep_len(constant, length(values))
-            temp_values[is.na(values)] <- NA
-        } else {
-            temp_values <- integer(length(values))
-            temp_values[test_equal(values, 
-                                   rollFun(values, 2 * n + 1L, min))] <- 1L
-            temp_values[test_equal(values, 
-                                   rollFun(values, 2 * n + 1L, max))] <- 2L
-        }
-        # drop inserted elements
-        if (!is.null(ins_ind)) temp_values <- temp_values[-ins_ind]
-        # assign the new values
-        rle_x$values <- temp_values
-        temp_values <- NULL; ins_ind < NULL
+      abs(dat - ref) < .Machine$double.eps^0.5
     }
-    # handle external elements
+  }
+  # find global or local extrema
+  if (n >= (nrow(x) - 1L)) {
+    # if n >= (nrow(x) - 1), rolling statistics are not needed
+    out <- matrix_(0L, nrow(x), ncol(x))
+    stats <- colRanges(x)
+    out[test_equal(x, stats[, 1L])] <- 1L
+    out[test_equal(x, stats[, 2L])] <- 2L
+    out[, stats[, 1L] == stats[, 2L]] <- constant
+    # this is needed later to handle external elements
     if (tail != "do_not_care") {
-        border_ind <- c(1L, length(rle_x$values))
-        if (ncol(x) > 1L) {
-            temp_ind <- which(diff(rle_x$matrixcolumn) > 0L)
-            border_ind <- c(border_ind,
-                            outer(0:1, temp_ind, "+"))
-        }
-        if (tail == "if_plateau") {
-            border_ind <- border_ind[rle_x$lengths[border_ind] == 1L]
-        }
-        rle_x$values[border_ind] <- 0L
+      rle_x <- matrixRle(x)
+      ind <- cumsum(c(1L, rle_x$lengths[-length(rle_x$length)]))
+      rle_x$values <- out[ind]
+      # set out to NULL to signal that we want to use rle_x
+      out <- NULL; ind <- NULL
     }
-    # reshape to a matrix (unless n >= nrow(x), and tail == "do_not_care")
-    if (is.null(out)) out <- inverse.matrixRle(rle_x)
-    #
-    # handle the neighbourhood of NA values
-    if (has_NA) {
-        naind <- which(is.na(x), arr.ind = TRUE)
-        out[naind] <- NA
-        for (i in 1:n) {
-            ind <- cbind(pmax(1L, naind[, 1L] - i), naind[, 2L])
-            out[ind] <- NA
-            ind <- cbind(pmin(nrow(x), naind[, 1L] + i), naind[, 2L])
-            out[ind] <- NA
-        }
+  } else {
+    out <- NULL
+    # main computation (need run-length encoding to handle repeated values
+    # in x)
+    rle_x <- matrixRle(x)
+    # replicate external elements if x is a multi-column matrix
+    if (ncol(x) > 1L) {
+      ins <- diff(rle_x$matrixcolumn)
+      ins <- 1L + n * (c(0L, ins) + c(ins, 0L))
+      rle_x_ins <- lapply(rle_x[2:3], rep.int, ins)
+      ins_ind <- which(diff(rle_x_ins$matrixcolumn) > 0L)
+      ins_ind <- as.vector( outer((1-n):n, ins_ind, "+") )
+    } else {
+      rle_x_ins <- rle_x
+      ins_ind <- NULL
     }
-    # return only the topN extrema
-    if (is.integer(topN)) {
-        temp_x <- x
-        temp_x[out != 1L] <- NA
-        out[which(colRanks(temp_x, 
-                           ties.method = "min",
-                           preserveShape = TRUE) > topN)] <- 0L
-        temp_x <- -x
-        temp_x[out != 2L] <- NA
-        out[which(colRanks(temp_x, 
-                           ties.method = "min",
-                           preserveShape = TRUE) > topN)] <- 0L
+    # store values and remove temporary variables
+    values <- rle_x_ins$values
+    rle_x_ins <- NULL; ins <- NULL
+    # find extrema
+    if (uniqueN(na.omit(values)) == 1L) {
+      temp_values <- rep_len(constant, length(values))
+      temp_values[is.na(values)] <- NA
+    } else {
+      temp_values <- integer(length(values))
+      temp_values[test_equal(values, 
+                             rollFun(values, 2 * n + 1L, min))] <- 1L
+      temp_values[test_equal(values, 
+                             rollFun(values, 2 * n + 1L, max))] <- 2L
     }
-    # return
-    out
+    # drop inserted elements
+    if (!is.null(ins_ind)) temp_values <- temp_values[-ins_ind]
+    # assign the new values
+    rle_x$values <- temp_values
+    temp_values <- NULL; ins_ind < NULL
+  }
+  # handle external elements
+  if (tail != "do_not_care") {
+    border_ind <- c(1L, length(rle_x$values))
+    if (ncol(x) > 1L) {
+      temp_ind <- which(diff(rle_x$matrixcolumn) > 0L)
+      border_ind <- c(border_ind,
+                      outer(0:1, temp_ind, "+"))
+    }
+    if (tail == "if_plateau") {
+      border_ind <- border_ind[rle_x$lengths[border_ind] == 1L]
+    }
+    rle_x$values[border_ind] <- 0L
+  }
+  # reshape to a matrix (unless n >= nrow(x), and tail == "do_not_care")
+  if (is.null(out)) out <- inverse.matrixRle(rle_x)
+  #
+  # handle the neighbourhood of NA values
+  if (has_NA) {
+    naind <- which(is.na(x), arr.ind = TRUE)
+    out[naind] <- NA
+    for (i in 1:n) {
+      ind <- cbind(pmax(1L, naind[, 1L] - i), naind[, 2L])
+      out[ind] <- NA
+      ind <- cbind(pmin(nrow(x), naind[, 1L] + i), naind[, 2L])
+      out[ind] <- NA
+    }
+  }
+  # return only the topN extrema
+  if (is.integer(topN)) {
+    temp_x <- x
+    temp_x[out != 1L] <- NA
+    out[which(colRanks(temp_x, 
+                       ties.method = "min",
+                       preserveShape = TRUE) > topN)] <- 0L
+    temp_x <- -x
+    temp_x[out != 2L] <- NA
+    out[which(colRanks(temp_x, 
+                       ties.method = "min",
+                       preserveShape = TRUE) > topN)] <- 0L
+  }
+  # return
+  out
 }
 
 
@@ -323,79 +323,79 @@ findExtremaMatrix <- function(x, n, tail, constant, topN, has_NA) {
 #' }
 #'
 rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
-    # check arguments and store attributes
+  # check arguments and store attributes
+  dims <- dim(dat)
+  attribs <- attributes(dat)
+  if (is.data.frame(dat)) dat <- as.matrix(dat)
+  if (is.list(dat)) 
+    stop("Provide a vector, matrix or data.frame as input!")
+  if (is.vector(dat)) {
+    dat <- matrix(dat, ncol = 1)
     dims <- dim(dat)
-    attribs <- attributes(dat)
-    if (is.data.frame(dat)) dat <- as.matrix(dat)
-    if (is.list(dat)) 
-        stop("Provide a vector, matrix or data.frame as input!")
-    if (is.vector(dat)) {
-        dat <- matrix(dat, ncol = 1)
-        dims <- dim(dat)
-    }
-    if (length(dims) > 2)
-        stop("dat can not be a multidimensional array. Consider the combination of fnDims and rollFun with vectorized = TRUE")
-    assertIntegerish(width, lower = 1, upper = dims[1], min.len = 1L,
-                     any.missing = FALSE, .var.name = "width")
-    width <- as.integer(width)
-    if (length(width) > 1L) width <- rep_len(width, dims[1])
-    FUN <- match.fun(FUN)
-    assertFlag(force_rollapply, .var.name = "force_rollaply")
-    if (!force_rollapply) {
-        funlist <- list(min = min, max = max, mean = mean, 
-                        sd = sd, mad = mad, quantile = quantile)
-        funind <- sapply(funlist, identical, FUN)
-        if (any(funind)) {
-            if (requireNamespace("caTools", quietly = TRUE)) {
-                FUN <- names(funlist)[funind]
-                FUN <- getExportedValue("caTools", paste0("run", FUN))
-                if (identical(FUN, caTools::runquantile)) {
-                    probs <- list(...)$probs
-                    dims <- c(dim(dat), length(probs))
-                    attribs$dim <- dims
-                    if (!is.null(attribs$dimnames)) {
-                        attribs$dimnames <- c(attribs$dimnames, 
-                                              list(quantiles = probs))
-                    }
-                }
-                if (length(width) == 1L) {
-                    out <- FUN(dat, width, ...)
-                } else {
-                    out <- array_(0, dims)
-                    if (identical(FUN, caTools::runquantile)) {
-                        for (i in unique(width)) {
-                            ind <- width == i
-                            out[ind, , ] <- FUN(dat, i, ...)[ind, , , drop = FALSE]
-                        }
-                    } else {
-                        for (i in unique(width)) {
-                            ind <- width == i
-                            out[ind, ] <- FUN(dat, i, ...)[ind, , drop = FALSE]
-                        }
-                    }
-                }
-            } else {
-                force_rollapply <- TRUE
-                warning("Install package:caTools to speed up computations!")
+  }
+  if (length(dims) > 2)
+    stop("dat can not be a multidimensional array. Consider the combination of fnDims and rollFun with vectorized = TRUE")
+  assertIntegerish(width, lower = 1, upper = dims[1], min.len = 1L,
+                   any.missing = FALSE, .var.name = "width")
+  width <- as.integer(width)
+  if (length(width) > 1L) width <- rep_len(width, dims[1])
+  FUN <- match.fun(FUN)
+  assertFlag(force_rollapply, .var.name = "force_rollaply")
+  if (!force_rollapply) {
+    funlist <- list(min = min, max = max, mean = mean, 
+                    sd = sd, mad = mad, quantile = quantile)
+    funind <- sapply(funlist, identical, FUN)
+    if (any(funind)) {
+      if (requireNamespace("caTools", quietly = TRUE)) {
+        FUN <- names(funlist)[funind]
+        FUN <- getExportedValue("caTools", paste0("run", FUN))
+        if (identical(FUN, caTools::runquantile)) {
+          probs <- list(...)$probs
+          dims <- c(dim(dat), length(probs))
+          attribs$dim <- dims
+          if (!is.null(attribs$dimnames)) {
+            attribs$dimnames <- c(attribs$dimnames, 
+                                  list(quantiles = probs))
+          }
+        }
+        if (length(width) == 1L) {
+          out <- FUN(dat, width, ...)
+        } else {
+          out <- array_(0, dims)
+          if (identical(FUN, caTools::runquantile)) {
+            for (i in unique(width)) {
+              ind <- width == i
+              out[ind, , ] <- FUN(dat, i, ...)[ind, , , drop = FALSE]
             }
-        } else {
-            force_rollapply <- TRUE
+          } else {
+            for (i in unique(width)) {
+              ind <- width == i
+              out[ind, ] <- FUN(dat, i, ...)[ind, , drop = FALSE]
+            }
+          }
         }
-    } 
-    if (force_rollapply) {
-        if (reqFn("zoo")) {
-            out <- zoo::rollapply(dat, width, FUN, partial = TRUE, 
-                                  by.column = TRUE, ...)
-        } else {
-            stop("Package zoo is not installed but called by rollFun().")
-        }
+      } else {
+        force_rollapply <- TRUE
+        warning("Install package:caTools to speed up computations!")
+      }
+    } else {
+      force_rollapply <- TRUE
     }
-    if (!is.null(attribs$class) && attribs$class == "data.frame") {
-        out <- as.data.frame(out)
+  } 
+  if (force_rollapply) {
+    if (reqFn("zoo")) {
+      out <- zoo::rollapply(dat, width, FUN, partial = TRUE, 
+                            by.column = TRUE, ...)
+    } else {
+      stop("Package zoo is not installed but called by rollFun().")
     }
-    attributes(out) <- attribs
-    # return
-    out
+  }
+  if (!is.null(attribs$class) && attribs$class == "data.frame") {
+    out <- as.data.frame(out)
+  }
+  attributes(out) <- attribs
+  # return
+  out
 }
 
 #' Low-level TFCE function which calls C++ code
@@ -419,12 +419,12 @@ rollFun <- function(dat, width, FUN, force_rollapply = FALSE, ...) {
 #' the C code to C++ (Rcpp) with minor improvements and added the R wrapper.
 tfceFn <- function(x, chn, eh, nr_steps = 50L, channel_dim = 1L, 
                    has_neg = TRUE, has_pos = TRUE) {
-    chan_dim <- which(names(dimnames(x)) == "chan")
-    if (length(chan_dim) == 0) {
-        stopifnot(dim(x)[channel_dim] == nrow(chn))
-        chan_dim <- channel_dim
-    }
-    # return
-    .Call('_eegR_tfce', PACKAGE = 'eegR', 
-          x, chan_dim, chn, eh, nr_steps, has_neg, has_pos)
+  chan_dim <- which(names(dimnames(x)) == "chan")
+  if (length(chan_dim) == 0) {
+    stopifnot(dim(x)[channel_dim] == nrow(chn))
+    chan_dim <- channel_dim
+  }
+  # return
+  .Call('_eegR_tfce', PACKAGE = 'eegR', 
+        x, chan_dim, chn, eh, nr_steps, has_neg, has_pos)
 }

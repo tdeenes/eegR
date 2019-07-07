@@ -87,62 +87,62 @@
 #'
 apermArray <- function(a, perm = NULL, resize = TRUE, first = perm,
                        keep_attributes. = FALSE) {
-    assertArray(a, min.d = 1L, .var.name = "input array ('a')")
-    dims <- dim(a)
-    num_dims <- length(dims)
-    orig_attribs <- attributes(a)
-    orig_attribs <- orig_attribs[setdiff(names(orig_attribs),
-                                         c("dim", "dimnames"))]
-    if (is.null(perm) && !is.null(first)) {
-        if (is.numeric(first)) {
-            assertNumeric(first, lower = 1, upper = num_dims,
-                          any.missing = FALSE, max.len = num_dims,
-                          .var.name = "first")
-        } else if (is.character(first)) {
-            dimn <- names(dimnames(a))
-            if (is.null(dimn))
-                stop("Input array ('a') does not have named dimnames")
-            assertCharacter(first,
-                            any.missing = FALSE, max.len = num_dims,
-                            .var.name = "first")
-            first <- match(first, dimn)
-            if (anyNA(first))
-                stop(sprintf("Not all elements in 'first' match the dimenion names: %s",
-                             paste(dimn, collapse = ", ")))
-        }
-        perm <- c(first, seq_len(num_dims)[-first])
+  assertArray(a, min.d = 1L, .var.name = "input array ('a')")
+  dims <- dim(a)
+  num_dims <- length(dims)
+  orig_attribs <- attributes(a)
+  orig_attribs <- orig_attribs[setdiff(names(orig_attribs),
+                                       c("dim", "dimnames"))]
+  if (is.null(perm) && !is.null(first)) {
+    if (is.numeric(first)) {
+      assertNumeric(first, lower = 1, upper = num_dims,
+                    any.missing = FALSE, max.len = num_dims,
+                    .var.name = "first")
+    } else if (is.character(first)) {
+      dimn <- names(dimnames(a))
+      if (is.null(dimn))
+        stop("Input array ('a') does not have named dimnames")
+      assertCharacter(first,
+                      any.missing = FALSE, max.len = num_dims,
+                      .var.name = "first")
+      first <- match(first, dimn)
+      if (anyNA(first))
+        stop(sprintf("Not all elements in 'first' match the dimenion names: %s",
+                     paste(dimn, collapse = ", ")))
     }
-    if (!is.null(perm) &&
-        (
-         (is.character(perm) && identical(perm, names(dimnames(a)))) ||
-         (is.numeric(perm) && identical(as.integer(perm), seq_along(dim(a))))
-        )
-       ) {
-        x <- copy(a)
-        if (keep_attributes.) {
-            if (!resize) setattr(x, "dimnames", NULL)
-            x
-        } else {
-            dims <- dim(a)
-            if (!resize) {
-                attributes(x) <- NULL
-                setattr(x, "dim", dims)
-            } else {
-                dimn <- dimnames(a)
-                attributes(x) <- NULL
-                setattr(x, "dim", dims)
-                setattr(x, "dimnames", dimn)
-            }
-            x
-        }
+    perm <- c(first, seq_len(num_dims)[-first])
+  }
+  if (!is.null(perm) &&
+      (
+        (is.character(perm) && identical(perm, names(dimnames(a)))) ||
+        (is.numeric(perm) && identical(as.integer(perm), seq_along(dim(a))))
+      )
+  ) {
+    x <- copy(a)
+    if (keep_attributes.) {
+      if (!resize) setattr(x, "dimnames", NULL)
+      x
     } else {
-        x <- aperm.default(a, perm, resize)
-        if (keep_attributes.) {
-            for (i in names(orig_attribs))
-                setattr(x, i, orig_attribs[[i]])
-        }
-        x
+      dims <- dim(a)
+      if (!resize) {
+        attributes(x) <- NULL
+        setattr(x, "dim", dims)
+      } else {
+        dimn <- dimnames(a)
+        attributes(x) <- NULL
+        setattr(x, "dim", dims)
+        setattr(x, "dimnames", dimn)
+      }
+      x
     }
+  } else {
+    x <- aperm.default(a, perm, resize)
+    if (keep_attributes.) {
+      for (i in names(orig_attribs))
+        setattr(x, i, orig_attribs[[i]])
+    }
+    x
+  }
 }
 
 
@@ -206,27 +206,27 @@ apermArray <- function(a, perm = NULL, resize = TRUE, first = perm,
 #' stopifnot(identical(dimnames(mat4), list(rows = NULL, columns = NULL)))
 #'
 decorateDims <- function(dat, .names = TRUE, .dimnames = TRUE) {
-    assertArray(dat, min.d = 1L, .var.name = "dat")
-    new_dimn <- fillMissingDimnames(dimnames(dat), dim(dat),
-                                    .names, .dimnames)
-    # return
-    if (identical(new_dimn, dimnames(dat))) {
-        dat
-    } else {
-        dimnames(dat) <- new_dimn
-        dat
-    }
+  assertArray(dat, min.d = 1L, .var.name = "dat")
+  new_dimn <- fillMissingDimnames(dimnames(dat), dim(dat),
+                                  .names, .dimnames)
+  # return
+  if (identical(new_dimn, dimnames(dat))) {
+    dat
+  } else {
+    dimnames(dat) <- new_dimn
+    dat
+  }
 }
 
 #' @rdname decorateDims
 #' @export
 decorateDims_ <- function(dat, .names = TRUE, .dimnames = TRUE) {
-    assertArray(dat, min.d = 1L, .var.name = "dat")
-    new_dimn <- fillMissingDimnames(dimnames(dat), dim(dat),
-                                    .names, .dimnames)
-    setattr(dat, "dimnames", new_dimn)
-    # return
-    invisible(dat)
+  assertArray(dat, min.d = 1L, .var.name = "dat")
+  new_dimn <- fillMissingDimnames(dimnames(dat), dim(dat),
+                                  .names, .dimnames)
+  setattr(dat, "dimnames", new_dimn)
+  # return
+  invisible(dat)
 }
 
 #' Find and fill missing dimension names and identifiers
@@ -240,93 +240,93 @@ decorateDims_ <- function(dat, .names = TRUE, .dimnames = TRUE) {
 #' @inheritParams decorateDims
 #' @keywords internal
 fillMissingDimnames <- function(dimn, .dim, .names = TRUE, .dimnames = TRUE) {
-    # helper function
-    checkForMissing <- function(x) {
-        if (is.null(x)) {
-            TRUE
-        } else {
-            is.na(x) | x == ""
-        }
+  # helper function
+  checkForMissing <- function(x) {
+    if (is.null(x)) {
+      TRUE
+    } else {
+      is.na(x) | x == ""
     }
-    # argument checks and fast return if no missings are found
-    check_names <- if (!identical(.names, FALSE)) TRUE else FALSE
-    check_dimnames <- if (!identical(.dimnames, FALSE)) TRUE else FALSE
-    check <- FALSE
-    if (check_names && any(checkForMissing(names(dimn)))) {
-        check <- TRUE
+  }
+  # argument checks and fast return if no missings are found
+  check_names <- if (!identical(.names, FALSE)) TRUE else FALSE
+  check_dimnames <- if (!identical(.dimnames, FALSE)) TRUE else FALSE
+  check <- FALSE
+  if (check_names && any(checkForMissing(names(dimn)))) {
+    check <- TRUE
+  }
+  if (check_dimnames) {
+    missings <- 
+      if (is.null(dimn)) {
+        as.list(rep_len(TRUE, length(.dim)))
+      } else {
+        lapply(dimn, checkForMissing)    
+      }
+    decor_dim <- vapply(missings, any, FALSE)
+    if (any(decor_dim)) check <- TRUE
+  }
+  if (!check) return(dimn)
+  #
+  new_dimnames <-
+    if (check_names && !check_dimnames) {
+      vector("list", length(.dim))
+    } else if (identical(.dimnames, TRUE) || is.null(.dimnames)) {
+      rep(list(""), sum(decor_dim))
+    } else if (!is.list(.dimnames)) {
+      rep(list(.dimnames), sum(decor_dim))
+    } else {
+      rep_len(.dimnames, sum(decor_dim))
     }
-    if (check_dimnames) {
-        missings <- 
-            if (is.null(dimn)) {
-                as.list(rep_len(TRUE, length(.dim)))
-            } else {
-                lapply(dimn, checkForMissing)    
-            }
-        decor_dim <- vapply(missings, any, FALSE)
-        if (any(decor_dim)) check <- TRUE
+  new_names <- if (is.logical(.names)) "_Dim" else .names
+  if (is.null(new_names)) new_names <- names(new_dimnames)
+  #
+  if (!is.null(new_names))
+    assertCharacter(new_names, any.missing = FALSE, .var.name = "new_names")
+  if (!is.null(new_dimnames))
+    assertList(new_dimnames, types = c("null", "character"),
+               any.missing = FALSE, .var.name = "new_dimnames")
+  # main part
+  if (is.null(dimn)) dimn <- vector("list", length(.dim))
+  if (check_dimnames) {
+    tempfn <- function(i, counter) {
+      newdimn <- new_dimnames[[counter]]
+      if (is.null(newdimn)) return(NULL)
+      miss <- missings[[i]]
+      # return
+      if (length(miss) == 1L && length(newdimn) == 1L) {
+        paste0(newdimn, seq_len(.dim[i]))
+      } else if (length(newdimn) == 1L) {
+        out <- dimn[[counter]]
+        out[miss] <- paste0(newdimn, which(miss))
+        make.unique(out, "__")
+      } else {
+        out <- rep_len(newdimn, .dim[i])
+        out[!miss] <- dimn[[counter]][!miss]
+        make.unique(out, "__")
+      }
     }
-    if (!check) return(dimn)
-    #
-    new_dimnames <-
-        if (check_names && !check_dimnames) {
-            vector("list", length(.dim))
-        } else if (identical(.dimnames, TRUE) || is.null(.dimnames)) {
-            rep(list(""), sum(decor_dim))
-        } else if (!is.list(.dimnames)) {
-            rep(list(.dimnames), sum(decor_dim))
-        } else {
-            rep_len(.dimnames, sum(decor_dim))
-        }
-    new_names <- if (is.logical(.names)) "_Dim" else .names
-    if (is.null(new_names)) new_names <- names(new_dimnames)
-    #
-    if (!is.null(new_names))
-        assertCharacter(new_names, any.missing = FALSE, .var.name = "new_names")
-    if (!is.null(new_dimnames))
-        assertList(new_dimnames, types = c("null", "character"),
-                   any.missing = FALSE, .var.name = "new_dimnames")
-    # main part
-    if (is.null(dimn)) dimn <- vector("list", length(.dim))
-    if (check_dimnames) {
-        tempfn <- function(i, counter) {
-            newdimn <- new_dimnames[[counter]]
-            if (is.null(newdimn)) return(NULL)
-            miss <- missings[[i]]
-            # return
-            if (length(miss) == 1L && length(newdimn) == 1L) {
-                paste0(newdimn, seq_len(.dim[i]))
-            } else if (length(newdimn) == 1L) {
-                out <- dimn[[counter]]
-                out[miss] <- paste0(newdimn, which(miss))
-                make.unique(out, "__")
-            } else {
-                out <- rep_len(newdimn, .dim[i])
-                out[!miss] <- dimn[[counter]][!miss]
-                make.unique(out, "__")
-            }
-        }
-        counter <- 1L
-        for (i in which(decor_dim)) {
-            dimn[i] <- list(tempfn(i, counter))
-            counter <- counter + 1L
-        }
+    counter <- 1L
+    for (i in which(decor_dim)) {
+      dimn[i] <- list(tempfn(i, counter))
+      counter <- counter + 1L
     }
-    dimn.n <- names(dimn)
-    if (check_names) {
-        if (is.null(dimn.n)) dimn.n <- rep("", length(dimn))
-        ind <- dimn.n == "" | is.na(dimn.n)
-        dimn.n[ind] <-
-            if (length(new_names) == 1L) {
-                paste0(new_names, which(ind))
-            } else {
-                out <- rep_len(new_names, sum(ind))
-                make.unique(as.character(out), "__")
-            }
-        dimn.n <- make.unique(dimn.n, "__")
-    }
-    names(dimn) <- dimn.n
-    # return
-    dimn
+  }
+  dimn.n <- names(dimn)
+  if (check_names) {
+    if (is.null(dimn.n)) dimn.n <- rep("", length(dimn))
+    ind <- dimn.n == "" | is.na(dimn.n)
+    dimn.n[ind] <-
+      if (length(new_names) == 1L) {
+        paste0(new_names, which(ind))
+      } else {
+        out <- rep_len(new_names, sum(ind))
+        make.unique(as.character(out), "__")
+      }
+    dimn.n <- make.unique(dimn.n, "__")
+  }
+  names(dimn) <- dimn.n
+  # return
+  dimn
 }
 
 
@@ -363,34 +363,34 @@ fillMissingDimnames <- function(dimn, .dim, .names = TRUE, .dimnames = TRUE) {
 #'                         c(stimclass = "Stimulus class"))
 #'  
 recodeDimnames <- function(dat, dim_levels = NULL, dim_ids = NULL) {
-    dat <- copy(dat)
-    recodeDimnames_(dat, dim_levels, dim_ids)
-    # return
-    dat
+  dat <- copy(dat)
+  recodeDimnames_(dat, dim_levels, dim_ids)
+  # return
+  dat
 }
 
 #' @describeIn recodeDimnames Modify by reference
 #' @export
 recodeDimnames_ <- function(dat, dim_levels = NULL, dim_ids = NULL) {
-    dimn <- dimnames(dat)
-    dimid <- names(dimn)
-    dim_levels <- dim_levels[names(dim_levels) %in% dimid]
-    dim_ids <- dim_ids[names(dim_ids) %in% dimid]
-    if (!is.null(dim_levels)) {
-        dimn[names(dim_levels)] <- lapply(
-            names(dim_levels), 
-            function(n) {
-                old <- names(dim_levels[[n]])
-                if (is.null(old)) old <- dimn[[n]]
-                Replace(dimn[[n]], old, as.vector(dim_levels[[n]])) 
-            })
-    }
-    if (!is.null(dim_ids)) {
-        dimid <- Replace(dimid, names(dim_ids), as.vector(dim_ids))    
-    }
-    setattr(dimn, "names", dimid)
-    setattr(dat, "dimnames", dimn)
-    invisible(dat)
+  dimn <- dimnames(dat)
+  dimid <- names(dimn)
+  dim_levels <- dim_levels[names(dim_levels) %in% dimid]
+  dim_ids <- dim_ids[names(dim_ids) %in% dimid]
+  if (!is.null(dim_levels)) {
+    dimn[names(dim_levels)] <- lapply(
+      names(dim_levels), 
+      function(n) {
+        old <- names(dim_levels[[n]])
+        if (is.null(old)) old <- dimn[[n]]
+        Replace(dimn[[n]], old, as.vector(dim_levels[[n]])) 
+      })
+  }
+  if (!is.null(dim_ids)) {
+    dimid <- Replace(dimid, names(dim_ids), as.vector(dim_ids))    
+  }
+  setattr(dimn, "names", dimid)
+  setattr(dat, "dimnames", dimn)
+  invisible(dat)
 }
 
 
@@ -477,83 +477,83 @@ recodeDimnames_ <- function(dat, dim_levels = NULL, dim_ids = NULL) {
 dropDims <- function(x, drop = TRUE, keep = NULL,
                      return_array = TRUE, named_vector = TRUE,
                      stop_if_missing = TRUE) {
-    # helper function
-    checkStop <- function(subset, fullset, dropkeep = c("drop", "keep"),
-                          st = stop_if_missing) {
-        if (is.logical(subset)) {
-            if (length(subset) != length(fullset)) {
-                stop(sprintf("if '%s' is a logical vector, its length must be equal to the number of dimensions in 'x'",
-                             dropkeep))
-            } else {
-                return(rep_len(subset, length(fullset)))
-            }
-        } else {
-            ind <- subset %in% fullset
-            if (st && !all(ind)) {
-                stop(sprintf("the dimensions of 'x' and the ones listed in '%s' do not match",
-                             dropkeep))
-            }
-            fullset %in% subset
-        }
-    }
-    # check if array
-    assertArray(x, .var.name = "x")
-    # return if drop is FALSE
-    if (identical(drop, "FALSE")) return(x)
-    # dimensions
-    dims <- dim(x)
-    dimn <- dimnames(x)
-    dimid <- names(dimn)
-    # check drop
-    singleton <- dims == 1L
-    drop <-
-        if (isTRUE(drop)) {
-            singleton
-        } else if (is.character(drop)) {
-            if (is.null(dimid)) {
-                stop("x must have named dimensions if 'drop' is a character vector")
-            }
-            singleton & checkStop(drop, dimid, "drop")
-        } else if (is.numeric(drop)) {
-            singleton & checkStop(as.integer(drop), seq_along(dims), "drop")
-        } else if (is.logical(drop)) {
-            singleton & checkStop(drop, logical(length(dims)), "drop")
-        } else {
-            stop("x is of wrong type. Must be a single logical, or a logical/integer/character vector")
-        }
-    keep <-
-        if (is.null(keep)) {
-            !drop
-        } else if (is.character(keep)) {
-            if (is.null(dimid)) {
-                stop("x must have named dimensions if 'keep' is a character vector")
-            }
-            !drop | checkStop(keep, dimid, "keep")
-        } else if (is.numeric(keep)) {
-            !drop | checkStop(keep, seq_along(dims), "keep")
-        } else if (is.logical(keep)) {
-            !drop | checkStop(keep, logical(length(dims)), "keep")
-        }
-    # return
-    nrkeep <- sum(keep)
-    asvec <- if (nrkeep <= 1L & !return_array) TRUE else FALSE
-    if (asvec) {
-        out <- copy(x)
-        setattr(out, "dim", NULL)
-        if (named_vector && nrkeep > 0L) {
-            setattr(out, "names", dimn[[which(keep)]])
-        } else {
-            out
-        }
-    } else if (nrkeep == length(dims)) {
-        x
+  # helper function
+  checkStop <- function(subset, fullset, dropkeep = c("drop", "keep"),
+                        st = stop_if_missing) {
+    if (is.logical(subset)) {
+      if (length(subset) != length(fullset)) {
+        stop(sprintf("if '%s' is a logical vector, its length must be equal to the number of dimensions in 'x'",
+                     dropkeep))
+      } else {
+        return(rep_len(subset, length(fullset)))
+      }
     } else {
-        out <- copy(x)
-        dims <- dims[keep]
-        dimn <- dimn[keep]
-        setattr(out, "dim", dims)
-        setattr(out, "dimnames", dimn)
+      ind <- subset %in% fullset
+      if (st && !all(ind)) {
+        stop(sprintf("the dimensions of 'x' and the ones listed in '%s' do not match",
+                     dropkeep))
+      }
+      fullset %in% subset
     }
+  }
+  # check if array
+  assertArray(x, .var.name = "x")
+  # return if drop is FALSE
+  if (identical(drop, "FALSE")) return(x)
+  # dimensions
+  dims <- dim(x)
+  dimn <- dimnames(x)
+  dimid <- names(dimn)
+  # check drop
+  singleton <- dims == 1L
+  drop <-
+    if (isTRUE(drop)) {
+      singleton
+    } else if (is.character(drop)) {
+      if (is.null(dimid)) {
+        stop("x must have named dimensions if 'drop' is a character vector")
+      }
+      singleton & checkStop(drop, dimid, "drop")
+    } else if (is.numeric(drop)) {
+      singleton & checkStop(as.integer(drop), seq_along(dims), "drop")
+    } else if (is.logical(drop)) {
+      singleton & checkStop(drop, logical(length(dims)), "drop")
+    } else {
+      stop("x is of wrong type. Must be a single logical, or a logical/integer/character vector")
+    }
+  keep <-
+    if (is.null(keep)) {
+      !drop
+    } else if (is.character(keep)) {
+      if (is.null(dimid)) {
+        stop("x must have named dimensions if 'keep' is a character vector")
+      }
+      !drop | checkStop(keep, dimid, "keep")
+    } else if (is.numeric(keep)) {
+      !drop | checkStop(keep, seq_along(dims), "keep")
+    } else if (is.logical(keep)) {
+      !drop | checkStop(keep, logical(length(dims)), "keep")
+    }
+  # return
+  nrkeep <- sum(keep)
+  asvec <- if (nrkeep <= 1L & !return_array) TRUE else FALSE
+  if (asvec) {
+    out <- copy(x)
+    setattr(out, "dim", NULL)
+    if (named_vector && nrkeep > 0L) {
+      setattr(out, "names", dimn[[which(keep)]])
+    } else {
+      out
+    }
+  } else if (nrkeep == length(dims)) {
+    x
+  } else {
+    out <- copy(x)
+    dims <- dims[keep]
+    dimn <- dimn[keep]
+    setattr(out, "dim", dims)
+    setattr(out, "dimnames", dimn)
+  }
 }
 
 #' Fast in-place transformation to a matrix (without copy)
@@ -613,41 +613,41 @@ dropDims <- function(x, drop = TRUE, keep = NULL,
 #'
 matrix_ <- function(x, nrow, ncol, byrow = FALSE,
                     dimnames = NULL, force_length = TRUE, arg_check = TRUE) {
-    if (arg_check) {
-        # argument checks
-        assertLogical(byrow, len = 1, .var.name = "byrow")
-        if (byrow) stop("'byrow' must be FALSE")
-        assertAtomic(x, .var.name = "x")
-        if (missing(nrow) && missing(ncol)) {
-            nrow <- length(x)
-            ncol <- 1L
-        } else if (missing(nrow)) {
-            assertCount(ncol, .var.name = "ncol")
-            nrow <- length(x)/as.integer(ncol)
-        } else if (missing(ncol)) {
-            assertCount(nrow, .var.name = "nrow")
-            ncol <- length(x)/as.integer(nrow)
-        }
-        nrow <- as.integer(nrow)
-        ncol <- as.integer(ncol)
-        # dimension names
-        if (!is.null(dimnames)) {
-            if (grepl(deparse(substitute(x)),
-                      deparse(substitute(dimnames)))) {
-                dimnames <- copy(dimnames)
-            }
-
-        }
-        # check length
-        if (force_length && length(x) != nrow*ncol) {
-            x <- rep_len(x, nrow*ncol)
-        }
+  if (arg_check) {
+    # argument checks
+    assertLogical(byrow, len = 1, .var.name = "byrow")
+    if (byrow) stop("'byrow' must be FALSE")
+    assertAtomic(x, .var.name = "x")
+    if (missing(nrow) && missing(ncol)) {
+      nrow <- length(x)
+      ncol <- 1L
+    } else if (missing(nrow)) {
+      assertCount(ncol, .var.name = "ncol")
+      nrow <- length(x)/as.integer(ncol)
+    } else if (missing(ncol)) {
+      assertCount(nrow, .var.name = "nrow")
+      ncol <- length(x)/as.integer(nrow)
     }
-    # set attributes
-    setattr(x, "dim", c(nrow, ncol))
-    setattr(x, "dimnames", dimnames)
-    # return
-    invisible(x)
+    nrow <- as.integer(nrow)
+    ncol <- as.integer(ncol)
+    # dimension names
+    if (!is.null(dimnames)) {
+      if (grepl(deparse(substitute(x)),
+                deparse(substitute(dimnames)))) {
+        dimnames <- copy(dimnames)
+      }
+      
+    }
+    # check length
+    if (force_length && length(x) != nrow*ncol) {
+      x <- rep_len(x, nrow*ncol)
+    }
+  }
+  # set attributes
+  setattr(x, "dim", c(nrow, ncol))
+  setattr(x, "dimnames", dimnames)
+  # return
+  invisible(x)
 }
 
 #' Fast in-place transformation to an array (without copy)
@@ -679,30 +679,30 @@ matrix_ <- function(x, nrow, ncol, byrow = FALSE,
 #' modifying the original input
 array_ <- function(x, dim, dimnames = NULL,
                    force_length = TRUE, arg_check = TRUE) {
-    if (arg_check) {
-        # check arguments
-        assertAtomic(x, .var.name = "x")
-        assertNumeric(dim, .var.name = "dim")
-        if (missing(dim)) {
-            dim <- length(x)
-        }
-        if (!is.null(dimnames)) {
-            if (grepl(deparse(substitute(x)),
-                      deparse(substitute(dimnames)))) {
-                dimnames <- copy(dimnames)
-            }
-        }
-        dim <- as.integer(dim)
-        # force length
-        if (force_length && length(x) != prod(dim)) {
-            x <- rep_len(x, prod(dim))
-        }
+  if (arg_check) {
+    # check arguments
+    assertAtomic(x, .var.name = "x")
+    assertNumeric(dim, .var.name = "dim")
+    if (missing(dim)) {
+      dim <- length(x)
     }
-    # set attributes
-    setattr(x, "dim", dim)
-    setattr(x, "dimnames", dimnames)
-    # return
-    invisible(x)
+    if (!is.null(dimnames)) {
+      if (grepl(deparse(substitute(x)),
+                deparse(substitute(dimnames)))) {
+        dimnames <- copy(dimnames)
+      }
+    }
+    dim <- as.integer(dim)
+    # force length
+    if (force_length && length(x) != prod(dim)) {
+      x <- rep_len(x, prod(dim))
+    }
+  }
+  # set attributes
+  setattr(x, "dim", dim)
+  setattr(x, "dimnames", dimnames)
+  # return
+  invisible(x)
 }
 
 #' Create subset indices for subsetArray
@@ -716,62 +716,62 @@ array_ <- function(x, dim, dimnames = NULL,
 #' @param dimnames. the dimension names of the data to subset on
 #' @keywords internal
 subsetIndices <- function(subset., which_dims., dim., dimnames.) {
-    dimid. <- names(dimnames.)
-    if (is.null(subset.)) subset. <- list()
-    assertList(subset.,
-               types = c("logical", "integerish", "character", "function"),
-               any.missing = FALSE, max.len = length(dim.),
-               .var.name = "subset.")
-    if (any(duplicated(names(subset.))))
-        stop("Duplicated elements in the joint list of 'subset.' and '...'")
-    if (length(subset.) == 0L)
-        stop(paste0("The joint list of 'subset.' and '...' is empty. ",
-                    "Provide either 'subset.' or use '...' or both."))
-    if (is.null(which_dims.)) {
-        if (anyDuplicated(dimid.)) {
-            stop(paste0(
-                "'dat' has duplicated dimension identifiers. ",
-                "Provide 'which_dims.' and do not rely on the names of ",
-                "the subset."))
-        }
-        which_dims. <- match(names(subset.), dimid.)
-        if (anyNA(which_dims.)) {
-            stop(paste0(
-                "Not all names in the joint list of 'subset.' and '...' ",
-                "correspond to existing dimensions in 'dat'. Provide ",
-                "either 'which_dim' to disambiguate or set the names ",
-                "in 'subset.' and/or '...' properly."))
-        }
-    } else {
-        if (is.null(which_dims.))
-            stop(paste0(
-                "If 'subset.' is not a named list and/or the arguments ",
-                "in '...' are not named, 'which_dims.' must be provided."))
-        assertVector(which_dims., strict = TRUE, any.missing = FALSE,
-                     len = length(subset.), unique = TRUE,
-                     .var.name = "which_dims.")
-        if (is.character(which_dims.)) {
-            which_dims. <- match(which_dims., dimid.)
-        }
+  dimid. <- names(dimnames.)
+  if (is.null(subset.)) subset. <- list()
+  assertList(subset.,
+             types = c("logical", "integerish", "character", "function"),
+             any.missing = FALSE, max.len = length(dim.),
+             .var.name = "subset.")
+  if (any(duplicated(names(subset.))))
+    stop("Duplicated elements in the joint list of 'subset.' and '...'")
+  if (length(subset.) == 0L)
+    stop(paste0("The joint list of 'subset.' and '...' is empty. ",
+                "Provide either 'subset.' or use '...' or both."))
+  if (is.null(which_dims.)) {
+    if (anyDuplicated(dimid.)) {
+      stop(paste0(
+        "'dat' has duplicated dimension identifiers. ",
+        "Provide 'which_dims.' and do not rely on the names of ",
+        "the subset."))
     }
-    #
-    # subsetting indices
-    ind <- as.list(rep(TRUE, length(dim.)))
-    for (i in seq_along(subset.)) {
-        subset_ <- subset.[[i]]
-        dimid_ <- which_dims.[i]
-        dimn_ <- dimnames.[[dimid_]]
-        ind[[dimid_]] <-
-            if (is.function(subset_)) {
-                subset_(dimn_)
-            } else {
-                subset_
-            }
+    which_dims. <- match(names(subset.), dimid.)
+    if (anyNA(which_dims.)) {
+      stop(paste0(
+        "Not all names in the joint list of 'subset.' and '...' ",
+        "correspond to existing dimensions in 'dat'. Provide ",
+        "either 'which_dim' to disambiguate or set the names ",
+        "in 'subset.' and/or '...' properly."))
     }
-    #
-    # return
-    setattr(ind, "which_dims.", which_dims.)
-    ind
+  } else {
+    if (is.null(which_dims.))
+      stop(paste0(
+        "If 'subset.' is not a named list and/or the arguments ",
+        "in '...' are not named, 'which_dims.' must be provided."))
+    assertVector(which_dims., strict = TRUE, any.missing = FALSE,
+                 len = length(subset.), unique = TRUE,
+                 .var.name = "which_dims.")
+    if (is.character(which_dims.)) {
+      which_dims. <- match(which_dims., dimid.)
+    }
+  }
+  #
+  # subsetting indices
+  ind <- as.list(rep(TRUE, length(dim.)))
+  for (i in seq_along(subset.)) {
+    subset_ <- subset.[[i]]
+    dimid_ <- which_dims.[i]
+    dimn_ <- dimnames.[[dimid_]]
+    ind[[dimid_]] <-
+      if (is.function(subset_)) {
+        subset_(dimn_)
+      } else {
+        subset_
+      }
+  }
+  #
+  # return
+  setattr(ind, "which_dims.", which_dims.)
+  ind
 }
 
 
@@ -861,79 +861,79 @@ subsetIndices <- function(subset., which_dims., dim., dimnames.) {
 #'
 subsetArray <- function(dat, subset. = list(), which_dims. = NULL,
                         drop. = NULL, keep_attributes. = TRUE, ...) {
-    # if NULL, return
-    if (is.null(dat)) return(NULL)
-    #
-    # check arguments (dat, subset., which_dims.) and find indices
-    assertArray(dat, min.d = 1L, .var.name = "dat")
-    dat_d <- dim(dat)
-    dat_dn <- dimnames(dat)
-    dat_dimid <- names(dat_dn)
-    subset. <- c(subset., list(...))
-    ind <- subsetIndices(subset., which_dims., dat_d, dat_dn)
-    which_dims. <- attr(ind, "which_dims.")
-    #
-    # do subsetting
-    out <- do("[", dat, arg_list = c(ind, list(drop = FALSE)))
-    #
-    # drop singleton dimensions if requested
-    if (!identical(drop., FALSE)) {
-        out_d <- dim(out)
-        out_dn <- dimnames(out)
-        keep_dim <- out_d > 1L
-        if (is.null(drop.)) {
-            keep_dim[-which_dims.] <- TRUE
-        } else if (is.logical(drop.)) {
-            if (length(drop.) != 1L) {
-                stop("If 'drop.' is logical, it must be a single value")
-            }
-        } else {
-            assertVector(drop., strict = TRUE, any.missing = FALSE,
-                         max.len = length(out_d), unique = TRUE,
-                         .var.name = "drop.")
-            if (is.character(drop.)) {
-                drop. <- match(drop., dat_dimid)
-                if (anyNA(drop.))
-                    stop("Not all elements of 'drop.' correspond to existing dimensions in 'dat'")
-                keep_dim[-drop.] <- TRUE
-            } else if (is.numeric(drop.)) {
-                assertIntegerish(drop., lower = 1L, upper = length(dim(dat)),
-                                 any.missing = FALSE, .var.name = "drop.")
-                keep_dim[-drop.] <- TRUE
-            } else {
-                stop("If 'drop.' is not NULL, TRUE or FALSE, it must be a character or numeric vector")
-            }
-        }
-        if (sum(keep_dim) > 0L) {
-            setattr(out, "dim", out_d[keep_dim])
-            setattr(out, "dimnames", out_dn[keep_dim])
-        } else {
-            setattr(out, "dim", NULL)
-            setattr(out, "dimnames", NULL)
-        }
+  # if NULL, return
+  if (is.null(dat)) return(NULL)
+  #
+  # check arguments (dat, subset., which_dims.) and find indices
+  assertArray(dat, min.d = 1L, .var.name = "dat")
+  dat_d <- dim(dat)
+  dat_dn <- dimnames(dat)
+  dat_dimid <- names(dat_dn)
+  subset. <- c(subset., list(...))
+  ind <- subsetIndices(subset., which_dims., dat_d, dat_dn)
+  which_dims. <- attr(ind, "which_dims.")
+  #
+  # do subsetting
+  out <- do("[", dat, arg_list = c(ind, list(drop = FALSE)))
+  #
+  # drop singleton dimensions if requested
+  if (!identical(drop., FALSE)) {
+    out_d <- dim(out)
+    out_dn <- dimnames(out)
+    keep_dim <- out_d > 1L
+    if (is.null(drop.)) {
+      keep_dim[-which_dims.] <- TRUE
+    } else if (is.logical(drop.)) {
+      if (length(drop.) != 1L) {
+        stop("If 'drop.' is logical, it must be a single value")
+      }
+    } else {
+      assertVector(drop., strict = TRUE, any.missing = FALSE,
+                   max.len = length(out_d), unique = TRUE,
+                   .var.name = "drop.")
+      if (is.character(drop.)) {
+        drop. <- match(drop., dat_dimid)
+        if (anyNA(drop.))
+          stop("Not all elements of 'drop.' correspond to existing dimensions in 'dat'")
+        keep_dim[-drop.] <- TRUE
+      } else if (is.numeric(drop.)) {
+        assertIntegerish(drop., lower = 1L, upper = length(dim(dat)),
+                         any.missing = FALSE, .var.name = "drop.")
+        keep_dim[-drop.] <- TRUE
+      } else {
+        stop("If 'drop.' is not NULL, TRUE or FALSE, it must be a character or numeric vector")
+      }
     }
-    #
-    # reattach attributes if requested
-    if (keep_attributes.) {
-        a <- attributes(dat)
-        a2keep <- setdiff(names(a),
-                          c("class", "comment", "dim", "dimnames", "names",
-                            "row.names", "tsp"))
-        a <- a[a2keep]
-        for (i in a2keep) setattr(out, i, a[[i]])
-        # this is just to handle the temporary "factor_level" attribute of
-        # the eeg data
-        if (!is.null(attr(out, "factors")) &&
-                ("factor_level" %in% names(subset.)) ) {
-            tempa <- splitMarker(dimnames(out)$factor_level,
-                                 colnames(attr(out, "factors")),
-                                 splitchar = "\\|")
-            setattr(out, "factors", tempa)
-        }
+    if (sum(keep_dim) > 0L) {
+      setattr(out, "dim", out_d[keep_dim])
+      setattr(out, "dimnames", out_dn[keep_dim])
+    } else {
+      setattr(out, "dim", NULL)
+      setattr(out, "dimnames", NULL)
     }
-    #
-    # return
-    out
+  }
+  #
+  # reattach attributes if requested
+  if (keep_attributes.) {
+    a <- attributes(dat)
+    a2keep <- setdiff(names(a),
+                      c("class", "comment", "dim", "dimnames", "names",
+                        "row.names", "tsp"))
+    a <- a[a2keep]
+    for (i in a2keep) setattr(out, i, a[[i]])
+    # this is just to handle the temporary "factor_level" attribute of
+    # the eeg data
+    if (!is.null(attr(out, "factors")) &&
+        ("factor_level" %in% names(subset.)) ) {
+      tempa <- splitMarker(dimnames(out)$factor_level,
+                           colnames(attr(out, "factors")),
+                           splitchar = "\\|")
+      setattr(out, "factors", tempa)
+    }
+  }
+  #
+  # return
+  out
 }
 
 #' @rdname subsetArray
@@ -944,26 +944,26 @@ subsetArray <- function(dat, subset. = list(), which_dims. = NULL,
 # Replace a part of an array
 `subsetArray<-` <- function(dat, subset. = list(), which_dims. = NULL, 
                             drop. = NULL, ..., value) {
-    #
-    # check arguments (dat, subset., which_dims.) and find indices
-    assertArray(dat, min.d = 1L, .var.name = "dat")
-    dat_d <- dim(dat)
-    dat_dn <- dimnames(dat)
-    dat_dimid <- names(dat_dn)
-    subset. <- c(subset., list(...))
-    ind <- subsetIndices(subset., which_dims., dat_d, dat_dn)
-    #
-    # do subsetting
-    value_dnn <- names(dimnames(value))
-    if (!is.null(value_dnn) && !anyDuplicated(value_dnn) &&
-        !anyNA(value_dnn)) {
-        value <- apermArray(value, na.omit(match(dat_dimid, value_dnn)),
-                            keep_attributes. = FALSE)
-    }
-    dat <- do("[<-", dat, arg_list = c(ind, list(value = value)))
-    #
-    # return
-    invisible(dat)
+  #
+  # check arguments (dat, subset., which_dims.) and find indices
+  assertArray(dat, min.d = 1L, .var.name = "dat")
+  dat_d <- dim(dat)
+  dat_dn <- dimnames(dat)
+  dat_dimid <- names(dat_dn)
+  subset. <- c(subset., list(...))
+  ind <- subsetIndices(subset., which_dims., dat_d, dat_dn)
+  #
+  # do subsetting
+  value_dnn <- names(dimnames(value))
+  if (!is.null(value_dnn) && !anyDuplicated(value_dnn) &&
+      !anyNA(value_dnn)) {
+    value <- apermArray(value, na.omit(match(dat_dimid, value_dnn)),
+                        keep_attributes. = FALSE)
+  }
+  dat <- do("[<-", dat, arg_list = c(ind, list(value = value)))
+  #
+  # return
+  invisible(dat)
 }
 
 #' Expand array
@@ -1101,104 +1101,104 @@ subsetArray <- function(dat, subset. = list(), which_dims. = NULL,
 #' 
 expandInto <- function(dat, new_dat, expand_levels = NULL, safe_mode = TRUE,
                        fill = TRUE) {
-    # check arguments
-    assertArray(dat, min.d = 1L, .var.name = "dat")
-    orig_dim <- dim(dat)
-    orig_dimn <- fillMissingDimnames(dimnames(dat), orig_dim)
-    orig_dimid <- names(orig_dimn)
-    assertArray(new_dat, min.d = length(orig_dim), .var.name = "new_dat")
-    new_dim <- dim(new_dat)
-    new_dimn <- fillMissingDimnames(dimnames(new_dat), new_dim)
-    new_dimid <- names(new_dimn)
-    if (!is.null(new_dimid) && any(!orig_dimid %in% new_dimid)) {
-        stop(paste0("if 'new_dat' has dimension identifiers, ",
-                    "it must contain all dimension identifiers of 'dat'"))
-    }
-    # match dimension order
-    shared_dimid <- intersect(new_dimid, orig_dimid)
-    dat <-
-        if (identical(shared_dimid, orig_dimid)) {
-            copy(dat)
-        } else {
-            apermArray(dat, shared_dimid)
-        }
-    # insert new dimensions
-    orig_dimn2 <- setNames(rep(list("1"), length(new_dim)), new_dimid)
-    orig_dimn2[orig_dimid] <- orig_dimn
-    array_(dat, vapply(orig_dimn2, length, integer(1L)), orig_dimn2)
-    # consider expand_levels
-    if (!is.null(expand_levels)) {
-        assertList(expand_levels, types = c("character", "numeric"),
-                   any.missing = FALSE,
-                   min.len = 1L, max.len = length(orig_dim),
-                   .var.name = "expand_levels")
-        if (is.null(names(expand_levels))) {
-            if (length(expand_levels) != length(orig_dim)) {
-                stop(paste0("if the length of 'expand_levels' does not ",
-                            "match the number of dimension of 'dat', ",
-                            "'expand_levels' must be named"))
-            } else {
-                names(expand_levels) <- orig_dimid
-            }
-        }
-        expand_levels <- fillMissingDimnames(
-            expand_levels, vapply(expand_levels, length, integer(1L)))
-    }
-    # create subsetting indices
-    sub_indices <- mapply(
-        function(old, new, nam) {
-            if (safe_mode && is.null(expand_levels) &&
-                length(old) > 1L && length(old) != length(new)) {
-                stop(sprintf(
-                    paste0("the '%s' dimension is not a singleton dimension ",
-                           "in 'dat', but it should be expanded to match ",
-                           "the corresponding dimension in 'new_dat'. ",
-                           "Please provide 'expand_levels' or if you really ",
-                           "know what you are doing, set 'safe_mode' to FALSE."
-                           ), nam))
-            }
-            # return
-            if (is.null(exp <- expand_levels[[nam]])) {
-                if (safe_mode) {
-                    if (all(new %in% old)) {
-                        new
-                    } else if (length(old) == 1L) {
-                        rep_len(old, length(new))
-                    } else {
-                        stop(sprintf(
-                            paste0("the '%s' dimension is neither a singleton ",
-                                   "dimension in 'dat', nor does it contain ",
-                                   "all levels of the corresponding dimension ",
-                                   "in 'new_dat'. Please provide ",
-                                   "'expand_levels' or if you really know ",
-                                   "what you are doing, set 'safe_mode' to ",
-                                   "FALSE."
-                            ), nam))
-                    }
-                } else {
-                    rep_len(old, length(new))
-                }
-            } else if (length(exp) == length(new)) {
-                exp
-            } else {
-                stop(sprintf(
-                    paste0("the size of the '%s' dimension in 'new_dat' ",
-                           "and the length of the corresponding vector in ",
-                           "'expand_levels' must be equal"), nam))
-            }
-        },
-        orig_dimn2, new_dimn, new_dimid, SIMPLIFY = FALSE
-    )
-    # expand array and return
-    if (fill) {
-        new_dat[] <- subsetArray(dat, sub_indices)
-        new_dat
+  # check arguments
+  assertArray(dat, min.d = 1L, .var.name = "dat")
+  orig_dim <- dim(dat)
+  orig_dimn <- fillMissingDimnames(dimnames(dat), orig_dim)
+  orig_dimid <- names(orig_dimn)
+  assertArray(new_dat, min.d = length(orig_dim), .var.name = "new_dat")
+  new_dim <- dim(new_dat)
+  new_dimn <- fillMissingDimnames(dimnames(new_dat), new_dim)
+  new_dimid <- names(new_dimn)
+  if (!is.null(new_dimid) && any(!orig_dimid %in% new_dimid)) {
+    stop(paste0("if 'new_dat' has dimension identifiers, ",
+                "it must contain all dimension identifiers of 'dat'"))
+  }
+  # match dimension order
+  shared_dimid <- intersect(new_dimid, orig_dimid)
+  dat <-
+    if (identical(shared_dimid, orig_dimid)) {
+      copy(dat)
     } else {
-        out <- subsetArray(dat, sub_indices)
-        setattr(out, "dim", dim(new_dat))
-        setattr(out, "dimnames", dimnames(new_dat))
-        out
+      apermArray(dat, shared_dimid)
     }
+  # insert new dimensions
+  orig_dimn2 <- setNames(rep(list("1"), length(new_dim)), new_dimid)
+  orig_dimn2[orig_dimid] <- orig_dimn
+  array_(dat, vapply(orig_dimn2, length, integer(1L)), orig_dimn2)
+  # consider expand_levels
+  if (!is.null(expand_levels)) {
+    assertList(expand_levels, types = c("character", "numeric"),
+               any.missing = FALSE,
+               min.len = 1L, max.len = length(orig_dim),
+               .var.name = "expand_levels")
+    if (is.null(names(expand_levels))) {
+      if (length(expand_levels) != length(orig_dim)) {
+        stop(paste0("if the length of 'expand_levels' does not ",
+                    "match the number of dimension of 'dat', ",
+                    "'expand_levels' must be named"))
+      } else {
+        names(expand_levels) <- orig_dimid
+      }
+    }
+    expand_levels <- fillMissingDimnames(
+      expand_levels, vapply(expand_levels, length, integer(1L)))
+  }
+  # create subsetting indices
+  sub_indices <- mapply(
+    function(old, new, nam) {
+      if (safe_mode && is.null(expand_levels) &&
+          length(old) > 1L && length(old) != length(new)) {
+        stop(sprintf(
+          paste0("the '%s' dimension is not a singleton dimension ",
+                 "in 'dat', but it should be expanded to match ",
+                 "the corresponding dimension in 'new_dat'. ",
+                 "Please provide 'expand_levels' or if you really ",
+                 "know what you are doing, set 'safe_mode' to FALSE."
+          ), nam))
+      }
+      # return
+      if (is.null(exp <- expand_levels[[nam]])) {
+        if (safe_mode) {
+          if (all(new %in% old)) {
+            new
+          } else if (length(old) == 1L) {
+            rep_len(old, length(new))
+          } else {
+            stop(sprintf(
+              paste0("the '%s' dimension is neither a singleton ",
+                     "dimension in 'dat', nor does it contain ",
+                     "all levels of the corresponding dimension ",
+                     "in 'new_dat'. Please provide ",
+                     "'expand_levels' or if you really know ",
+                     "what you are doing, set 'safe_mode' to ",
+                     "FALSE."
+              ), nam))
+          }
+        } else {
+          rep_len(old, length(new))
+        }
+      } else if (length(exp) == length(new)) {
+        exp
+      } else {
+        stop(sprintf(
+          paste0("the size of the '%s' dimension in 'new_dat' ",
+                 "and the length of the corresponding vector in ",
+                 "'expand_levels' must be equal"), nam))
+      }
+    },
+    orig_dimn2, new_dimn, new_dimid, SIMPLIFY = FALSE
+  )
+  # expand array and return
+  if (fill) {
+    new_dat[] <- subsetArray(dat, sub_indices)
+    new_dat
+  } else {
+    out <- subsetArray(dat, sub_indices)
+    setattr(out, "dim", dim(new_dat))
+    setattr(out, "dimnames", dimnames(new_dat))
+    out
+  }
 }
 
 
@@ -1218,30 +1218,30 @@ expandInto <- function(dat, new_dat, expand_levels = NULL, safe_mode = TRUE,
 #' @seealso \code{\link{mat2array}} which is the inverse of array2mat
 array2mat <- function(dat, row_dim, return_attributes = TRUE,
                       keep_dimnames = TRUE) {
-    if (is.character(row_dim)) {
-        row_dim <- which(names(dimnames(dat)) == row_dim)
-    }
-    col_dims <- seq_along(dim(dat))[-row_dim]
-    out <- apermArray(dat, c(row_dim, col_dims),
-                      keep_attributes. = TRUE)
-    if (!keep_dimnames || is.null(dimnames(dat))) {
-        out_dimnames <- NULL
-    } else {
-        dat <- decorateDims(dat)
-        out_dimnames <- c(dimnames(dat)[row_dim],
-                          list(interaction(expand.grid(dimnames(dat)[col_dims]),
-                                           sep = "|")))
-        setattr(out_dimnames, "names",
-                c(names(dimnames(dat))[row_dim],
-                  paste(names(dimnames(dat))[col_dims], collapse = "|")))
-    }
-    matrix_(out, nrow(out), dimnames = out_dimnames)
-    if (return_attributes) {
-        setattr(out, "array_attributes",
-                c(attributes(dat), list(row_dim = row_dim)))
-    }
-    # return
-    out
+  if (is.character(row_dim)) {
+    row_dim <- which(names(dimnames(dat)) == row_dim)
+  }
+  col_dims <- seq_along(dim(dat))[-row_dim]
+  out <- apermArray(dat, c(row_dim, col_dims),
+                    keep_attributes. = TRUE)
+  if (!keep_dimnames || is.null(dimnames(dat))) {
+    out_dimnames <- NULL
+  } else {
+    dat <- decorateDims(dat)
+    out_dimnames <- c(dimnames(dat)[row_dim],
+                      list(interaction(expand.grid(dimnames(dat)[col_dims]),
+                                       sep = "|")))
+    setattr(out_dimnames, "names",
+            c(names(dimnames(dat))[row_dim],
+              paste(names(dimnames(dat))[col_dims], collapse = "|")))
+  }
+  matrix_(out, nrow(out), dimnames = out_dimnames)
+  if (return_attributes) {
+    setattr(out, "array_attributes",
+            c(attributes(dat), list(row_dim = row_dim)))
+  }
+  # return
+  out
 }
 
 #' (Back-)Transforms a matrix to an array. See array2mat as a related function.
@@ -1259,30 +1259,30 @@ array2mat <- function(dat, row_dim, return_attributes = TRUE,
 #' @export
 #' @seealso \code{\link{array2mat}}
 mat2array <- function(dat, dims = NULL, row_dim = NULL) {
-    dimn <- NULL
-    if (is.null(dims)) {
-        array_attribs <- attr(dat, "array_attributes")
-        if (!is.null(array_attribs)) {
-            dims <- array_attribs$dim
-            row_dim <- array_attribs$row_dim
-            dimn <- array_attribs$dimnames
-        } else {
-            stop("Provide dims and row_dim parameters!")
-        }
+  dimn <- NULL
+  if (is.null(dims)) {
+    array_attribs <- attr(dat, "array_attributes")
+    if (!is.null(array_attribs)) {
+      dims <- array_attribs$dim
+      row_dim <- array_attribs$row_dim
+      dimn <- array_attribs$dimnames
     } else {
-        if (is.character(row_dim)) row_dim <- which(names(dims) == row_dim)
-        if (is.list(dims)) {
-            dimn <- dims
-            dims <- vapply(dims, length, 0L)
-        }
+      stop("Provide dims and row_dim parameters!")
     }
-    matdims <- c(dims[row_dim], dims[-row_dim])
-    dimord <- order( c(row_dim, seq_along(dims)[-row_dim]) )
-    out <- apermArray(array(dat, matdims), dimord,
-                      keep_attributes. = TRUE)
-    dimnames(out) <- dimn
-    # return
-    out
+  } else {
+    if (is.character(row_dim)) row_dim <- which(names(dims) == row_dim)
+    if (is.list(dims)) {
+      dimn <- dims
+      dims <- vapply(dims, length, 0L)
+    }
+  }
+  matdims <- c(dims[row_dim], dims[-row_dim])
+  dimord <- order( c(row_dim, seq_along(dims)[-row_dim]) )
+  out <- apermArray(array(dat, matdims), dimord,
+                    keep_attributes. = TRUE)
+  dimnames(out) <- dimn
+  # return
+  out
 }
 
 #' Transforms an array to a data.frame
@@ -1338,87 +1338,87 @@ array2df <- function(dat, value_name = "values", value_dim = NULL,
                      value_type = typeof(dat), 
                      auto_convert = FALSE,
                      na_omit = FALSE, ...) {
-    # argument checks
-    assertArray(dat, min.d = 1L, .var.name = "dat")
-    assertString(value_name, .var.name = "value_name")
-    assertChoice(value_type, 
-                 c(typeof(dat), "logical", "character", "integer",
-                   "numeric", "double", "factor", "complex", "raw"), 
-                 .var.name = "value_type")
-    assertFlag(auto_convert, .var.name  = "auto_convert")
-    assertFlag(na_omit, .var.name = "na_omit")
-    orig_address <- address(dat)
-    # if value_dim is not NULL, dat must be permuted
-    if (length(value_dim)) {
-        if (is.character(value_dim)) {
-            value_dim <- match(value_dim, names(dimnames(dat)), 
-                                  nomatch = 0L)
-        }
-        if (!all(value_dim %in% seq_along(dim(dat)))) {
-            stop(paste0(
-                "array2df: not all dimensions in 'value_dim' ",
-                "are present in 'dat'"), call. = FALSE)
-        }
-        value_dim <- sort(value_dim)
-        # permute dat
-        dimord <- c(seq_along(dim(dat))[-value_dim], value_dim)
-        # modify select (a possible argument to autoConvert)
-        if (exists("select", inherits = FALSE) && is.numeric(select)) 
-            select <- match(select, dimord)
-        dat <- apermArray(dat, dimord)
+  # argument checks
+  assertArray(dat, min.d = 1L, .var.name = "dat")
+  assertString(value_name, .var.name = "value_name")
+  assertChoice(value_type, 
+               c(typeof(dat), "logical", "character", "integer",
+                 "numeric", "double", "factor", "complex", "raw"), 
+               .var.name = "value_type")
+  assertFlag(auto_convert, .var.name  = "auto_convert")
+  assertFlag(na_omit, .var.name = "na_omit")
+  orig_address <- address(dat)
+  # if value_dim is not NULL, dat must be permuted
+  if (length(value_dim)) {
+    if (is.character(value_dim)) {
+      value_dim <- match(value_dim, names(dimnames(dat)), 
+                         nomatch = 0L)
     }
-    row_dim <- seq_len(length(dim(dat)) - length(value_dim))
-    var_dim <- seq_along(dim(dat))[-row_dim]
-    # coerce dat if needed
-    if (value_type != typeof(dat)) {
-        dat <- do(paste0("as.", value_type), dat)
+    if (!all(value_dim %in% seq_along(dim(dat)))) {
+      stop(paste0(
+        "array2df: not all dimensions in 'value_dim' ",
+        "are present in 'dat'"), call. = FALSE)
     }
-    # prepare dimension names
-    dimn <- fillMissingDimnames(dimnames(dat), dim(dat), .dimnames = FALSE)
-    if (auto_convert) dimn <- autoConvert(dimn, ...)
-    dimn_null <- vapply(dimn, is.null, logical(1L))
-    dimn[dimn_null] <- lapply(dim(dat)[dimn_null], seq_len)
-    # prepare the data.frame
-    out <- expand.grid(dimn[row_dim], KEEP.OUT.ATTRS = FALSE, 
-                       stringsAsFactors = FALSE)
-    # cbind the values
-    if (is.null(value_dim)) {
-        out[[value_name]] <- as.vector(dat)
+    value_dim <- sort(value_dim)
+    # permute dat
+    dimord <- c(seq_along(dim(dat))[-value_dim], value_dim)
+    # modify select (a possible argument to autoConvert)
+    if (exists("select", inherits = FALSE) && is.numeric(select)) 
+      select <- match(select, dimord)
+    dat <- apermArray(dat, dimord)
+  }
+  row_dim <- seq_len(length(dim(dat)) - length(value_dim))
+  var_dim <- seq_along(dim(dat))[-row_dim]
+  # coerce dat if needed
+  if (value_type != typeof(dat)) {
+    dat <- do(paste0("as.", value_type), dat)
+  }
+  # prepare dimension names
+  dimn <- fillMissingDimnames(dimnames(dat), dim(dat), .dimnames = FALSE)
+  if (auto_convert) dimn <- autoConvert(dimn, ...)
+  dimn_null <- vapply(dimn, is.null, logical(1L))
+  dimn[dimn_null] <- lapply(dim(dat)[dimn_null], seq_len)
+  # prepare the data.frame
+  out <- expand.grid(dimn[row_dim], KEEP.OUT.ATTRS = FALSE, 
+                     stringsAsFactors = FALSE)
+  # cbind the values
+  if (is.null(value_dim)) {
+    out[[value_name]] <- as.vector(dat)
+  } else {
+    if (identical(orig_address, address(dat))) {
+      dim(dat) <- c(nrow(out), length(dat)/nrow(out))
     } else {
-        if (identical(orig_address, address(dat))) {
-            dim(dat) <- c(nrow(out), length(dat)/nrow(out))
-        } else {
-            matrix_(dat, nrow = nrow(out))
-        }
-        tempn <- 
-            if (length(var_dim)) {
-                do.call(
-                    "paste",
-                    c(expand.grid(mapply(function(x, y) paste(x, y, sep = "_"),
-                                         names(dimn)[var_dim], dimn[var_dim],
-                                         SIMPLIFY = FALSE), 
-                                  KEEP.OUT.ATTRS = FALSE, 
-                                  stringsAsFactors = FALSE),
-                      sep = "."))
-            } else {
-                NULL
-            }
-        colnames(dat) <- 
-            if (length(value_name) & length(tempn)) {
-                paste(value_name, tempn, sep = ".")
-            } else if (length(tempn)) {
-                tempn
-            } else if (length(value_name)) {
-                value_name
-            } else {
-                "values"
-            }
-        out <- cbind(out, dat)
+      matrix_(dat, nrow = nrow(out))
     }
-    # remove rows with NA if requested
-    if (na_omit) out <- na.omit(out)
-    # return
-    out
+    tempn <- 
+      if (length(var_dim)) {
+        do.call(
+          "paste",
+          c(expand.grid(mapply(function(x, y) paste(x, y, sep = "_"),
+                               names(dimn)[var_dim], dimn[var_dim],
+                               SIMPLIFY = FALSE), 
+                        KEEP.OUT.ATTRS = FALSE, 
+                        stringsAsFactors = FALSE),
+            sep = "."))
+      } else {
+        NULL
+      }
+    colnames(dat) <- 
+      if (length(value_name) & length(tempn)) {
+        paste(value_name, tempn, sep = ".")
+      } else if (length(tempn)) {
+        tempn
+      } else if (length(value_name)) {
+        value_name
+      } else {
+        "values"
+      }
+    out <- cbind(out, dat)
+  }
+  # remove rows with NA if requested
+  if (na_omit) out <- na.omit(out)
+  # return
+  out
 }
 
 #' Reshape array by merging specific dimensions
@@ -1437,59 +1437,59 @@ array2df <- function(dat, value_name = "values", value_dim = NULL,
 #' @return Array with merged dimensions
 mergeDims <- function(dat, dims, return_attributes = TRUE,
                       keep_dimnames = TRUE, sep = ".") {
-    if (return_attributes) {
-        attribs <- attributes(dat)
-        dimattribs <- list(dim = setNames(attribs$dim, names(attribs$dimnames)),
-                           dimnames = attribs$dimnames)
-        attribs <- attribs[setdiff(names(attribs), names(dimattribs))]
-    }
-    if (!is.list(dims)) dims <- list(dims)
-    dims <- lapply(dims,
-                   function(x) {
-                       if (is.character(x)) {
-                           match(x, names(dimnames(dat)))
-                       } else {
-                           x
-                       }
-                   })
-    if (anyDuplicated(unlist(dims)))
-        stop("Duplicated dimensions in the dims parameter are not allowed")
-    if (length(unlist(dims)) < length(dim(dat))) {
-        dims <- c(dims, as.list(setdiff(seq_along(dim(dat)), unlist(dims))))
-    }
-    if (keep_dimnames) {
-        dat <- decorateDims(dat)
-        dimn <- lapply(dims, function(i)
-            do.call(paste,
-                    c(expand.grid(dimnames(dat)[i],
-                                  stringsAsFactors = FALSE),
-                      list(sep = sep))))
-        setattr(dimn, "names",
-                vapply(relist(names(dimnames(dat))[unlist(dims)], dims),
-                       paste, "", collapse = sep))
+  if (return_attributes) {
+    attribs <- attributes(dat)
+    dimattribs <- list(dim = setNames(attribs$dim, names(attribs$dimnames)),
+                       dimnames = attribs$dimnames)
+    attribs <- attribs[setdiff(names(attribs), names(dimattribs))]
+  }
+  if (!is.list(dims)) dims <- list(dims)
+  dims <- lapply(dims,
+                 function(x) {
+                   if (is.character(x)) {
+                     match(x, names(dimnames(dat)))
+                   } else {
+                     x
+                   }
+                 })
+  if (anyDuplicated(unlist(dims)))
+    stop("Duplicated dimensions in the dims parameter are not allowed")
+  if (length(unlist(dims)) < length(dim(dat))) {
+    dims <- c(dims, as.list(setdiff(seq_along(dim(dat)), unlist(dims))))
+  }
+  if (keep_dimnames) {
+    dat <- decorateDims(dat)
+    dimn <- lapply(dims, function(i)
+      do.call(paste,
+              c(expand.grid(dimnames(dat)[i],
+                            stringsAsFactors = FALSE),
+                list(sep = sep))))
+    setattr(dimn, "names",
+            vapply(relist(names(dimnames(dat))[unlist(dims)], dims),
+                   paste, "", collapse = sep))
+  } else {
+    dimn <- NULL
+  }
+  udims <- unlist(dims, use.names = FALSE)
+  out <-
+    if (identical(udims, seq_along(dim(dat)))) {
+      array_(as.vector(dat),
+             vapply(relist(dim(dat)[udims], dims), prod, 0),
+             dimn)
     } else {
-        dimn <- NULL
+      array_(aperm(dat, udims),
+             vapply(relist(dim(dat)[udims], dims), prod, 0),
+             dimn)
     }
-    udims <- unlist(dims, use.names = FALSE)
-    out <-
-        if (identical(udims, seq_along(dim(dat)))) {
-            array_(as.vector(dat),
-                   vapply(relist(dim(dat)[udims], dims), prod, 0),
-                   dimn)
-        } else {
-            array_(aperm(dat, udims),
-                   vapply(relist(dim(dat)[udims], dims), prod, 0),
-                   dimn)
-        }
-    if (return_attributes) {
-        setattr(out, "orig_dimattributes",
-                c(dimattribs, list(sep = sep, merged_dims = dims)))
-        if (length(attribs) > 0) {
-            for (i in names(attribs)) setattr(out, i, attribs[[i]])
-        }
+  if (return_attributes) {
+    setattr(out, "orig_dimattributes",
+            c(dimattribs, list(sep = sep, merged_dims = dims)))
+    if (length(attribs) > 0) {
+      for (i in names(attribs)) setattr(out, i, attribs[[i]])
     }
-    # return
-    out
+  }
+  # return
+  out
 }
 
 #' Reverse mergeDims transformation
@@ -1501,28 +1501,28 @@ mergeDims <- function(dat, dims, return_attributes = TRUE,
 #' @return An array of the same dimension attributes as the array which
 #' \code{\link{mergeDims}} was called on
 revMergeDims <- function(dat) {
-    attribs <- attributes(dat)
-    if (!"orig_dimattributes" %in% names(attribs))
-        stop("The input is not a result of mergeDims(..., return_attributes=TRUE)")
-    dimattribs <- attr(dat, "orig_dimattributes")
-    attribs <- attribs[setdiff(names(attribs),
-                               c("orig_dimattributes", names(dimattribs)))]
-    orig_dim <- dimattribs$dim
-    orig_dimnames <- dimattribs$dimnames
-    merged_dims <- unlist(dimattribs$merged_dims, use.names = FALSE)
-    if (is.character(merged_dims)) {
-        merged_dims <- match(merged_dims, names(orig_dimnames))
-    }
-    dimord <- c(merged_dims,
-                setdiff(seq_along(orig_dim), merged_dims))
-    out <- array(dat, orig_dim[dimord])
-    out <- aperm(out, order(dimord))
-    dimnames(out) <- orig_dimnames
-    if (length(attribs) > 0) {
-        for (i in names(attribs)) setattr(out, i, attribs[[i]])
-    }
-    # return
-    out
+  attribs <- attributes(dat)
+  if (!"orig_dimattributes" %in% names(attribs))
+    stop("The input is not a result of mergeDims(..., return_attributes=TRUE)")
+  dimattribs <- attr(dat, "orig_dimattributes")
+  attribs <- attribs[setdiff(names(attribs),
+                             c("orig_dimattributes", names(dimattribs)))]
+  orig_dim <- dimattribs$dim
+  orig_dimnames <- dimattribs$dimnames
+  merged_dims <- unlist(dimattribs$merged_dims, use.names = FALSE)
+  if (is.character(merged_dims)) {
+    merged_dims <- match(merged_dims, names(orig_dimnames))
+  }
+  dimord <- c(merged_dims,
+              setdiff(seq_along(orig_dim), merged_dims))
+  out <- array(dat, orig_dim[dimord])
+  out <- aperm(out, order(dimord))
+  dimnames(out) <- orig_dimnames
+  if (length(attribs) > 0) {
+    for (i in names(attribs)) setattr(out, i, attribs[[i]])
+  }
+  # return
+  out
 }
 
 
@@ -1541,28 +1541,28 @@ revMergeDims <- function(dat) {
 #' @return An array
 #' @seealso \code{\link{expand.grid}}
 dim2multidim <- function(dat, whichdim, datfr) {
-    if (!is.data.frame(datfr))
-        datfr <- as.data.frame(datfr, stringsAsFactors = FALSE)
-    datfr <- lapply(datfr, as.character)
-    orig_dimnames <- dimnames(dat)
-    orig_dims <- dim(dat)
-    add_dimnames <- lapply(datfr, unique)
-    if (!identical(datfr,
-                   as.list(expand.grid(add_dimnames,
-                                       KEEP.OUT.ATTRS = FALSE,
-                                       stringsAsFactors = FALSE)))) {
-        stop("datfr is not commensurate with the result of expand.grid()")
-    }
-    add_dims <- vapply(add_dimnames, length, 0L)
-    if (is.character(whichdim))
-        whichdim <- which(names(orig_dimnames) == whichdim)
-    if (is.logical(whichdim))
-        whichdim <- which(whichdim)
-    dim(dat) <- append(orig_dims[-whichdim], add_dims, whichdim - 1)
-    dimnames(dat) <- append(orig_dimnames[-whichdim], add_dimnames,
-                            whichdim - 1)
-    # return
-    dat
+  if (!is.data.frame(datfr))
+    datfr <- as.data.frame(datfr, stringsAsFactors = FALSE)
+  datfr <- lapply(datfr, as.character)
+  orig_dimnames <- dimnames(dat)
+  orig_dims <- dim(dat)
+  add_dimnames <- lapply(datfr, unique)
+  if (!identical(datfr,
+                 as.list(expand.grid(add_dimnames,
+                                     KEEP.OUT.ATTRS = FALSE,
+                                     stringsAsFactors = FALSE)))) {
+    stop("datfr is not commensurate with the result of expand.grid()")
+  }
+  add_dims <- vapply(add_dimnames, length, 0L)
+  if (is.character(whichdim))
+    whichdim <- which(names(orig_dimnames) == whichdim)
+  if (is.logical(whichdim))
+    whichdim <- which(whichdim)
+  dim(dat) <- append(orig_dims[-whichdim], add_dims, whichdim - 1)
+  dimnames(dat) <- append(orig_dimnames[-whichdim], add_dimnames,
+                          whichdim - 1)
+  # return
+  dat
 }
 
 #' Splits an array along a given dimension
@@ -1612,51 +1612,51 @@ dim2multidim <- function(dat, whichdim, datfr) {
 #' }
 #' 
 splitArray <- function(dat, whichdim, f = NULL, drop = FALSE) {
-    subFn <- function(ind) {
-        abind::asub(dat, lapply(ind, unlist), whichdim_num, drop = drop)
+  subFn <- function(ind) {
+    abind::asub(dat, lapply(ind, unlist), whichdim_num, drop = drop)
+  }
+  if (is.character(whichdim)) {
+    whichdim_num <- match(whichdim, names(dimnames(dat)))
+    if (anyNA(whichdim_num))
+      stop("splitArray: wrong dimension name(s) provided", call. = FALSE)
+  } else {
+    whichdim_num <- whichdim
+  }
+  assertArray(dat, min.d = 1L, .var.name = "dat")
+  dimn <- fillMissingDimnames(dimnames(dat), dim(dat))
+  if (is.null(f)) {
+    f <- dimn[whichdim_num]
+  } else if (!is.list(f)) {
+    f <- list(f)
+    names(f) <- names(dimn)[whichdim_num[1]]
+  }
+  if (is.character(whichdim)) {
+    ind <- names(f) == "" & vapply(f, is.null, logical(1L))
+    names(f)[ind] <- whichdim[ind]
+  }
+  if (length(f) != length(whichdim_num)) {
+    stop("splitArray: length of f must match the length of whichdim", 
+         call. = FALSE)
+  }
+  for (i in seq_along(f)) {
+    if (is.null(f[[i]])) {
+      #f[[i]] <- seq_len(dim(dat)[whichdim_num[i]])
+      f[[i]] <- dimn[[whichdim_num[i]]]
+    } else if (is.list(f[[i]])) {
+      f[[i]] <- do.call(paste, list(f[[i]], sep="_"))
     }
-    if (is.character(whichdim)) {
-        whichdim_num <- match(whichdim, names(dimnames(dat)))
-        if (anyNA(whichdim_num))
-            stop("splitArray: wrong dimension name(s) provided", call. = FALSE)
-    } else {
-        whichdim_num <- whichdim
-    }
-    assertArray(dat, min.d = 1L, .var.name = "dat")
-    dimn <- fillMissingDimnames(dimnames(dat), dim(dat))
-    if (is.null(f)) {
-        f <- dimn[whichdim_num]
-    } else if (!is.list(f)) {
-        f <- list(f)
-        names(f) <- names(dimn)[whichdim_num[1]]
-    }
-    if (is.character(whichdim)) {
-        ind <- names(f) == "" & vapply(f, is.null, logical(1L))
-        names(f)[ind] <- whichdim[ind]
-    }
-    if (length(f) != length(whichdim_num)) {
-        stop("splitArray: length of f must match the length of whichdim", 
-             call. = FALSE)
-    }
-    for (i in seq_along(f)) {
-        if (is.null(f[[i]])) {
-            #f[[i]] <- seq_len(dim(dat)[whichdim_num[i]])
-            f[[i]] <- dimn[[whichdim_num[i]]]
-        } else if (is.list(f[[i]])) {
-            f[[i]] <- do.call(paste, list(f[[i]], sep="_"))
-        }
-    }
-    f <- lapply(f, function(x) split(seq_along(x), x))
-    out.dimnames <- lapply(f, names)
-    out.dim <- vapply(out.dimnames, length, integer(1L), USE.NAMES = FALSE)
-    f <- expand.grid(f, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
-    out <- lapply(1:nrow(f), function(i) subFn(f[i, ]))
-    setattr(out, "names",
-            do.call("paste", c(lapply(f, names), list(sep = "."))))
-    setattr(out, "dim", out.dim)
-    setattr(out, "dimnames", out.dimnames)
-    # return
-    out
+  }
+  f <- lapply(f, function(x) split(seq_along(x), x))
+  out.dimnames <- lapply(f, names)
+  out.dim <- vapply(out.dimnames, length, integer(1L), USE.NAMES = FALSE)
+  f <- expand.grid(f, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+  out <- lapply(1:nrow(f), function(i) subFn(f[i, ]))
+  setattr(out, "names",
+          do.call("paste", c(lapply(f, names), list(sep = "."))))
+  setattr(out, "dim", out.dim)
+  setattr(out, "dimnames", out.dimnames)
+  # return
+  out
 }
 
 #' Combine several arrays into one large array
@@ -1694,64 +1694,64 @@ bindArrays <- function(..., along = NULL, rev.along = NULL, new.names = NULL,
                        use.anon.names = FALSE,
                        use.first.dimnames = FALSE, hier.names = FALSE,
                        along_name = NULL)  {
-    dat <- list(...)
-    if (length(dat) > 1L && any(vapply(dat, is.list, logical(1L)))) {
-        stop("Only one list is allowed as an argument")
+  dat <- list(...)
+  if (length(dat) > 1L && any(vapply(dat, is.list, logical(1L)))) {
+    stop("Only one list is allowed as an argument")
+  }
+  if (is.list(dat[[1L]])) dat <- dat[[1L]]
+  if (is.character(along)) stop("Provide along_name if you want to refer to a dimension by its name")
+  #
+  dimn <- lapply(dat, function(x) names(dimnames(x)))
+  if (length(udimn <- unique(dimn)) > 1L) {
+    if (is.null(along_name)) {
+      stop("The order of dimensions differs. Provide along_name instead of along.")
     }
-    if (is.list(dat[[1L]])) dat <- dat[[1L]]
-    if (is.character(along)) stop("Provide along_name if you want to refer to a dimension by its name")
-    #
-    dimn <- lapply(dat, function(x) names(dimnames(x)))
-    if (length(udimn <- unique(dimn)) > 1L) {
-        if (is.null(along_name)) {
-            stop("The order of dimensions differs. Provide along_name instead of along.")
-        }
-        alldimn <- unique(unlist(dimn, use.names = FALSE))
-        dat <- lapply(dat, function(x) {
-            if (length(dim(x)) < length(alldimn)) {
-                if (identical(names(dimnames(x)),
-                              setdiff(alldimn, along_name))) {
-                    x
-                } else {
-                    aperm(x, setdiff(alldimn, along_name))
-                }
-            } else {
-                if (identical(names(dimnames(x)), alldimn)) {
-                    x
-                } else {
-                    aperm(x, alldimn)
-                }
-            }
-        })
-    }
-    new_ndimn <- udimn[[1L]]
-    N <- max(1L, vapply(dat, function(x) length(dim(x)), integer(1L)))
-    if (is.null(along))
-        along <- N
-    if (!is.null(rev.along))
-        along <- N + 1L - rev.along
-    if (!is.null(along_name)) {
-        ind <- match(along_name, new_ndimn)
-        if (!is.na(ind)) {
-            along <- ind
+    alldimn <- unique(unlist(dimn, use.names = FALSE))
+    dat <- lapply(dat, function(x) {
+      if (length(dim(x)) < length(alldimn)) {
+        if (identical(names(dimnames(x)),
+                      setdiff(alldimn, along_name))) {
+          x
         } else {
-            if (along >= 1L && along <= length(new_ndimn))
-                along <- length(new_ndimn) + 1L
-            new_ndimn <- append(new_ndimn, along_name, along)
+          aperm(x, setdiff(alldimn, along_name))
         }
-    } else if (along < 1) {
-        new_ndimn <- c("", new_ndimn)
-    } else if (along > N) {
-        new_ndimn <- c(new_ndimn, "")
+      } else {
+        if (identical(names(dimnames(x)), alldimn)) {
+          x
+        } else {
+          aperm(x, alldimn)
+        }
+      }
+    })
+  }
+  new_ndimn <- udimn[[1L]]
+  N <- max(1L, vapply(dat, function(x) length(dim(x)), integer(1L)))
+  if (is.null(along))
+    along <- N
+  if (!is.null(rev.along))
+    along <- N + 1L - rev.along
+  if (!is.null(along_name)) {
+    ind <- match(along_name, new_ndimn)
+    if (!is.na(ind)) {
+      along <- ind
+    } else {
+      if (along >= 1L && along <= length(new_ndimn))
+        along <- length(new_ndimn) + 1L
+      new_ndimn <- append(new_ndimn, along_name, along)
     }
-    out <- abind(dat, along = along, rev.along = NULL, new.names = new.names,
-                 force.array = force.array, make.names = make.names,
-                 use.anon.names = use.anon.names,
-                 use.first.dimnames = use.first.dimnames,
-                 hier.names = hier.names)
-    names(dimnames(out)) <- new_ndimn
-    # return
-    out
+  } else if (along < 1) {
+    new_ndimn <- c("", new_ndimn)
+  } else if (along > N) {
+    new_ndimn <- c(new_ndimn, "")
+  }
+  out <- abind(dat, along = along, rev.along = NULL, new.names = new.names,
+               force.array = force.array, make.names = make.names,
+               use.anon.names = use.anon.names,
+               use.first.dimnames = use.first.dimnames,
+               hier.names = hier.names)
+  names(dimnames(out)) <- new_ndimn
+  # return
+  out
 }
 
 #' Merge arrays having common dimension identifiers
@@ -1774,63 +1774,63 @@ bindArrays <- function(..., along = NULL, rev.along = NULL, new.names = NULL,
 #' the dimension levels of the input arrays.
 mergeArrays <- function(..., base_value = NA,
                         sort_dims = FALSE, sort_dimlevels = FALSE) {
-    is_bad <- function(x) {
-        anyNA(x) || is.null(x) || any(x == "") || anyDuplicated(x)
+  is_bad <- function(x) {
+    anyNA(x) || is.null(x) || any(x == "") || anyDuplicated(x)
+  }
+  dimnCheck <- function(x) {
+    if (is_bad(names(x))) return(FALSE)
+    if (any(vapply(x, is_bad, logical(1L)))) return(FALSE)
+    TRUE
+  }
+  #
+  dat <- list(...)
+  if (length(dat) > 1L && any(vapply(dat, is.list, logical(1L)))) {
+    stop("mergeArrays: only one list is allowed as an argument", 
+         call. = FALSE)
+  }
+  if (is.list(dat[[1L]])) dat <- dat[[1L]]
+  #
+  dimn <- lapply(dat, function(x) dimnames(x))
+  if (any(checks <- !vapply(dimn, dimnCheck, logical(1L)))) {
+    bad <- which(checks)
+    stop(paste0(
+      "mergeArrays: dimension names of the arrays ",
+      paste(bad, collapse = ", "),
+      " are not appropriate (see Arguments in help('mergeArrays')"), 
+      call. = FALSE)
+  }
+  ndimn <- lapply(dimn, names)
+  if (length(unique(lapply(ndimn, sort))) > 1L)
+    stop(paste0(
+      "mergeArrays: at least one list element has a ",
+      "unique dimension identifier", 
+      call. = FALSE))
+  all_dimn <- if (sort_dims) dimn[[1L]][order(ndimn[[1L]])] else dimn[[1L]]
+  for (i in names(all_dimn)) {
+    for (j in dimn[-1L]) {
+      all_dimn[[i]] <- union(all_dimn[[i]], j[[i]])
     }
-    dimnCheck <- function(x) {
-        if (is_bad(names(x))) return(FALSE)
-        if (any(vapply(x, is_bad, logical(1L)))) return(FALSE)
-        TRUE
+    if (sort_dimlevels) all_dimn[[i]] <- sort(all_dimn[[i]])
+  }
+  out <- base_value[1L]
+  storage.mode(out) <- typeof(dat[[1L]])
+  out <- array_(out, vapply(all_dimn, length, integer(1L)),
+                all_dimn)
+  out_touched <- array_(FALSE, dim(out), dimnames(out))
+  for (i in seq_along(dat)) {
+    x <- dat[[i]]
+    if (any(subsetArray(out_touched, dimnames(x)))) {
+      stop(paste0(
+        "mergeArrays: ",
+        "the ", i, ". list element has overlapping dimension ",
+        "combination(s) with at least one of the previous list ",
+        "elements"), call. = FALSE)
     }
-    #
-    dat <- list(...)
-    if (length(dat) > 1L && any(vapply(dat, is.list, logical(1L)))) {
-        stop("mergeArrays: only one list is allowed as an argument", 
-             call. = FALSE)
-    }
-    if (is.list(dat[[1L]])) dat <- dat[[1L]]
-    #
-    dimn <- lapply(dat, function(x) dimnames(x))
-    if (any(checks <- !vapply(dimn, dimnCheck, logical(1L)))) {
-        bad <- which(checks)
-        stop(paste0(
-            "mergeArrays: dimension names of the arrays ",
-            paste(bad, collapse = ", "),
-            " are not appropriate (see Arguments in help('mergeArrays')"), 
-            call. = FALSE)
-    }
-    ndimn <- lapply(dimn, names)
-    if (length(unique(lapply(ndimn, sort))) > 1L)
-        stop(paste0(
-            "mergeArrays: at least one list element has a ",
-            "unique dimension identifier", 
-             call. = FALSE))
-    all_dimn <- if (sort_dims) dimn[[1L]][order(ndimn[[1L]])] else dimn[[1L]]
-    for (i in names(all_dimn)) {
-        for (j in dimn[-1L]) {
-            all_dimn[[i]] <- union(all_dimn[[i]], j[[i]])
-        }
-        if (sort_dimlevels) all_dimn[[i]] <- sort(all_dimn[[i]])
-    }
-    out <- base_value[1L]
-    storage.mode(out) <- typeof(dat[[1L]])
-    out <- array_(out, vapply(all_dimn, length, integer(1L)),
-                  all_dimn)
-    out_touched <- array_(FALSE, dim(out), dimnames(out))
-    for (i in seq_along(dat)) {
-        x <- dat[[i]]
-        if (any(subsetArray(out_touched, dimnames(x)))) {
-            stop(paste0(
-                "mergeArrays: ",
-                "the ", i, ". list element has overlapping dimension ",
-                "combination(s) with at least one of the previous list ",
-                "elements"), call. = FALSE)
-        }
-        subsetArray(out_touched, dimnames(x)) <- TRUE
-        subsetArray(out, dimnames(x)) <- x
-    }
-    # return
-    out
+    subsetArray(out_touched, dimnames(x)) <- TRUE
+    subsetArray(out, dimnames(x)) <- x
+  }
+  # return
+  out
 }
 
 
@@ -1855,40 +1855,40 @@ mergeArrays <- function(..., base_value = NA,
 #' @return A matrix or array, if the input is a one-level list, and a one-level
 #' list, if the input is a two-level list
 rearrangeList <- function(dat, name_listdim, name_datadim = NULL) {
-    stopifnot(!missing(name_listdim))
-    if (identical(unlist(dat, recursive = FALSE, use.names = FALSE),
-                  unlist(dat, recursive = TRUE, use.names = FALSE))) {
-        dat <- lapply(dat, as.array)
-        newdims <- c(dim(dat[[1]]), length(dat))
-        newdimns <- c(dimnames(dat[[1]]), listS(.name_listdim = names(dat)))
-        if (!is.null(name_datadim)) {
-            names(newdimns) <- c(name_datadim, name_listdim)
-        }
-        dat <- unlist(dat, recursive = TRUE, use.names = FALSE)
-        dim(dat) <- newdims
-        dimnames(dat) <- newdimns
-    } else {
-        names_at_level2 <- names(dat[[1]])
-        dat <- lapply(dat, function(x) lapply(x, as.array))
-        dat <- lapply(seq_along(names_at_level2), function(i) {
-            out <- abind(lapply(dat, function(x) x[[i]]),
-                         along = length(dim(dat[[1]][[i]])) + 1)
-            dimn <-
-                if (!is.null(name_datadim[[i]])) {
-                    name_datadim[[i]]
-                } else {
-                    names(dimnames(dat[[1]][[i]]))
-                }
-            if (is.null(dimn)) {
-                dimn <- character(length(dim(dat[[1]][[i]])))
-            }
-            names(dimnames(out)) <- c(dimn, name_listdim)
-            return( out )
-        })
-        names(dat) <- names_at_level2
+  stopifnot(!missing(name_listdim))
+  if (identical(unlist(dat, recursive = FALSE, use.names = FALSE),
+                unlist(dat, recursive = TRUE, use.names = FALSE))) {
+    dat <- lapply(dat, as.array)
+    newdims <- c(dim(dat[[1]]), length(dat))
+    newdimns <- c(dimnames(dat[[1]]), listS(.name_listdim = names(dat)))
+    if (!is.null(name_datadim)) {
+      names(newdimns) <- c(name_datadim, name_listdim)
     }
-    # return
-    dat
+    dat <- unlist(dat, recursive = TRUE, use.names = FALSE)
+    dim(dat) <- newdims
+    dimnames(dat) <- newdimns
+  } else {
+    names_at_level2 <- names(dat[[1]])
+    dat <- lapply(dat, function(x) lapply(x, as.array))
+    dat <- lapply(seq_along(names_at_level2), function(i) {
+      out <- abind(lapply(dat, function(x) x[[i]]),
+                   along = length(dim(dat[[1]][[i]])) + 1)
+      dimn <-
+        if (!is.null(name_datadim[[i]])) {
+          name_datadim[[i]]
+        } else {
+          names(dimnames(dat[[1]][[i]]))
+        }
+      if (is.null(dimn)) {
+        dimn <- character(length(dim(dat[[1]][[i]])))
+      }
+      names(dimnames(out)) <- c(dimn, name_listdim)
+      return( out )
+    })
+    names(dat) <- names_at_level2
+  }
+  # return
+  dat
 }
 
 #' Data preparation mainly aimed at facilitating plotting in lattice or ggplot2
@@ -1927,137 +1927,137 @@ prepare2plot <- function(dat, datid,
                          compGFP = TRUE, keep_channels = !compGFP,
                          sc = NULL,
                          datfr = TRUE, iaFac = NULL, ...) {
-    #
-    .Deprecated("transformArray")
-    #
-    bool_collFac <- !is.null(collFac) && collFac %in% names(dimnames(dat))
-    if (!is.null(sc)) {
-        sc.options.default <- list(method = "phase", indiv = TRUE, div = NULL)
-        if (with(sc, exists("sc.options", inherits = FALSE))) {
-            sc.options <- lapply(1:length(sc.options.default), function(i) {
-                tt <- sc$sc.options[[names(sc.options.default)[i]]]
-                if (is.null(tt)) sc.options.default[[i]] else tt
-            })
-            names(sc.options) <- names(sc.options.default)
-            sc$sc.options <- NULL
-        } else {
-            sc.options <- sc.options.default
-        }
-    }
-    facs <- nofac_facs <- data.frame(id = "all")
-    if (!is.null(bwFac)) {
-        facs <- do.call(expand.grid, bwFac)
-        if (nrow(facs) == 0) facs <- nofac_facs
-    }
-    out <- lapply(1:nrow(facs), function(i) {
-        if (identical(nofac_facs, facs)) {
-            ids <- datid$id
-        } else {
-            ids <- datid$id[rowSums(sapply(1:length(bwFac), function(f)
-                datid[, names(bwFac)[f]] == facs[i, f])) == length(bwFac)]
-        }
-        subFac <- append(wiFac, list(id = ids))
-        temp <- subsetArray(dat, subFac)
-        if (!is.null(sc) && sc.options$method != "fix" && sc.options$indiv == TRUE) {
-            if (bool_collFac) {
-                tempcoll <- setdiff(collFac, c("chan", "id", "time"))
-                temp <- avgDims(temp, tempcoll)
-                collFac <- setdiff(collFac, tempcoll)
-            }
-            tt0 <- subsetArray(temp, sc)
-            tempcoll <- setdiff(names(dimnames(tt0)), c("chan", "id", "time"))
-            if (length(tempcoll) > 0) tt0 <- avgDims(tt0, tempcoll)
-            tt0 <- compGfp(tt0)
-            if (sc.options$method == "phase") {
-                tt0 <- apply(tt0, which(names(dimnames(tt0)) == "id"),
-                             mean, na.rm = TRUE)
-                temp <- sweep(temp, which(names(dimnames(temp)) == "id"),
-                              tt0, "/")
-            } else {
-                temp <- sweep(temp,
-                              match(names(dimnames(tt0)), names(dimnames(temp))),
-                              tt0, "/")
-            }
-            if (bool_collFac) temp <- avgDims(temp, collFac)
-        } else {
-            if (bool_collFac) temp <- avgDims(temp, collFac)
-        }
-        if (!is.null(sc) && sc.options$method != "fix" && sc.options$indiv == FALSE) {
-            tt0 <- subsetArray(temp, sc)
-            tempcoll <- setdiff(names(dimnames(tt0)), c("chan", "id", "time"))
-            if (length(tempcoll) > 0) tt0 <- avgDims(tt0, tempcoll)
-            tt0 <- compGfp(tt0)
-            if (sc.options$method == "phase") {
-                tt0 <- mean(tt0)
-            }
-            if (is.vector(tt0)) {
-                temp <- temp / tt0
-            } else {
-                temp <- sweep(temp,
-                              match(names(dimnames(tt0)), names(dimnames(temp))),
-                              tt0, "/")
-            }
-        }
-        if (!is.null(sc) && sc.options$method == "fix") {
-            temp <- temp/sc.options$div[i]
-        }
-        if (!is.null(diffFac)) {
-            if (!is.list(diffFac)) {
-                diffFac <- matrix(diffFac, 1, 4)
-            } else {
-                diffFac <- matrix(unlist(diffFac), length(diffFac), 4, TRUE)
-            }
-            for (ii in 1:nrow(diffFac)) {
-                c1 <- parse(text = paste("list(", diffFac[ii,1], "='",
-                                         diffFac[ii,2], "')", sep = ""))
-                c2 <- parse(text = paste("list(", diffFac[ii,1], "='",
-                                         diffFac[ii,3], "')", sep = ""))
-                tempd <- subsetArray(temp, eval(c1)) -
-                    subsetArray(temp, eval(c2))
-                dimn.orig <- dimnames(temp)
-                temp <- aperm(temp, c(setdiff(names(dimn.orig),
-                                              diffFac[ii,1]),
-                                      diffFac[ii,1]))
-                dimn.perm <- dimnames(temp)
-                temp <- c(temp,tempd)
-                dimn.perm[[diffFac[ii, 1]]] <- dimn.orig[[diffFac[ii, 1]]] <-
-                    c(dimn.orig[[diffFac[ii, 1]]], diffFac[ii, 4])
-                array_(temp, vapply(dimn.perm, length, 0L), dimn.perm)
-                temp <- aperm(temp, names(dimn.orig))
-            }
-        }
-        if (compGFP) {
-            temp <- compGfp(temp, keep_channels = keep_channels)
-            if (datfr) {
-                temp <- array2df(temp, ...)
-                temp[colnames(facs)] <- facs[i, ]
-            }
-        } else if (datfr) {
-            temp <- array2df(temp, ...)
-            temp[colnames(facs)] <- facs[i, ]
-        }
-        return(temp)
-    })
-    if (datfr) {
-        out <- do.call(rbind, out)
-        if (!is.null(iaFac)) {
-            out[, paste(iaFac, collapse = ".")] <- interaction(out[, iaFac])
-        }
+  #
+  .Deprecated("transformArray")
+  #
+  bool_collFac <- !is.null(collFac) && collFac %in% names(dimnames(dat))
+  if (!is.null(sc)) {
+    sc.options.default <- list(method = "phase", indiv = TRUE, div = NULL)
+    if (with(sc, exists("sc.options", inherits = FALSE))) {
+      sc.options <- lapply(1:length(sc.options.default), function(i) {
+        tt <- sc$sc.options[[names(sc.options.default)[i]]]
+        if (is.null(tt)) sc.options.default[[i]] else tt
+      })
+      names(sc.options) <- names(sc.options.default)
+      sc$sc.options <- NULL
     } else {
-        names.mat <- sapply(1:ncol(facs),
-                            function(cc) sapply(1:nrow(facs), function(rr)
-                                paste(colnames(facs)[cc],
-                                      facs[rr, cc], sep = "-")))
-        if (nrow(facs) > 1) {
-            names(out) <- apply(names.mat, 1, paste, collapse = "_")
-        } else if (ncol(facs) > 1) {
-            names(out) <- paste(names.mat, collapse = "_")
-        } else {
-            names(out) <- names.mat
-        }
+      sc.options <- sc.options.default
     }
-    # return
-    out
+  }
+  facs <- nofac_facs <- data.frame(id = "all")
+  if (!is.null(bwFac)) {
+    facs <- do.call(expand.grid, bwFac)
+    if (nrow(facs) == 0) facs <- nofac_facs
+  }
+  out <- lapply(1:nrow(facs), function(i) {
+    if (identical(nofac_facs, facs)) {
+      ids <- datid$id
+    } else {
+      ids <- datid$id[rowSums(sapply(1:length(bwFac), function(f)
+        datid[, names(bwFac)[f]] == facs[i, f])) == length(bwFac)]
+    }
+    subFac <- append(wiFac, list(id = ids))
+    temp <- subsetArray(dat, subFac)
+    if (!is.null(sc) && sc.options$method != "fix" && sc.options$indiv == TRUE) {
+      if (bool_collFac) {
+        tempcoll <- setdiff(collFac, c("chan", "id", "time"))
+        temp <- avgDims(temp, tempcoll)
+        collFac <- setdiff(collFac, tempcoll)
+      }
+      tt0 <- subsetArray(temp, sc)
+      tempcoll <- setdiff(names(dimnames(tt0)), c("chan", "id", "time"))
+      if (length(tempcoll) > 0) tt0 <- avgDims(tt0, tempcoll)
+      tt0 <- compGfp(tt0)
+      if (sc.options$method == "phase") {
+        tt0 <- apply(tt0, which(names(dimnames(tt0)) == "id"),
+                     mean, na.rm = TRUE)
+        temp <- sweep(temp, which(names(dimnames(temp)) == "id"),
+                      tt0, "/")
+      } else {
+        temp <- sweep(temp,
+                      match(names(dimnames(tt0)), names(dimnames(temp))),
+                      tt0, "/")
+      }
+      if (bool_collFac) temp <- avgDims(temp, collFac)
+    } else {
+      if (bool_collFac) temp <- avgDims(temp, collFac)
+    }
+    if (!is.null(sc) && sc.options$method != "fix" && sc.options$indiv == FALSE) {
+      tt0 <- subsetArray(temp, sc)
+      tempcoll <- setdiff(names(dimnames(tt0)), c("chan", "id", "time"))
+      if (length(tempcoll) > 0) tt0 <- avgDims(tt0, tempcoll)
+      tt0 <- compGfp(tt0)
+      if (sc.options$method == "phase") {
+        tt0 <- mean(tt0)
+      }
+      if (is.vector(tt0)) {
+        temp <- temp / tt0
+      } else {
+        temp <- sweep(temp,
+                      match(names(dimnames(tt0)), names(dimnames(temp))),
+                      tt0, "/")
+      }
+    }
+    if (!is.null(sc) && sc.options$method == "fix") {
+      temp <- temp/sc.options$div[i]
+    }
+    if (!is.null(diffFac)) {
+      if (!is.list(diffFac)) {
+        diffFac <- matrix(diffFac, 1, 4)
+      } else {
+        diffFac <- matrix(unlist(diffFac), length(diffFac), 4, TRUE)
+      }
+      for (ii in 1:nrow(diffFac)) {
+        c1 <- parse(text = paste("list(", diffFac[ii,1], "='",
+                                 diffFac[ii,2], "')", sep = ""))
+        c2 <- parse(text = paste("list(", diffFac[ii,1], "='",
+                                 diffFac[ii,3], "')", sep = ""))
+        tempd <- subsetArray(temp, eval(c1)) -
+          subsetArray(temp, eval(c2))
+        dimn.orig <- dimnames(temp)
+        temp <- aperm(temp, c(setdiff(names(dimn.orig),
+                                      diffFac[ii,1]),
+                              diffFac[ii,1]))
+        dimn.perm <- dimnames(temp)
+        temp <- c(temp,tempd)
+        dimn.perm[[diffFac[ii, 1]]] <- dimn.orig[[diffFac[ii, 1]]] <-
+          c(dimn.orig[[diffFac[ii, 1]]], diffFac[ii, 4])
+        array_(temp, vapply(dimn.perm, length, 0L), dimn.perm)
+        temp <- aperm(temp, names(dimn.orig))
+      }
+    }
+    if (compGFP) {
+      temp <- compGfp(temp, keep_channels = keep_channels)
+      if (datfr) {
+        temp <- array2df(temp, ...)
+        temp[colnames(facs)] <- facs[i, ]
+      }
+    } else if (datfr) {
+      temp <- array2df(temp, ...)
+      temp[colnames(facs)] <- facs[i, ]
+    }
+    return(temp)
+  })
+  if (datfr) {
+    out <- do.call(rbind, out)
+    if (!is.null(iaFac)) {
+      out[, paste(iaFac, collapse = ".")] <- interaction(out[, iaFac])
+    }
+  } else {
+    names.mat <- sapply(1:ncol(facs),
+                        function(cc) sapply(1:nrow(facs), function(rr)
+                          paste(colnames(facs)[cc],
+                                facs[rr, cc], sep = "-")))
+    if (nrow(facs) > 1) {
+      names(out) <- apply(names.mat, 1, paste, collapse = "_")
+    } else if (ncol(facs) > 1) {
+      names(out) <- paste(names.mat, collapse = "_")
+    } else {
+      names(out) <- names.mat
+    }
+  }
+  # return
+  out
 }
 
 #' Data preparation mainly aimed at facilitating plotting in lattice or ggplot2
@@ -2175,133 +2175,133 @@ prepare2plot <- function(dat, datid,
 transformArray <- function(formula, data, group = NULL, group_fun = "avgDims",
                            subset = NULL, datfr = TRUE, 
                            auto_convert = TRUE, ...) {
-    # checks
-    assertArray(data, mode = "atomic", min.d = 1L, .var.name = "data")
-    group_fun <- match.fun(group_fun)
-    opt <- list(...)
+  # checks
+  assertArray(data, mode = "atomic", min.d = 1L, .var.name = "data")
+  group_fun <- match.fun(group_fun)
+  opt <- list(...)
+  dimn <- dimnames(data)
+  dimid <- names(dimn)
+  if (is.null(dimid) || any(dimid == ""))
+    stop("transformArray: the input array must have named dimnames",
+         call. = FALSE)
+  #
+  if (!is.null(subset)) {
+    data <- subsetArray(data, subset)
     dimn <- dimnames(data)
     dimid <- names(dimn)
-    if (is.null(dimid) || any(dimid == ""))
-        stop("transformArray: the input array must have named dimnames",
-             call. = FALSE)
-    #
-    if (!is.null(subset)) {
-        data <- subsetArray(data, subset)
-        dimn <- dimnames(data)
-        dimid <- names(dimn)
-    }
-    #
-    formula <- as.formula(formula)
-    # LHS
-    if (length(formula) == 2L) {
-        formula[[3L]] <- formula[[2L]]
-        formula[[2L]] <- 
-            if (!is.null(opt$value_name)) {
-                as.symbol(opt$value_name)
-            } else {
-                as.symbol(formals(array2df)$value_name)
-            }
-    }
-    LHS <- formula[[2L]]
-    value_dims <- 
-        regmatches(deparse(LHS), 
-                   gregexpr("(?<=\\[).+?(?=\\])", deparse(LHS), perl = TRUE)
-                   )[[1L]]
-    if (length(value_dims)) value_dims <- strsplit(value_dims, ", *")[[1L]]
-    LHS <- parse(text = sub("\\[.*\\]", "", deparse(LHS)))[[1L]]
-    # evaluate RHS
-    RHS <- deparse(formula[[3L]])
-    RHS <- gsub(" ", "", RHS)
-    RHS <- gsub("-", "+-", RHS)
-    RHS <- strsplit(RHS, "\\|")[[1L]]
-    splitdims <- 
-        if (length(RHS) > 1L) {
-            strsplit(RHS[2L], "\\+")[[1L]] 
-        } else {
-            NULL
-        }
-    dims <- strsplit(RHS, "\\+")[[1L]]
-    # collapse
-    avgdims <- sub("^-", "", dims[grepl("^-", dims)])
-    dims <- dims[!grepl("^-", dims)]
-    if ("." %in% dims) {
-        dims <- setdiff(dimid, c(avgDims, value_dims, splitdims))
-    } else if ("." %in% splitdims) {
-        splitdims <- setdiff(dimid, c(avgDims, value_dims, dims))
-    }
-    avgdims <- setdiff(dimid, c(dims, value_dims, splitdims))
-    if (length(avgdims)) data <- avgDims(data, avgdims)
-    # split
-    data <-
-        if (!is.null(splitdims)) {
-            if (is.null(group)) {
-                group <- vector("list", length(splitdims))
-            } else if (!is.list(group)) {
-                if (length(splitdims) == 1L) {
-                    group <- list(group)
-                } else {
-                    stop(paste0(
-                        "The group argument must be a list if there are ",
-                        "more than one splitting dimensions"), call. = FALSE)
-                }
-            }
-            ind <-
-                if (is.null(names(group))) {
-                    !logical(length(splitdims))
-                } else {
-                    is.na(names(group)) | names(group) == ""
-                }
-            names(group)[ind] <- splitdims[ind]
-            splitArray(data, splitdims, group)
-        } else {
-            list(data)
-        }
-    if (!is.null(splitdims)) {
-        for (i in seq_along(data)) {
-            data[[i]] <- do(group_fun, data[[i]], splitdims)
-            if (!is.atomic(data[[i]])) {
-                stop(paste0(
-                    "transformArray: 'group_fun' must return an atomic object", 
-                    "(a vector, matrix, or array)"), call. = FALSE)
-            }
-        }
-    }
-    # evaluate LHS
-    if (length(LHS) > 1L) {
-        value_name <- as.character(LHS[[2]])
-        if (identical(value_name, ".")) value_name = ""
-        LHS[[2]] <- quote(x)
-        data[] <- lapply(data, function(x) eval(LHS))
+  }
+  #
+  formula <- as.formula(formula)
+  # LHS
+  if (length(formula) == 2L) {
+    formula[[3L]] <- formula[[2L]]
+    formula[[2L]] <- 
+      if (!is.null(opt$value_name)) {
+        as.symbol(opt$value_name)
+      } else {
+        as.symbol(formals(array2df)$value_name)
+      }
+  }
+  LHS <- formula[[2L]]
+  value_dims <- 
+    regmatches(deparse(LHS), 
+               gregexpr("(?<=\\[).+?(?=\\])", deparse(LHS), perl = TRUE)
+    )[[1L]]
+  if (length(value_dims)) value_dims <- strsplit(value_dims, ", *")[[1L]]
+  LHS <- parse(text = sub("\\[.*\\]", "", deparse(LHS)))[[1L]]
+  # evaluate RHS
+  RHS <- deparse(formula[[3L]])
+  RHS <- gsub(" ", "", RHS)
+  RHS <- gsub("-", "+-", RHS)
+  RHS <- strsplit(RHS, "\\|")[[1L]]
+  splitdims <- 
+    if (length(RHS) > 1L) {
+      strsplit(RHS[2L], "\\+")[[1L]] 
     } else {
-        value_name <- as.character(LHS)
+      NULL
     }
-    # back to array
-    dimn <- attr(data, "dimnames")
-    data <- bindArrays(data, along = 0L)
-    data <- dim2multidim(data, 1,
-                         expand.grid(dimn,
-                                     KEEP.OUT.ATTRS = FALSE,
-                                     stringsAsFactors = FALSE))
-    # permute to the original dimension order
-    dimid[dimid %in% splitdims] <- names(dimn)
-    dimid <- intersect(dimid, names(dimnames(data)))
-    data <- apermArray(data, dimid)
-    # transform to a data.frame
-    if (datfr) {
-        data <- decorateDims_(data)
-        dimn <- dimnames(data)
-        singleton <- which(dim(data) == 1L &
-                               grepl("_Dim", names(dimn)))
-        singleton <- names(dimn)[singleton]
-        data <- array2df(data, value_name = value_name, 
-                         value_dim = value_dims,
-                         auto_convert = auto_convert, 
-                         ...)
-        if (length(singleton) > 0)
-            data <- data[setdiff(colnames(data), singleton)]
+  dims <- strsplit(RHS, "\\+")[[1L]]
+  # collapse
+  avgdims <- sub("^-", "", dims[grepl("^-", dims)])
+  dims <- dims[!grepl("^-", dims)]
+  if ("." %in% dims) {
+    dims <- setdiff(dimid, c(avgDims, value_dims, splitdims))
+  } else if ("." %in% splitdims) {
+    splitdims <- setdiff(dimid, c(avgDims, value_dims, dims))
+  }
+  avgdims <- setdiff(dimid, c(dims, value_dims, splitdims))
+  if (length(avgdims)) data <- avgDims(data, avgdims)
+  # split
+  data <-
+    if (!is.null(splitdims)) {
+      if (is.null(group)) {
+        group <- vector("list", length(splitdims))
+      } else if (!is.list(group)) {
+        if (length(splitdims) == 1L) {
+          group <- list(group)
+        } else {
+          stop(paste0(
+            "The group argument must be a list if there are ",
+            "more than one splitting dimensions"), call. = FALSE)
+        }
+      }
+      ind <-
+        if (is.null(names(group))) {
+          !logical(length(splitdims))
+        } else {
+          is.na(names(group)) | names(group) == ""
+        }
+      names(group)[ind] <- splitdims[ind]
+      splitArray(data, splitdims, group)
+    } else {
+      list(data)
     }
-    # return
-    data
+  if (!is.null(splitdims)) {
+    for (i in seq_along(data)) {
+      data[[i]] <- do(group_fun, data[[i]], splitdims)
+      if (!is.atomic(data[[i]])) {
+        stop(paste0(
+          "transformArray: 'group_fun' must return an atomic object", 
+          "(a vector, matrix, or array)"), call. = FALSE)
+      }
+    }
+  }
+  # evaluate LHS
+  if (length(LHS) > 1L) {
+    value_name <- as.character(LHS[[2]])
+    if (identical(value_name, ".")) value_name = ""
+    LHS[[2]] <- quote(x)
+    data[] <- lapply(data, function(x) eval(LHS))
+  } else {
+    value_name <- as.character(LHS)
+  }
+  # back to array
+  dimn <- attr(data, "dimnames")
+  data <- bindArrays(data, along = 0L)
+  data <- dim2multidim(data, 1,
+                       expand.grid(dimn,
+                                   KEEP.OUT.ATTRS = FALSE,
+                                   stringsAsFactors = FALSE))
+  # permute to the original dimension order
+  dimid[dimid %in% splitdims] <- names(dimn)
+  dimid <- intersect(dimid, names(dimnames(data)))
+  data <- apermArray(data, dimid)
+  # transform to a data.frame
+  if (datfr) {
+    data <- decorateDims_(data)
+    dimn <- dimnames(data)
+    singleton <- which(dim(data) == 1L &
+                         grepl("_Dim", names(dimn)))
+    singleton <- names(dimn)[singleton]
+    data <- array2df(data, value_name = value_name, 
+                     value_dim = value_dims,
+                     auto_convert = auto_convert, 
+                     ...)
+    if (length(singleton) > 0)
+      data <- data[setdiff(colnames(data), singleton)]
+  }
+  # return
+  data
 }
 
 
@@ -2366,117 +2366,117 @@ transformArray <- function(formula, data, group = NULL, group_fun = "avgDims",
 #' }
 autoConvert <- function(dat, select = NULL, conversion = "ANY",  
                         rules = convertParams(), keep_dim = TRUE) {
-    #
-    # workhorse function
-    convert <- function(x, conv, rules, x_ind, dat_type) {
-        # early return if 'x' does not match 'IF';
-        # choose the right element from 'rules' function list
-        if (!identical(conv, "ANY") && 
-            !isTRUE(rules[[conv]]$IF(x))) {
-            return(x)
-        } else if (identical(conv, "ANY")) {
-            conv_rule <- NULL
-            for (r in rules) {
-                if (isTRUE(r$IF(x))) {
-                    conv_rule <- r
-                    break
-                }
-            }
-            if (is.null(conv_rule)) return(x)
-        } else {
-            conv_rule <- rules[[conv]]
+  #
+  # workhorse function
+  convert <- function(x, conv, rules, x_ind, dat_type) {
+    # early return if 'x' does not match 'IF';
+    # choose the right element from 'rules' function list
+    if (!identical(conv, "ANY") && 
+        !isTRUE(rules[[conv]]$IF(x))) {
+      return(x)
+    } else if (identical(conv, "ANY")) {
+      conv_rule <- NULL
+      for (r in rules) {
+        if (isTRUE(r$IF(x))) {
+          conv_rule <- r
+          break
         }
-        # informative error message
-        err_msg <- "autoConvert: the coercion resulted in an error"
-        if (dat_type != "other") {
-            tmp <- switch(dat_type,
-                          list = " element of the list",
-                          data.frame = " variable")
-            err_msg <- paste0(err_msg, 
-                              sprintf(" for the %d.", x_ind),
-                              tmp)
-        }
-        errFn <- function(e) stop(err_msg, call. = FALSE)
-        # 
-        for (cr in seq_along(conv_rule$DO)) {
-            DO <- conv_rule$DO[[cr]]
-            EVAL <- conv_rule$EVAL
-            out <- try(suppressWarnings(DO(x)), silent = TRUE)
-            # if error, continue with the next cr
-            if (inherits(out, "try-error")) {
-                out <- x
-                next
-            }
-            # evaluate
-            ev <- try(EVAL(x, out), silent = TRUE)
-            if (length(ev) > 1L) {
-                stop(paste0(
-                    "autoConvert: ",
-                    "the EVAL function must return a logical value (either ",
-                    "TRUE or FALSE)"), call. = FALSE)
-            } else if (inherits(ev, "try-error")) {
-                stop(paste0(
-                    "autoConvert: ",
-                    "the EVAL function exited with an error: ",
-                    ev), call. = FALSE)
-            } else if (isTRUE(ev)) {
-                if (keep_dim) {
-                    setattr(out, "dim", dim(x))
-                    setattr(out, "dimnames", dimnames(x))
-                }
-                break
-            } else {
-                out <- x
-            }
-        }
-        # return
-        out
-    }
-    #
-    # argument checks
-    #
-    # deparse 'convert'
-    rules <- argumentDeparser(substitute(rules), "convertParams")
-    # check 'dat'
-    if (is.atomic(dat)) {
-        dat_type <- "other"
-        dat <- list(dat)
-    } else if (is.data.frame(dat)) {
-        dat_type <- "data.frame"
-    } else if (is.list(dat)) {
-        dat_type <- "list"
+      }
+      if (is.null(conv_rule)) return(x)
     } else {
+      conv_rule <- rules[[conv]]
+    }
+    # informative error message
+    err_msg <- "autoConvert: the coercion resulted in an error"
+    if (dat_type != "other") {
+      tmp <- switch(dat_type,
+                    list = " element of the list",
+                    data.frame = " variable")
+      err_msg <- paste0(err_msg, 
+                        sprintf(" for the %d.", x_ind),
+                        tmp)
+    }
+    errFn <- function(e) stop(err_msg, call. = FALSE)
+    # 
+    for (cr in seq_along(conv_rule$DO)) {
+      DO <- conv_rule$DO[[cr]]
+      EVAL <- conv_rule$EVAL
+      out <- try(suppressWarnings(DO(x)), silent = TRUE)
+      # if error, continue with the next cr
+      if (inherits(out, "try-error")) {
+        out <- x
+        next
+      }
+      # evaluate
+      ev <- try(EVAL(x, out), silent = TRUE)
+      if (length(ev) > 1L) {
         stop(paste0(
-            "autoConvert: ",
-            "'dat' must be an atomic or list/data.frame object"), 
-            call. = FALSE)
-    }
-    # check 'select'
-    if (!is.null(select)) {
-        if (!all(select %in% seq_along(dat)) &&
-            !all(select %in% names(dat))) {
-            stop("autoConvert: 'select' has invalid element(s)", call. = FALSE)
+          "autoConvert: ",
+          "the EVAL function must return a logical value (either ",
+          "TRUE or FALSE)"), call. = FALSE)
+      } else if (inherits(ev, "try-error")) {
+        stop(paste0(
+          "autoConvert: ",
+          "the EVAL function exited with an error: ",
+          ev), call. = FALSE)
+      } else if (isTRUE(ev)) {
+        if (keep_dim) {
+          setattr(out, "dim", dim(x))
+          setattr(out, "dimnames", dimnames(x))
         }
-    } else {
-        select <- seq_along(dat)
-    }
-    select <- select[!vapply(dat[select], is.null, logical(1L))]
-    # check 'conversion'
-    assertChoice(conversion, c("ANY", names(rules)), .var.name = "conversion")
-    conversion <- repLen(conversion, length(select), "conversion")
-    # perform coercion
-    for (i in seq_along(select)) {
-        selind <- select[i]
-        dat[[selind]] <- convert(
-            dat[[selind]],
-            conversion[i], rules,
-            selind, dat_type
-        )
+        break
+      } else {
+        out <- x
+      }
     }
     # return
-    if (dat_type == "other") {
-        dat[[1L]]
-    } else {
-        dat
+    out
+  }
+  #
+  # argument checks
+  #
+  # deparse 'convert'
+  rules <- argumentDeparser(substitute(rules), "convertParams")
+  # check 'dat'
+  if (is.atomic(dat)) {
+    dat_type <- "other"
+    dat <- list(dat)
+  } else if (is.data.frame(dat)) {
+    dat_type <- "data.frame"
+  } else if (is.list(dat)) {
+    dat_type <- "list"
+  } else {
+    stop(paste0(
+      "autoConvert: ",
+      "'dat' must be an atomic or list/data.frame object"), 
+      call. = FALSE)
+  }
+  # check 'select'
+  if (!is.null(select)) {
+    if (!all(select %in% seq_along(dat)) &&
+        !all(select %in% names(dat))) {
+      stop("autoConvert: 'select' has invalid element(s)", call. = FALSE)
     }
+  } else {
+    select <- seq_along(dat)
+  }
+  select <- select[!vapply(dat[select], is.null, logical(1L))]
+  # check 'conversion'
+  assertChoice(conversion, c("ANY", names(rules)), .var.name = "conversion")
+  conversion <- repLen(conversion, length(select), "conversion")
+  # perform coercion
+  for (i in seq_along(select)) {
+    selind <- select[i]
+    dat[[selind]] <- convert(
+      dat[[selind]],
+      conversion[i], rules,
+      selind, dat_type
+    )
+  }
+  # return
+  if (dat_type == "other") {
+    dat[[1L]]
+  } else {
+    dat
+  }
 }

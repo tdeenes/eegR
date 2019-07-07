@@ -51,12 +51,12 @@ importOptions <- function(eeg_ext = "dat", marker_ext = "vmrk", info_ext = "vhdr
                           marker_ignorecase = TRUE,  
                           marker_header = FALSE, marker_fill = TRUE, 
                           marker_asis = TRUE, marker_sep = ",") {
-    #
-    if (length(marker_badchan) == 1) {
-        marker_badchan <- paste(marker_badchan, c("start", "stop"), sep = "_")
-    }
-    # return
-    mget(ls())
+  #
+  if (length(marker_badchan) == 1) {
+    marker_badchan <- paste(marker_badchan, c("start", "stop"), sep = "_")
+  }
+  # return
+  mget(ls())
 }
 
 #' Import binary file exported from BrainVision
@@ -78,194 +78,194 @@ importOptions <- function(eeg_ext = "dat", marker_ext = "vmrk", info_ext = "vhdr
 #' channels (data.frame)
 importBVdat <- function(file_name, file_path = getwd(), id = "",
                         import_options = importOptions()) {
-    message(paste("\nImport ", file_name, "...", sep = ""))
-    mygrepl <- function(patterns, ...) {
-        if (is.null(patterns)) {
-            rep(FALSE, length(list(...)$x))
-        } else {
-            rowSums(sapply(patterns, 
-                           grepl, 
-                           ignore.case = import_options$marker_ignorecase, 
-                           fixed = !import_options$marker_regexp,
-                           ...)) > 0
-        }
-    }
-    extractInfo <- function(x, type = "char") {
-        out <- tolower(strsplit(info[grep(x, info)], "=")[[1]][2])
-        if (type == "num") out <- as.numeric(out)
-        return(out)
-    }
-    chanInfo <- function() {
-        chan <- strsplit(info[grep("Ch.{1,3}=", info)], "=")
-        chan_names <- sapply(chan[1:(length(chan)/2)],
-                             function(x) strsplit(x[[2]], ",")[[1]][1])
-        chan_pos <- t(sapply(chan[-(1:(length(chan)/2))],
-                             function(x) as.numeric(strsplit(x[[2]], ",")[[1]])))
-        colnames(chan_pos) <- c("r", "theta", "phi")
-        return( data.frame(chan_pos, row.names = chan_names) )
-    }
-    #
-    #assignList(import_options, verbose = FALSE)
-    #
-    # info from vhdr file
-    con1 <- file(file.path(file_path, paste(file_name, 
-                                            import_options$info_ext, 
-                                            sep = ".")))
-    info <- readLines(con1)
-    close(con1)
-    eeg_orientation <- extractInfo("DataOrientation=")
-    nr_chan <- extractInfo("NumberOfChannels=", "num")
-    nr_tpoints <- extractInfo("SegmentDataPoints=", "num")
-    eeg_length <- extractInfo("DataPoints=", "num") * nr_chan
-    eeg_Hz <- 1e6 / extractInfo("SamplingInterval=", "num")
-    chan <- chanInfo()
-    #
-    # import eeg data
-    if (!is.null(import_options$eeg_ext)) {
-        eeg <- readBin(file.path(file_path, 
-                                 paste(file_name, 
-                                       import_options$eeg_ext, sep = ".")),
-                       what = "integer", n = eeg_length)
-        eeg <- eeg / 1000
-        if (eeg_orientation == "vectorized") {
-            eeg <- t(matrix_(eeg, eeg_length/nr_chan, nr_chan))
-        } else {
-            matrix_(eeg, nr_chan, eeg_length/nr_chan)
-        }
-        setattr(eeg, "subject_id", as.character(id))
-        procstep <- list(
-            what = "import", call = match.call(),
-            file_name = file_name, file_path = file_path,
-            options = import_options)
+  message(paste("\nImport ", file_name, "...", sep = ""))
+  mygrepl <- function(patterns, ...) {
+    if (is.null(patterns)) {
+      rep(FALSE, length(list(...)$x))
     } else {
-        eeg <- NULL
+      rowSums(sapply(patterns, 
+                     grepl, 
+                     ignore.case = import_options$marker_ignorecase, 
+                     fixed = !import_options$marker_regexp,
+                     ...)) > 0
     }
-    #
-    # import markers
-    markers.orig <- with(import_options, read.table(
-        file.path(file_path, 
-                  paste(file_name, marker_ext, sep = ".")),
-        header = marker_header, 
-        fill = marker_fill, 
-        as.is = marker_asis, 
-        sep = marker_sep, 
-        skip = marker_skip))
-    markers.orig[,3] <- suppressWarnings(as.numeric(markers.orig[, 3]))
-    markers.orig[,5] <- suppressWarnings(as.integer(markers.orig[, 5]))
-    markers.orig <- markers.orig[!is.na(markers.orig[, 3]), 1:5]
-    markers.orig$segmind <- findInterval(
-        markers.orig[,3],
-        markers.orig[grepl("New Segment", 
-                           markers.orig[, 1]), 3])
-    if (eeg_length/nr_chan/nr_tpoints  != max(markers.orig$segmind))
-        stop("Marker and data files do not match!")
-    #
-    # remove data in bad channel intervals
-    if (!is.null(import_options$marker_badchan)) {
-        chan_names <- rownames(chan)
-        bch <- markers.orig[, 2]
-        ind <- markers.orig[, 5] > 0
-        bch[ind] <- paste(bch[ind],
-                          chan_names[markers.orig[ind, 5]],
-                          sep = "_")
-        bch <- paste0(bch, "_")
-        badchanFn <- function(i) {
-            indstart <- grep(paste(import_options$marker_badchan[1], ".*_", 
-                                   chan_names[i], "_", sep = ""), 
-                             bch)
-            indstart <- unique(markers.orig[indstart, 3])
-            indstop <- grep(paste(import_options$marker_badchan[2], ".*_", 
-                                  chan_names[i], "_", sep = ""), 
-                            bch)
-            indstop <- unique(markers.orig[indstop, 3])
-            len1 <- length(indstart)
-            len2 <- length(indstop)
-            if (len1 == 0 & len2 == 0) {
-                return(NULL)
-            } else {
-                lendiff <- len1 - len2
-                if (lendiff == 1) {
-                    message(
-                        paste0("One badchan_stop marker was missing at channel ", chan_names[i], 
-                               " and was automatically set to the last sampling point.")
-                    )
-                    indstop <- c(indstop, ncol(eeg))
-                } else if (lendiff == -1) {
-                    message(
-                        paste0("One badchan_start marker was missing at channel ", chan_names[i],
-                               " and was automatically set to the first sampling point.")
-                    )
-                    indstart <- c(1, indstart)    
-                } else if (abs(lendiff) > 1) {
-                    stop(
-                        paste0("Badchan_start and badchan_stop markers do not match at channel ", chan_names[i], ".")
-                    )
-                }
-                return(cbind(start = indstart, stop = indstop))
-            }
-            if (any((indstop - indstart) < 0)) {
-                stop(
-                    paste0("Badchan_start and badchan_stop markers do not match at channel ", chan_names[i], ".")
-                )
-            }
+  }
+  extractInfo <- function(x, type = "char") {
+    out <- tolower(strsplit(info[grep(x, info)], "=")[[1]][2])
+    if (type == "num") out <- as.numeric(out)
+    return(out)
+  }
+  chanInfo <- function() {
+    chan <- strsplit(info[grep("Ch.{1,3}=", info)], "=")
+    chan_names <- sapply(chan[1:(length(chan)/2)],
+                         function(x) strsplit(x[[2]], ",")[[1]][1])
+    chan_pos <- t(sapply(chan[-(1:(length(chan)/2))],
+                         function(x) as.numeric(strsplit(x[[2]], ",")[[1]])))
+    colnames(chan_pos) <- c("r", "theta", "phi")
+    return( data.frame(chan_pos, row.names = chan_names) )
+  }
+  #
+  #assignList(import_options, verbose = FALSE)
+  #
+  # info from vhdr file
+  con1 <- file(file.path(file_path, paste(file_name, 
+                                          import_options$info_ext, 
+                                          sep = ".")))
+  info <- readLines(con1)
+  close(con1)
+  eeg_orientation <- extractInfo("DataOrientation=")
+  nr_chan <- extractInfo("NumberOfChannels=", "num")
+  nr_tpoints <- extractInfo("SegmentDataPoints=", "num")
+  eeg_length <- extractInfo("DataPoints=", "num") * nr_chan
+  eeg_Hz <- 1e6 / extractInfo("SamplingInterval=", "num")
+  chan <- chanInfo()
+  #
+  # import eeg data
+  if (!is.null(import_options$eeg_ext)) {
+    eeg <- readBin(file.path(file_path, 
+                             paste(file_name, 
+                                   import_options$eeg_ext, sep = ".")),
+                   what = "integer", n = eeg_length)
+    eeg <- eeg / 1000
+    if (eeg_orientation == "vectorized") {
+      eeg <- t(matrix_(eeg, eeg_length/nr_chan, nr_chan))
+    } else {
+      matrix_(eeg, nr_chan, eeg_length/nr_chan)
+    }
+    setattr(eeg, "subject_id", as.character(id))
+    procstep <- list(
+      what = "import", call = match.call(),
+      file_name = file_name, file_path = file_path,
+      options = import_options)
+  } else {
+    eeg <- NULL
+  }
+  #
+  # import markers
+  markers.orig <- with(import_options, read.table(
+    file.path(file_path, 
+              paste(file_name, marker_ext, sep = ".")),
+    header = marker_header, 
+    fill = marker_fill, 
+    as.is = marker_asis, 
+    sep = marker_sep, 
+    skip = marker_skip))
+  markers.orig[,3] <- suppressWarnings(as.numeric(markers.orig[, 3]))
+  markers.orig[,5] <- suppressWarnings(as.integer(markers.orig[, 5]))
+  markers.orig <- markers.orig[!is.na(markers.orig[, 3]), 1:5]
+  markers.orig$segmind <- findInterval(
+    markers.orig[,3],
+    markers.orig[grepl("New Segment", 
+                       markers.orig[, 1]), 3])
+  if (eeg_length/nr_chan/nr_tpoints  != max(markers.orig$segmind))
+    stop("Marker and data files do not match!")
+  #
+  # remove data in bad channel intervals
+  if (!is.null(import_options$marker_badchan)) {
+    chan_names <- rownames(chan)
+    bch <- markers.orig[, 2]
+    ind <- markers.orig[, 5] > 0
+    bch[ind] <- paste(bch[ind],
+                      chan_names[markers.orig[ind, 5]],
+                      sep = "_")
+    bch <- paste0(bch, "_")
+    badchanFn <- function(i) {
+      indstart <- grep(paste(import_options$marker_badchan[1], ".*_", 
+                             chan_names[i], "_", sep = ""), 
+                       bch)
+      indstart <- unique(markers.orig[indstart, 3])
+      indstop <- grep(paste(import_options$marker_badchan[2], ".*_", 
+                            chan_names[i], "_", sep = ""), 
+                      bch)
+      indstop <- unique(markers.orig[indstop, 3])
+      len1 <- length(indstart)
+      len2 <- length(indstop)
+      if (len1 == 0 & len2 == 0) {
+        return(NULL)
+      } else {
+        lendiff <- len1 - len2
+        if (lendiff == 1) {
+          message(
+            paste0("One badchan_stop marker was missing at channel ", chan_names[i], 
+                   " and was automatically set to the last sampling point.")
+          )
+          indstop <- c(indstop, ncol(eeg))
+        } else if (lendiff == -1) {
+          message(
+            paste0("One badchan_start marker was missing at channel ", chan_names[i],
+                   " and was automatically set to the first sampling point.")
+          )
+          indstart <- c(1, indstart)    
+        } else if (abs(lendiff) > 1) {
+          stop(
+            paste0("Badchan_start and badchan_stop markers do not match at channel ", chan_names[i], ".")
+          )
         }
-        badchans <- lapply(seq_along(chan_names), badchanFn)
-        names(badchans) <- chan_names
-        badchans <- badchans[!sapply(badchans, is.null)]
-        if (!is.null(import_options$eeg_ext)) {
-            for (i in names(badchans)) {
-                eeg[i, unlist(mapply(seq, 
-                                     badchans[[i]][, "start"], 
-                                     badchans[[i]][, "stop"], 
-                                     SIMPLIFY = FALSE), 
-                              use.names = FALSE)] <- NA
-            }
-        }
-        procstep$bad_channels <- badchans
-    } 
-    # 
-    # remove bad segments
-    markers.orig$badsegm <- rep(
-        sapply(
-            split(markers.orig, markers.orig$segmind), 
-            function(x) 
-                any(mygrepl(import_options$marker_badcat, x = x[, 1]) | 
-                        mygrepl(import_options$marker_badstim, x = x[, 2]))
-        ),
-        table(markers.orig$segmind))
-    keepind <- with(import_options,
-                    mygrepl(import_options$marker_segment, x = markers.orig[, 1]) & 
-                        mygrepl(import_options$marker_keepstim, x = markers.orig[, 2]) &
-                        rep(markers.orig[mygrepl("Time 0", x = markers.orig[, 1]), 3] %in% 
-                                markers.orig[mygrepl(import_options$marker_time0, 
-                                                     x = markers.orig[, 1]), 3],
-                            table(markers.orig$segmind)) &
-                        !markers.orig$badsegm)
-    markers <- markers.orig[keepind, ]
-    markers <- data.frame(
-        segment = sapply(strsplit(markers[, 1], "="), "[[", 2),
-        fullcode = markers[, 2],
-        dpoint = markers[, 3],
-        segmind = markers$segmind
-    )
-    #
-    # format eeg data
+        return(cbind(start = indstart, stop = indstop))
+      }
+      if (any((indstop - indstart) < 0)) {
+        stop(
+          paste0("Badchan_start and badchan_stop markers do not match at channel ", chan_names[i], ".")
+        )
+      }
+    }
+    badchans <- lapply(seq_along(chan_names), badchanFn)
+    names(badchans) <- chan_names
+    badchans <- badchans[!sapply(badchans, is.null)]
     if (!is.null(import_options$eeg_ext)) {
-        eeg <- eeg[, c(outer(import_options$segment_dpoints, 
-                             markers$dpoint,"+"))]
-        array_(eeg, 
-               c(nr_chan, length(import_options$segment_dpoints), 
-                 nrow(markers)),
-               list(chan = rownames(chan),
-                    time = import_options$segment_dpoints * 1000 / eeg_Hz,
-                    trial = paste(markers$segment, 
-                                  markers$fullcode, 
-                                  sep = "_")))
+      for (i in names(badchans)) {
+        eeg[i, unlist(mapply(seq, 
+                             badchans[[i]][, "start"], 
+                             badchans[[i]][, "stop"], 
+                             SIMPLIFY = FALSE), 
+                      use.names = FALSE)] <- NA
+      }
     }
-    # decorate
-    setattr(eeg, "processing_steps", list(procstep))
-    # return
-    list(eeg = eeg, markers = markers, channels = chan)
+    procstep$bad_channels <- badchans
+  } 
+  # 
+  # remove bad segments
+  markers.orig$badsegm <- rep(
+    sapply(
+      split(markers.orig, markers.orig$segmind), 
+      function(x) 
+        any(mygrepl(import_options$marker_badcat, x = x[, 1]) | 
+              mygrepl(import_options$marker_badstim, x = x[, 2]))
+    ),
+    table(markers.orig$segmind))
+  keepind <- with(import_options,
+                  mygrepl(import_options$marker_segment, x = markers.orig[, 1]) & 
+                    mygrepl(import_options$marker_keepstim, x = markers.orig[, 2]) &
+                    rep(markers.orig[mygrepl("Time 0", x = markers.orig[, 1]), 3] %in% 
+                          markers.orig[mygrepl(import_options$marker_time0, 
+                                               x = markers.orig[, 1]), 3],
+                        table(markers.orig$segmind)) &
+                    !markers.orig$badsegm)
+  markers <- markers.orig[keepind, ]
+  markers <- data.frame(
+    segment = sapply(strsplit(markers[, 1], "="), "[[", 2),
+    fullcode = markers[, 2],
+    dpoint = markers[, 3],
+    segmind = markers$segmind
+  )
+  #
+  # format eeg data
+  if (!is.null(import_options$eeg_ext)) {
+    eeg <- eeg[, c(outer(import_options$segment_dpoints, 
+                         markers$dpoint,"+"))]
+    array_(eeg, 
+           c(nr_chan, length(import_options$segment_dpoints), 
+             nrow(markers)),
+           list(chan = rownames(chan),
+                time = import_options$segment_dpoints * 1000 / eeg_Hz,
+                trial = paste(markers$segment, 
+                              markers$fullcode, 
+                              sep = "_")))
+  }
+  # decorate
+  setattr(eeg, "processing_steps", list(procstep))
+  # return
+  list(eeg = eeg, markers = markers, channels = chan)
 }
 
 #' Split concatenated strings. 
@@ -288,26 +288,26 @@ importBVdat <- function(file_name, file_path = getwd(), id = "",
 #' spltted substrings of the original vector elements
 #' @seealso \code{\link{strsplit}}
 splitMarker <- function(marker, header, type = NULL, splitchar = "_") {
-    out <- data.frame(
-        matrix(unlist(strsplit(as.character(marker), splitchar), 
-                      use.names = FALSE), 
-               nrow = length(marker), ncol = length(header), byrow = TRUE))
-    colnames(out) <- header
-    if (!is.null(type)) {
-        if (length(type) < length(header)) {
-            type <- rep(type, length.out = length(header))
-        }
-        for (i in 1:length(type)) {
-            if (is.factor(out[, i])) {
-                out[, i] <- do.call(paste("as", type[i], sep = "."), 
-                                    list(as.character(out[, i])))
-            } else {
-                out[, i] <- do.call(paste("as", type[i], sep = "."), list(out[, i]))
-            }
-        }
+  out <- data.frame(
+    matrix(unlist(strsplit(as.character(marker), splitchar), 
+                  use.names = FALSE), 
+           nrow = length(marker), ncol = length(header), byrow = TRUE))
+  colnames(out) <- header
+  if (!is.null(type)) {
+    if (length(type) < length(header)) {
+      type <- rep(type, length.out = length(header))
     }
-    # return
-    out
+    for (i in 1:length(type)) {
+      if (is.factor(out[, i])) {
+        out[, i] <- do.call(paste("as", type[i], sep = "."), 
+                            list(as.character(out[, i])))
+      } else {
+        out[, i] <- do.call(paste("as", type[i], sep = "."), list(out[, i]))
+      }
+    }
+  }
+  # return
+  out
 }
 
 # base functions =========== 
@@ -359,33 +359,33 @@ splitMarker <- function(marker, header, type = NULL, splitchar = "_") {
 baselineCorr <- function(dat, pool_dim = "time", sep_dim = NULL, 
                          base_timerange = isPositive(negate. = TRUE),
                          return_call = TRUE) {
-    #
-    message("\n****\nPerform baseline correction ... ", appendLF = FALSE)
-    origattr <- attributes(dat)
-    if (is.null(sep_dim)) {
-        if (is.null(pool_dim)) {
-            stop("Both pool_dim and sep_dim are NULL")
-        } else if (is.character(pool_dim)) {
-            pool_dim <- match(pool_dim, names(dimnames(dat)))
-        }
-        sep_dim <- setdiff(seq_along(dim(dat)), pool_dim)
+  #
+  message("\n****\nPerform baseline correction ... ", appendLF = FALSE)
+  origattr <- attributes(dat)
+  if (is.null(sep_dim)) {
+    if (is.null(pool_dim)) {
+      stop("Both pool_dim and sep_dim are NULL")
+    } else if (is.character(pool_dim)) {
+      pool_dim <- match(pool_dim, names(dimnames(dat)))
     }
-    if (is.null(base_timerange)) base_timerange <- dimnames(dat)$time
-    out <- scaleArray(dat, along_dims = sep_dim, 
-                      center_subset = list(time = base_timerange),
-                      scale = FALSE)
-    attributes(out) <- origattr
-    if (return_call) {
-        setattr(out, "processing_steps",
-                c(attr(out, "processing_steps"),
-                  list(list(what = "baseline correction", 
-                            call = match.call(), 
-                            separately = names(dimnames(dat))[sep_dim], 
-                            base_timerange = base_timerange))))
-    }
-    message("Done")
-    # return
-    out
+    sep_dim <- setdiff(seq_along(dim(dat)), pool_dim)
+  }
+  if (is.null(base_timerange)) base_timerange <- dimnames(dat)$time
+  out <- scaleArray(dat, along_dims = sep_dim, 
+                    center_subset = list(time = base_timerange),
+                    scale = FALSE)
+  attributes(out) <- origattr
+  if (return_call) {
+    setattr(out, "processing_steps",
+            c(attr(out, "processing_steps"),
+              list(list(what = "baseline correction", 
+                        call = match.call(), 
+                        separately = names(dimnames(dat))[sep_dim], 
+                        base_timerange = base_timerange))))
+  }
+  message("Done")
+  # return
+  out
 }
 
 #' Options for artifact rejection
@@ -435,23 +435,23 @@ baselineCorr <- function(dat, pool_dim = "time", sep_dim = NULL,
 #' @export
 #' @return A list object with all parameters.
 artrejOptions <- function(
-    sampling_freq = 1000, channels = "all", 
-    apply_maxgrad = TRUE, maxgrad_limit = 50, maxgrad_mark = c(-200, 200),
-    apply_diffrange = TRUE, diffrange_limit = c(0.5, 100), 
-    diffrange_mark = c(-200, 200), diffrange_interval = 200,
-    apply_amplrange = TRUE, amplrange_limit = c(-200, 200), 
-    amplrange_mark = c(-200, 200)) {
-    #
-    opt <- mget(setdiff(ls(), "sampling_freq"))
-    freqmod <- sampling_freq/1000
-    ind <- grep("mark|interval|limit", names(opt))
-    lapply(opt[ind], function(x) is.numeric(x))
-    opt[ind] <- lapply(opt[ind], sort)
-    ind <- grep("mark|interval", names(opt))
-    opt[ind] <- lapply(opt[ind], "*", freqmod)
-    opt$maxgrad_limit <- opt$maxgrad_limit / freqmod
-    # return
-    opt
+  sampling_freq = 1000, channels = "all", 
+  apply_maxgrad = TRUE, maxgrad_limit = 50, maxgrad_mark = c(-200, 200),
+  apply_diffrange = TRUE, diffrange_limit = c(0.5, 100), 
+  diffrange_mark = c(-200, 200), diffrange_interval = 200,
+  apply_amplrange = TRUE, amplrange_limit = c(-200, 200), 
+  amplrange_mark = c(-200, 200)) {
+  #
+  opt <- mget(setdiff(ls(), "sampling_freq"))
+  freqmod <- sampling_freq/1000
+  ind <- grep("mark|interval|limit", names(opt))
+  lapply(opt[ind], function(x) is.numeric(x))
+  opt[ind] <- lapply(opt[ind], sort)
+  ind <- grep("mark|interval", names(opt))
+  opt[ind] <- lapply(opt[ind], "*", freqmod)
+  opt$maxgrad_limit <- opt$maxgrad_limit / freqmod
+  # return
+  opt
 }
 
 #' Artifact rejection
@@ -476,127 +476,127 @@ artrejOptions <- function(
 artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOptions(),
                               return_data = TRUE, return_details = TRUE,
                               print_result = TRUE) {
-    maxgradFn <- function(x, 
-                          maxgrad_limit = artrej_options$maxgrad_limit,
-                          maxgrad_mark = artrej_options$maxgrad_mark) {
-        colAnys( abs(x[-1,]-x[-nrow(x),]) > maxgrad_limit )
+  maxgradFn <- function(x, 
+                        maxgrad_limit = artrej_options$maxgrad_limit,
+                        maxgrad_mark = artrej_options$maxgrad_mark) {
+    colAnys( abs(x[-1,]-x[-nrow(x),]) > maxgrad_limit )
+  }
+  diffrangeFn <- function(x, 
+                          diffr_int = artrej_options$diffrange_interval,
+                          diffr_lim = artrej_options$diffrange_limit) {
+    ind <- rollFun(x, diffr_int, max, endrule = "NA") - 
+      rollFun(x, diffr_int, min, endrule = "NA")
+    ind <- ind[!rowAlls(is.na(ind)), ]
+    #
+    colAnys( abs(ind) < diffr_lim[1] ) |
+      colAnys( abs(ind) > diffr_lim[2] )
+  }
+  amplrangeFn <- function(x, 
+                          amplr_lim = artrej_options$amplrange_limit,
+                          amplr_mark = artrej_options$amplrange_mark) {
+    colMaxs(x) > amplr_lim[2] |
+      colMins(x) < amplr_lim[1] 
+  }
+  # main function
+  aRej <- function(x, details = return_details) {
+    #assignList(artrej_options, verbose = FALSE)
+    crits <- sub("apply_", "", 
+                 names(artrej_options)[grep("apply", 
+                                            names(artrej_options))])
+    if (length(crits) == 0) {
+      stop("No criterion to apply; check the apply_* parameters in artrej_options!")
     }
-    diffrangeFn <- function(x, 
-                            diffr_int = artrej_options$diffrange_interval,
-                            diffr_lim = artrej_options$diffrange_limit) {
-        ind <- rollFun(x, diffr_int, max, endrule = "NA") - 
-            rollFun(x, diffr_int, min, endrule = "NA")
-        ind <- ind[!rowAlls(is.na(ind)), ]
-        #
-        colAnys( abs(ind) < diffr_lim[1] ) |
-            colAnys( abs(ind) > diffr_lim[2] )
+    attribs <- attr(x, "array_attributes")
+    row_dim <- attribs$row_dim
+    dims <- attribs$dim[-row_dim]
+    dimn <- attribs$dimnames[-row_dim]
+    names(dims) <- names(dimn)
+    out <- matrix_(FALSE, ncol(x), length(crits))
+    colnames(out) <- crits
+    message("\n****\nStart artifact rejection / Criterion: ...\n")
+    if (artrej_options$apply_maxgrad) {
+      message("... Maximum gradient - ", appendLF = FALSE)
+      out[, "maxgrad"] <- maxgradFn(x)
+      message(" done\n")
     }
-    amplrangeFn <- function(x, 
-                            amplr_lim = artrej_options$amplrange_limit,
-                            amplr_mark = artrej_options$amplrange_mark) {
-        colMaxs(x) > amplr_lim[2] |
-            colMins(x) < amplr_lim[1] 
+    if (artrej_options$apply_diffrange) {
+      message("... Difference range - ", appendLF = FALSE)
+      out[, "diffrange"] <- diffrangeFn(x)
+      message(" done\n")
     }
-    # main function
-    aRej <- function(x, details = return_details) {
-        #assignList(artrej_options, verbose = FALSE)
-        crits <- sub("apply_", "", 
-                     names(artrej_options)[grep("apply", 
-                                                names(artrej_options))])
-        if (length(crits) == 0) {
-            stop("No criterion to apply; check the apply_* parameters in artrej_options!")
-        }
-        attribs <- attr(x, "array_attributes")
-        row_dim <- attribs$row_dim
-        dims <- attribs$dim[-row_dim]
-        dimn <- attribs$dimnames[-row_dim]
-        names(dims) <- names(dimn)
-        out <- matrix_(FALSE, ncol(x), length(crits))
-        colnames(out) <- crits
-        message("\n****\nStart artifact rejection / Criterion: ...\n")
-        if (artrej_options$apply_maxgrad) {
-            message("... Maximum gradient - ", appendLF = FALSE)
-            out[, "maxgrad"] <- maxgradFn(x)
-            message(" done\n")
-        }
-        if (artrej_options$apply_diffrange) {
-            message("... Difference range - ", appendLF = FALSE)
-            out[, "diffrange"] <- diffrangeFn(x)
-            message(" done\n")
-        }
-        if (artrej_options$apply_amplrange) {
-            message("... Amplitude range - ", appendLF = FALSE)
-            out[, "amplrange"] <- amplrangeFn(x)
-            message(" done\n")
-        }
-        array_(out, c(dims, ncol(out)), c(dimn, list(crit = crits)))
-        artrej_summary <- matrix_(0, dims["chan"]+1, length(crits)+1,
-                                  list(chan = c(dimn$chan, "all"),
-                                       crit = c(crits, "all")))
-        dimres <- dim(artrej_summary)
-        artrej_summary[-dimres[1], -dimres[2]] <- avgDims(out, "trial")
-        artrej_summary[dimres[1], -dimres[2]] <- 
-            colMeans(apply(out, c("trial", "crit"), any))
-        artrej_summary[-dimres[1], dimres[2]] <- 
-            colMeans(apply(out, c("trial", "chan"), any))
-        out.details <- out
-        out <- apply(out, "trial", any)
-        artrej_summary[dimres[1], dimres[2]] <- mean( out )
-        setattr(out, "summary", artrej_summary)
-        if (details) setattr(out, "details", out.details)
-        return( out )
+    if (artrej_options$apply_amplrange) {
+      message("... Amplitude range - ", appendLF = FALSE)
+      out[, "amplrange"] <- amplrangeFn(x)
+      message(" done\n")
     }
-    # input data check
-    if (is.null(dimnames(dat)) || is.null(names(dimnames(dat))) ||
-            !identical(sort(names(dimnames(dat))), 
-                       c("chan", "time", "trial"))) {
-        stop("Provide EEG data as an array with the following named 
+    array_(out, c(dims, ncol(out)), c(dimn, list(crit = crits)))
+    artrej_summary <- matrix_(0, dims["chan"]+1, length(crits)+1,
+                              list(chan = c(dimn$chan, "all"),
+                                   crit = c(crits, "all")))
+    dimres <- dim(artrej_summary)
+    artrej_summary[-dimres[1], -dimres[2]] <- avgDims(out, "trial")
+    artrej_summary[dimres[1], -dimres[2]] <- 
+      colMeans(apply(out, c("trial", "crit"), any))
+    artrej_summary[-dimres[1], dimres[2]] <- 
+      colMeans(apply(out, c("trial", "chan"), any))
+    out.details <- out
+    out <- apply(out, "trial", any)
+    artrej_summary[dimres[1], dimres[2]] <- mean( out )
+    setattr(out, "summary", artrej_summary)
+    if (details) setattr(out, "details", out.details)
+    return( out )
+  }
+  # input data check
+  if (is.null(dimnames(dat)) || is.null(names(dimnames(dat))) ||
+      !identical(sort(names(dimnames(dat))), 
+                 c("chan", "time", "trial"))) {
+    stop("Provide EEG data as an array with the following named 
              dimensions (dimension order does not matter): 
              chan, time, trial.")
-    }
-    if (is.null(markers)) {
-        markers <- data.frame(fullcode = seq_along(dimnames(dat)$trial))
-    }
-    if (length(dimnames(dat)$trial) != nrow(markers)) {
-        stop("EEG and marker data contain different number of trials!")
-    }
-    if (!is.list(artrej_options)) {
-        stop("The artrej_options parameter must be a list; provide it through 
+  }
+  if (is.null(markers)) {
+    markers <- data.frame(fullcode = seq_along(dimnames(dat)$trial))
+  }
+  if (length(dimnames(dat)$trial) != nrow(markers)) {
+    stop("EEG and marker data contain different number of trials!")
+  }
+  if (!is.list(artrej_options)) {
+    stop("The artrej_options parameter must be a list; provide it through 
              artrejOptions() to avoid inconsistent results!")
-    }
-    keepchan <- 
-        if (identical(artrej_options$channels, "all")) {
-            dimnames(dat)$chan
-        } else {
-            artrej_options$channels
-        }
-    # run artifact rejection
-    tempdat <- array2mat(subsetArray(dat, list(chan = keepchan), drop. = FALSE),
-                         "time", keep_dimnames = FALSE)
-    badtrials <- aRej(tempdat)
-    if (print_result) {
-        cat("\n----- Proportion of bad trials -----\n")
-        print(attr(badtrials, "summary"))
-        cat("\n------------------------------------\n")
-    }
-    if (return_data) {
-        dat <- subsetArray(dat, list(trial = which(!badtrials)))
-        setattr(dat, "processing_steps",
-                c(attr(dat, "processing_steps"),
-                  list(list(
-                      what = "artifact rejection",
-                      call = match.call(), results = badtrials, 
-                      options = artrej_options)))
-        )
-        markers <- droplevels( markers[!badtrials, ] )
-        # return
-        list(bad_trials = badtrials, eeg = dat, markers = markers)
+  }
+  keepchan <- 
+    if (identical(artrej_options$channels, "all")) {
+      dimnames(dat)$chan
     } else {
-        setattr(badtrials, "options", artrej_options)
-        # return
-        list(bad_trials = badtrials, eeg = NULL, markers = NULL)
+      artrej_options$channels
     }
-    }
+  # run artifact rejection
+  tempdat <- array2mat(subsetArray(dat, list(chan = keepchan), drop. = FALSE),
+                       "time", keep_dimnames = FALSE)
+  badtrials <- aRej(tempdat)
+  if (print_result) {
+    cat("\n----- Proportion of bad trials -----\n")
+    print(attr(badtrials, "summary"))
+    cat("\n------------------------------------\n")
+  }
+  if (return_data) {
+    dat <- subsetArray(dat, list(trial = which(!badtrials)))
+    setattr(dat, "processing_steps",
+            c(attr(dat, "processing_steps"),
+              list(list(
+                what = "artifact rejection",
+                call = match.call(), results = badtrials, 
+                options = artrej_options)))
+    )
+    markers <- droplevels( markers[!badtrials, ] )
+    # return
+    list(bad_trials = badtrials, eeg = dat, markers = markers)
+  } else {
+    setattr(badtrials, "options", artrej_options)
+    # return
+    list(bad_trials = badtrials, eeg = NULL, markers = NULL)
+  }
+}
 
 #' Compute Global Field Power
 #'
@@ -613,22 +613,22 @@ artifactRejection <- function(dat, markers = NULL, artrej_options = artrejOption
 #' @return The function returns a matrix or an array. Note that if
 #' the original channels are not retained, the channel dimension is dropped.
 compGfp <- function(dat, keep_channels = FALSE, channel_dim = "chan") {
-    out <- fnDims(dat, channel_dim, colSds, vectorized = TRUE)
-    if (keep_channels) {
-        dimn <- names(dimnames(dat))
-        if (!is.null(dimn) && is.numeric(channel_dim))
-            channel_dim <- dimn[channel_dim]
-        out <- 
-            if (is.character(channel_dim)) {
-                bindArrays(dat, GFP = out, along_name = channel_dim)
-            } else {
-                bindArrays(dat, GFP = out, along = channel_dim)
-            }
-        if (is.null(dimnames(dat)))
-            setattr(out, "dimnames", NULL)
-    }
-    # return
-    out
+  out <- fnDims(dat, channel_dim, colSds, vectorized = TRUE)
+  if (keep_channels) {
+    dimn <- names(dimnames(dat))
+    if (!is.null(dimn) && is.numeric(channel_dim))
+      channel_dim <- dimn[channel_dim]
+    out <- 
+      if (is.character(channel_dim)) {
+        bindArrays(dat, GFP = out, along_name = channel_dim)
+      } else {
+        bindArrays(dat, GFP = out, along = channel_dim)
+      }
+    if (is.null(dimnames(dat)))
+      setattr(out, "dimnames", NULL)
+  }
+  # return
+  out
 }
 
 #' Scale channels
@@ -644,7 +644,7 @@ compGfp <- function(dat, keep_channels = FALSE, channel_dim = "chan") {
 #' @export
 #' @return A numeric matrix or array
 scaleChan <- function(dat, keep_dimorder = TRUE) {
-    scaleArray(dat, by_dims = "chan", keep_dimorder = keep_dimorder)
+  scaleArray(dat, by_dims = "chan", keep_dimorder = keep_dimorder)
 }
 
 #' Compute centroids
@@ -663,26 +663,26 @@ scaleChan <- function(dat, keep_dimorder = TRUE) {
 #' @return A data.frame containing the positions of the negative and positive 
 #' centroids 
 centroid <- function(dat, ch_pos, proj2map = TRUE, proj_unitsphere = FALSE, ...) {
-    ch_pos <- as.data.frame(ch_pos)
-    if (!all(c("x", "y", "z") %in% colnames(ch_pos))) {
-        ch_pos <- sph2cart(ch_pos)
+  ch_pos <- as.data.frame(ch_pos)
+  if (!all(c("x", "y", "z") %in% colnames(ch_pos))) {
+    ch_pos <- sph2cart(ch_pos)
+  }
+  ind.neg <- dat < 0
+  ind.pos <- dat >= 0
+  centroids <- as.data.frame(
+    rbind(colMeans(ch_pos[ind.neg, c("x", "y", "z")]),
+          colMeans(ch_pos[ind.pos, c("x", "y", "z")]))
+  )
+  rownames(centroids) <- c("negative", "positive")
+  if (proj2map) {
+    pos <- cart2sph(centroids)
+    if (proj_unitsphere) {
+      pos$r <- 1
     }
-    ind.neg <- dat < 0
-    ind.pos <- dat >= 0
-    centroids <- as.data.frame(
-        rbind(colMeans(ch_pos[ind.neg, c("x", "y", "z")]),
-              colMeans(ch_pos[ind.pos, c("x", "y", "z")]))
-    )
-    rownames(centroids) <- c("negative", "positive")
-    if (proj2map) {
-        pos <- cart2sph(centroids)
-        if (proj_unitsphere) {
-            pos$r <- 1
-        }
-        out <- project3dMap(pos, ...)
-    }
-    # return
-    out
+    out <- project3dMap(pos, ...)
+  }
+  # return
+  out
 }
 
 #' Average single-trials
@@ -696,41 +696,41 @@ centroid <- function(dat, ch_pos, proj2map = TRUE, proj_unitsphere = FALSE, ...)
 #' @export
 #' @return numeric array
 avgTrials <- function(dat, markers, which_factors = NULL) {
-    stopifnot(is.numeric(dat))
-    stopifnot(!is.null(markers))
-    message("\n****\nAverage single-trials ... ", appendLF = FALSE)
-    if (is.character(which_factors)) {
-        if (!all(which_factors %in% colnames(markers))) {
-            stop("markers and which_factors do not match")
-        }
-    } else if (is.numeric(which_factors)) {
-        if (!all(which_factors %in% (1:ncol(markers)))) {
-            stop("markers and which_factors do not match")
-        }
+  stopifnot(is.numeric(dat))
+  stopifnot(!is.null(markers))
+  message("\n****\nAverage single-trials ... ", appendLF = FALSE)
+  if (is.character(which_factors)) {
+    if (!all(which_factors %in% colnames(markers))) {
+      stop("markers and which_factors do not match")
     }
-    if (!is.null(which_factors)) markers <- markers[, which_factors]
-    groups <- interaction(markers, drop = TRUE, sep = "|")
-    out <- fnDims(dat, "trial", 
-                  function(x, g) sweep(rowsum(x, g), 1, table(g), "/"), 
-                  list(g = groups), vectorized = TRUE, 
-                  newdims = list(factor_level = levels(groups)))
-    tempfac <- strsplit(dimnames(out)$factor_level, "\\|")
-    setattr(out, "processing_steps",
-            c(attr(out, "processing_steps"),
-              list(list(
-                  what = "averaging",
-                  call = match.call(),
-                  factors = as.data.frame(
-                      matrix(unlist(tempfac, use.names = FALSE), 
-                             nrow = length(tempfac), 
-                             ncol = length(tempfac[[1]]), 
-                             byrow = TRUE,
-                             dimnames = list(1:length(tempfac), 
-                                             colnames(markers))))
-              ))
-            )
-    )
-    message("Done")
-    # return
-    out
+  } else if (is.numeric(which_factors)) {
+    if (!all(which_factors %in% (1:ncol(markers)))) {
+      stop("markers and which_factors do not match")
+    }
+  }
+  if (!is.null(which_factors)) markers <- markers[, which_factors]
+  groups <- interaction(markers, drop = TRUE, sep = "|")
+  out <- fnDims(dat, "trial", 
+                function(x, g) sweep(rowsum(x, g), 1, table(g), "/"), 
+                list(g = groups), vectorized = TRUE, 
+                newdims = list(factor_level = levels(groups)))
+  tempfac <- strsplit(dimnames(out)$factor_level, "\\|")
+  setattr(out, "processing_steps",
+          c(attr(out, "processing_steps"),
+            list(list(
+              what = "averaging",
+              call = match.call(),
+              factors = as.data.frame(
+                matrix(unlist(tempfac, use.names = FALSE), 
+                       nrow = length(tempfac), 
+                       ncol = length(tempfac[[1]]), 
+                       byrow = TRUE,
+                       dimnames = list(1:length(tempfac), 
+                                       colnames(markers))))
+            ))
+          )
+  )
+  message("Done")
+  # return
+  out
 }

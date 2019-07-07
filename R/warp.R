@@ -45,73 +45,73 @@
 warp <- function(erp, align_dim, time_dim = "time", lambda = 0, 
                  method = c("mean", "median"), smooth_data = FALSE, 
                  smooth_times = 25L, verbose = FALSE, time_points = NULL, ...) {
-    # helper function
-    checkdim <- function(d, dim., dimid., arg_name) {
-        assertScalar(d, .var.name = arg_name)
-        if (is.character(d) && (!d %in% dimid.)) {
-            stop(sprintf("%s: 'erp' does not have '%s' dimension identifier",
-                         arg_name, d))
-        } else if (is.numeric(d) && !d %in% seq_along(dim.)) {
-            stop(sprintf("%s: wrong dimension identifier; must be between 1 and %d",
-                         arg_name, length(dim.)))
-        }
-        if (is.character(d))
-            d <- match(d, dimid.)
-        # return
-        d
+  # helper function
+  checkdim <- function(d, dim., dimid., arg_name) {
+    assertScalar(d, .var.name = arg_name)
+    if (is.character(d) && (!d %in% dimid.)) {
+      stop(sprintf("%s: 'erp' does not have '%s' dimension identifier",
+                   arg_name, d))
+    } else if (is.numeric(d) && !d %in% seq_along(dim.)) {
+      stop(sprintf("%s: wrong dimension identifier; must be between 1 and %d",
+                   arg_name, length(dim.)))
     }
-    # argument checks
-    assertArray(erp, mode = "numeric", min.d = 2L, 
-                .var.name = "erp")
-    assertNumber(lambda, .var.name = "lambda")
-    method <- match.arg(method)
-    assertFlag(smooth_data, .var.name = "smooth_data")
-    assertInt(smooth_times, .var.name = "smooth_times")
-    assertFlag(verbose, .var.name = "verbose")
-    dims <- dim(erp)
-    dimn <- dimnames(erp)
-    dimid <- names(dimnames(erp))
-    names(dims) <- dimid
-    time_dim <- checkdim(time_dim, dims, dimid, "time_dim")
-    if (missing(align_dim)) {
-        if (length(dims) == 2L) {
-            align_dim <- setdiff(seq_along(dims), time_dim)
-        } else {
-            stop(paste0("the argument 'align_dim' must be provided ",
-                        "if 'erps' is a multidimensional array"))
-        }
-    }
-    align_dim <- checkdim(align_dim, dims, dimid, "align_dim")
-    if (is.null(time_points)) {
-        time_points <- as.integer(dimn[[time_dim]])
-        if (is.null(time_points) || anyNA(time_points)) {
-            stop(paste0("The time dimension does not have proper dimnames; ",
-                        "provide time_points explicitly"))
-        }
-    }
-    tw_params <- list(
-        time = time_points, lambda = lambda, method = method, 
-        showplot = verbose, smooth_data = smooth_data, sparam = smooth_times,
-        parallel = FALSE
-    )
-    # sink time_warping output if not verbose
-    if (!verbose) {
-        tmp <- tempfile()
-        sink(tmp)
-        on.exit({sink(file = NULL);unlink(tmp)})
-    }
-    # main part
-    ncols <- dims[align_dim]
-    out <- fnDims(erp, c(time_dim, align_dim),
-                  function(x, ncols, params) {
-                      do("time_warping", matrix_(x, ncol = ncols),
-                         arg_list = params)$gam
-                  },
-                  arg_list = list(ncols = ncols, params = tw_params),
-                  ...)
+    if (is.character(d))
+      d <- match(d, dimid.)
     # return
-    setattr(out, "time_points", time_points)
-    out
+    d
+  }
+  # argument checks
+  assertArray(erp, mode = "numeric", min.d = 2L, 
+              .var.name = "erp")
+  assertNumber(lambda, .var.name = "lambda")
+  method <- match.arg(method)
+  assertFlag(smooth_data, .var.name = "smooth_data")
+  assertInt(smooth_times, .var.name = "smooth_times")
+  assertFlag(verbose, .var.name = "verbose")
+  dims <- dim(erp)
+  dimn <- dimnames(erp)
+  dimid <- names(dimnames(erp))
+  names(dims) <- dimid
+  time_dim <- checkdim(time_dim, dims, dimid, "time_dim")
+  if (missing(align_dim)) {
+    if (length(dims) == 2L) {
+      align_dim <- setdiff(seq_along(dims), time_dim)
+    } else {
+      stop(paste0("the argument 'align_dim' must be provided ",
+                  "if 'erps' is a multidimensional array"))
+    }
+  }
+  align_dim <- checkdim(align_dim, dims, dimid, "align_dim")
+  if (is.null(time_points)) {
+    time_points <- as.integer(dimn[[time_dim]])
+    if (is.null(time_points) || anyNA(time_points)) {
+      stop(paste0("The time dimension does not have proper dimnames; ",
+                  "provide time_points explicitly"))
+    }
+  }
+  tw_params <- list(
+    time = time_points, lambda = lambda, method = method, 
+    showplot = verbose, smooth_data = smooth_data, sparam = smooth_times,
+    parallel = FALSE
+  )
+  # sink time_warping output if not verbose
+  if (!verbose) {
+    tmp <- tempfile()
+    sink(tmp)
+    on.exit({sink(file = NULL);unlink(tmp)})
+  }
+  # main part
+  ncols <- dims[align_dim]
+  out <- fnDims(erp, c(time_dim, align_dim),
+                function(x, ncols, params) {
+                  do("time_warping", matrix_(x, ncol = ncols),
+                     arg_list = params)$gam
+                },
+                arg_list = list(ncols = ncols, params = tw_params),
+                ...)
+  # return
+  setattr(out, "time_points", time_points)
+  out
 }
 
 #' Adjust ERP curves by time warping
@@ -177,96 +177,96 @@ warp <- function(erp, align_dim, time_dim = "time", lambda = 0,
 #'              minus_up = FALSE, grid = c(3, 1))
 #'              
 align <- function(erp, w, time_dim = "time") {
-    #
-    # helper function
-    checkdim <- function(d, dim., dimid., arg_name) {
-        assertScalar(d, .var.name = arg_name)
-        if (is.character(d) && (!d %in% dimid.)) {
-            stop(sprintf("%s: 'erp' does not have '%s' dimension identifier",
-                         arg_name, d))
-        } else if (is.numeric(d) && !d %in% seq_along(dim.)) {
-            stop(sprintf("%s: wrong dimension identifier; must be between 1 and %d",
-                         arg_name, length(dim.)))
-        }
-        if (is.character(d))
-            d <- match(d, dimid.)
-        # return
-        d
+  #
+  # helper function
+  checkdim <- function(d, dim., dimid., arg_name) {
+    assertScalar(d, .var.name = arg_name)
+    if (is.character(d) && (!d %in% dimid.)) {
+      stop(sprintf("%s: 'erp' does not have '%s' dimension identifier",
+                   arg_name, d))
+    } else if (is.numeric(d) && !d %in% seq_along(dim.)) {
+      stop(sprintf("%s: wrong dimension identifier; must be between 1 and %d",
+                   arg_name, length(dim.)))
     }
-    # function for interpolation
-    warpVector <- function(erp_vec, w_vec, time) {
-        approx(
-            time, erp_vec, 
-            xout = (time[length(time)] - time[1]) * w_vec + time[1])$y
-    }
-    # function to prepare interpolation
-    warpArray <- function(y, w, time, return_array = TRUE) {
-        dims <- dim(w)
-        dim(y) <- c(dims[1L], prod(dims[-1L]))
-        dim(w) <- c(dims[1L], prod(dims[-1L]))
-        for (i in 1:ncol(y)) y[, i] <- warpVector(y[, i], w[, i], time)
-        # return
-        if (return_array) {
-            array_(y, dims, arg_check = FALSE)
-        } else {
-            as.vector(y)
-        }
-    }
-    #
-    # check arguments (if vectors, return early)
-    time_points <- attr(w, "time_points")
-    if (is.null(time_points))
-        stop("w must have 'time_points' attribute")
-    #
-    assertNumeric(erp, .var.name = "erp")
-    assertNumeric(w, .var.name = "w")
-    #
-    if (is.vector(erp) && is.vector(w)) {
-        if (length(erp) != length(w)) {
-            stop("If erp and w are vectors, they must have equal length")
-        }
-        return(warpVector(erp, w, time_points))
-    }
-    #
-    dims_erp <- dim(erp); dims_w <- dim(w);
-    dimn_erp <- dimnames(erp); dimn_w <- dimnames(w);
-    dimid_erp <- names(dimn_erp); dimid_w <- names(dimn_w);
-    names(dims_erp) <- dimid_erp; names(dims_w) <- dimid_w;
-    #
-    # if identical dimensions, return early
-    if (identical(dim(erp), dim(w)) && identical(length(erp), length(w))) {
-        time_dim <- checkdim(time_dim, dims_erp, dimid_erp, "time_dim")
-        reord <- order(c(time_dim, seq_along(dims_erp)[-time_dim]))
-        erp <- apermArray(erp, first = time_dim)
-        w <- apermArray(w, first = time_dim)
-        out <- warpArray(erp, w, time_points, TRUE)
-        out <- aperm(out, reord)
-        return(array_(out, dims_erp, dimn_erp))
-    }
-    #
-    # if erp has more dimensions than w, they must have named dimnames
-    if (is.null(dimid_erp) || is.null(dimid_w)) {
-        stop("If not vectors, both 'erp' and 'w' must have named dimension names")
-    }
-    if (!all(dimid_w %in% dimid_erp)) {
-        stop("w may not have any dimension identifier which is not present in erp")
-    }
-    if (!time_dim %in% dimid_w) {
-        stop("If not vectors, both erp and w must have time dimension")
-    }
-    if (!identical(dimnames(w), dimn_erp[dimid_w])) {
-        stop("Common dimensions in erp and w must have identical dimension names")
-    }
-    # change dimension order for efficiency: 
-    # first time, then commons, then others
-    dimord <- c(time_dim, setdiff(dimid_w, time_dim))
-    w <- apermArray(w, first = dimord)
-    erp <- apermArray(erp, first = dimord)
-    # computations
-    out <- fnDims(
-        erp, dimid_w, warpArray,
-        arg_list = list(w = w, time = time_points, 
-                        return_array = FALSE))
+    if (is.character(d))
+      d <- match(d, dimid.)
     # return
-    apermArray(out, dimid_erp)
+    d
+  }
+  # function for interpolation
+  warpVector <- function(erp_vec, w_vec, time) {
+    approx(
+      time, erp_vec, 
+      xout = (time[length(time)] - time[1]) * w_vec + time[1])$y
+  }
+  # function to prepare interpolation
+  warpArray <- function(y, w, time, return_array = TRUE) {
+    dims <- dim(w)
+    dim(y) <- c(dims[1L], prod(dims[-1L]))
+    dim(w) <- c(dims[1L], prod(dims[-1L]))
+    for (i in 1:ncol(y)) y[, i] <- warpVector(y[, i], w[, i], time)
+    # return
+    if (return_array) {
+      array_(y, dims, arg_check = FALSE)
+    } else {
+      as.vector(y)
+    }
+  }
+  #
+  # check arguments (if vectors, return early)
+  time_points <- attr(w, "time_points")
+  if (is.null(time_points))
+    stop("w must have 'time_points' attribute")
+  #
+  assertNumeric(erp, .var.name = "erp")
+  assertNumeric(w, .var.name = "w")
+  #
+  if (is.vector(erp) && is.vector(w)) {
+    if (length(erp) != length(w)) {
+      stop("If erp and w are vectors, they must have equal length")
+    }
+    return(warpVector(erp, w, time_points))
+  }
+  #
+  dims_erp <- dim(erp); dims_w <- dim(w);
+  dimn_erp <- dimnames(erp); dimn_w <- dimnames(w);
+  dimid_erp <- names(dimn_erp); dimid_w <- names(dimn_w);
+  names(dims_erp) <- dimid_erp; names(dims_w) <- dimid_w;
+  #
+  # if identical dimensions, return early
+  if (identical(dim(erp), dim(w)) && identical(length(erp), length(w))) {
+    time_dim <- checkdim(time_dim, dims_erp, dimid_erp, "time_dim")
+    reord <- order(c(time_dim, seq_along(dims_erp)[-time_dim]))
+    erp <- apermArray(erp, first = time_dim)
+    w <- apermArray(w, first = time_dim)
+    out <- warpArray(erp, w, time_points, TRUE)
+    out <- aperm(out, reord)
+    return(array_(out, dims_erp, dimn_erp))
+  }
+  #
+  # if erp has more dimensions than w, they must have named dimnames
+  if (is.null(dimid_erp) || is.null(dimid_w)) {
+    stop("If not vectors, both 'erp' and 'w' must have named dimension names")
+  }
+  if (!all(dimid_w %in% dimid_erp)) {
+    stop("w may not have any dimension identifier which is not present in erp")
+  }
+  if (!time_dim %in% dimid_w) {
+    stop("If not vectors, both erp and w must have time dimension")
+  }
+  if (!identical(dimnames(w), dimn_erp[dimid_w])) {
+    stop("Common dimensions in erp and w must have identical dimension names")
+  }
+  # change dimension order for efficiency: 
+  # first time, then commons, then others
+  dimord <- c(time_dim, setdiff(dimid_w, time_dim))
+  w <- apermArray(w, first = dimord)
+  erp <- apermArray(erp, first = dimord)
+  # computations
+  out <- fnDims(
+    erp, dimid_w, warpArray,
+    arg_list = list(w = w, time = time_points, 
+                    return_array = FALSE))
+  # return
+  apermArray(out, dimid_erp)
 }

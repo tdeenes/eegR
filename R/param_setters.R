@@ -60,40 +60,40 @@
 #' str(res)
 #' 
 tfceParams <- function(ChN = NULL, EH = NULL, auto = TRUE, steps = 50L) {
-    if (any(c(is.null(ChN), is.null(EH)))) {
-        if (!auto) {
-            stop("If 'auto' is FALSE, both 'ChN' and 'EH' must be explicitly given")    
-        }
-        if (auto && identical(parent.frame(), globalenv())) {
-            stop("Both ChN and EH must be explicitly provided if this function is called from the global environment")
-        }
+  if (any(c(is.null(ChN), is.null(EH)))) {
+    if (!auto) {
+      stop("If 'auto' is FALSE, both 'ChN' and 'EH' must be explicitly given")    
     }
-    if (auto & is.null(ChN)) {
-        ChN <- try(attr(get(".arraydat", 
-                            envir = parent.frame(), mode = "numeric"), 
-                        "ChN"), 
-                   silent = TRUE)
-        if (inherits(ChN, "try-error")) {
-            stop("Automatic extraction of the channel neigbourhood matrix failed. Provide 'ChN' parameter explicitly.")
-        }
+    if (auto && identical(parent.frame(), globalenv())) {
+      stop("Both ChN and EH must be explicitly provided if this function is called from the global environment")
     }
-    if (auto & is.null(EH)) {
-        fn <- tolower(deparse(sys.call(-1)[[1]]))
-        EH <- 
-            if (grepl("anova", fn)) {
-                c(0.66, 1)
-            } else {
-                c(0.66, 2)
-            }
+  }
+  if (auto & is.null(ChN)) {
+    ChN <- try(attr(get(".arraydat", 
+                        envir = parent.frame(), mode = "numeric"), 
+                    "ChN"), 
+               silent = TRUE)
+    if (inherits(ChN, "try-error")) {
+      stop("Automatic extraction of the channel neigbourhood matrix failed. Provide 'ChN' parameter explicitly.")
     }
-    # checks
-    assertMatrix(ChN, any.missing = FALSE, .var.name = "ChN")
-    assertIntegerish(ChN, .var.name = "ChN")
-    assertNumeric(EH, any.missing = FALSE, len = 2L, .var.name = "EH")
-    assertCount(steps, .var.name = "steps")
-    # return
-    structure(list(ChN = ChN, EH = EH, steps = as.integer(steps)), 
-              class = "tfceParams")
+  }
+  if (auto & is.null(EH)) {
+    fn <- tolower(deparse(sys.call(-1)[[1]]))
+    EH <- 
+      if (grepl("anova", fn)) {
+        c(0.66, 1)
+      } else {
+        c(0.66, 2)
+      }
+  }
+  # checks
+  assertMatrix(ChN, any.missing = FALSE, .var.name = "ChN")
+  assertIntegerish(ChN, .var.name = "ChN")
+  assertNumeric(EH, any.missing = FALSE, len = 2L, .var.name = "EH")
+  assertCount(steps, .var.name = "steps")
+  # return
+  structure(list(ChN = ChN, EH = EH, steps = as.integer(steps)), 
+            class = "tfceParams")
 }
 
 #' Setting the parameters for parallel computation
@@ -167,30 +167,30 @@ tfceParams <- function(ChN = NULL, EH = NULL, auto = TRUE, steps = 50L) {
 #' 
 parallelParams <- function(cl = NULL, method = c("auto", "snow", "multicore"),
                            ncores = parallel::detectCores()-1L, ...) {
-    method <- match.arg(method)
-    opts <- list(...)
-    if (length(opts) == 0L) opts <- NULL
-    mc_options <- snow_options <- NULL
-    cl_new <- FALSE
-    if (is.null(cl)) {
-        if (ncores <= 1L) {
-            registerDoSEQ()
-        } else if (.Platform$OS.type == "windows" || method == "snow") {
-            snow_options <- opts
-            cl <- makePSOCKcluster(as.integer(ncores))
-            cl_new <- TRUE
-            registerDoParallel(cl = cl)
-        } else {
-            mc_options <- opts
-            registerDoParallel(cores = as.integer(ncores))
-        }
+  method <- match.arg(method)
+  opts <- list(...)
+  if (length(opts) == 0L) opts <- NULL
+  mc_options <- snow_options <- NULL
+  cl_new <- FALSE
+  if (is.null(cl)) {
+    if (ncores <= 1L) {
+      registerDoSEQ()
+    } else if (.Platform$OS.type == "windows" || method == "snow") {
+      snow_options <- opts
+      cl <- makePSOCKcluster(as.integer(ncores))
+      cl_new <- TRUE
+      registerDoParallel(cl = cl)
     } else {
-        snow_options <- opts
-        registerDoParallel(cl = cl)
+      mc_options <- opts
+      registerDoParallel(cores = as.integer(ncores))
     }
-    # return
-    list(cl = cl, cl_new = cl_new, 
-         snow_options = snow_options, mc_options = mc_options)
+  } else {
+    snow_options <- opts
+    registerDoParallel(cl = cl)
+  }
+  # return
+  list(cl = cl, cl_new = cl_new, 
+       snow_options = snow_options, mc_options = mc_options)
 }
 
 
@@ -206,9 +206,9 @@ parallelParams <- function(cl = NULL, method = c("auto", "snow", "multicore"),
 #' to the arguments ('n' and 'type')
 #' 
 permParams <- function(n = 999L, type = c("residuals", "observations")) {
-    assertCount(n, .var.name = "n")
-    type <- match.arg(type)
-    list(n = n, type = type)
+  assertCount(n, .var.name = "n")
+  type <- match.arg(type)
+  list(n = n, type = type)
 }
 
 #' Setting the parameters for auto-conversion
@@ -288,130 +288,130 @@ permParams <- function(n = 999L, type = c("residuals", "observations")) {
 #' @seealso
 #' \code{\link{autoConvert}} for examples
 convertParams <- function(
-    ...,
-    factor = list(
-        IF = is.factor,
-        DO = list(function(x) as.logical(as.character(x)),
-                  function(x) as.integer(as.character(x)),
-                  function(x) as.double(as.character(x)),
-                  function(x) as.Date(as.character(x)),
-                  as.character),
-        EVAL = function(x, y) isTRUE(all.equal(as.character(x), as.character(y),
-                                               check.attributes = FALSE))
-        ),
-    integer = list(
-        IF = is.integer,
-        DO = list(as.logical),
-        EVAL = function(x, y) isTRUE(all.equal(as.vector(x), as.integer(y),
-                                               check.attributes = FALSE))
-        ),
-    double = list(
-        IF = is.double,
-        DO = list(as.logical, 
-                  as.integer),
-        EVAL = function(x, y) isTRUE(all.equal(as.vector(x), as.double(y),
-                                               check.attributes = FALSE))
-        ),
-    character = list(
-        IF = is.character,
-        DO = list(as.logical, 
-                  as.integer, 
-                  as.Date, 
-                  as.double, 
-                  function(x) factor(x, levels = unique.default(x)),
-                  as.factor),
-        EVAL = function(x, y) isTRUE(all.equal(as.vector(x), 
-                                               as.character(y),
-                                               check.attributes = FALSE))
-        )) {
-    #
-    # collect all arguments 
-    out <- c(
-        lapply(match.call(expand.dots = FALSE)$`...`, eval),
-        mget(setdiff(ls(sorted = FALSE, all.names = TRUE), "..."))
-    )
-    # checks
-    if ("ANY" %in% names(out)) {
-        stop(paste0(
-            "The argument name 'ANY' is reserved for internal use. ",
-            "Choose an other name for that rule."
-        ))
+  ...,
+  factor = list(
+    IF = is.factor,
+    DO = list(function(x) as.logical(as.character(x)),
+              function(x) as.integer(as.character(x)),
+              function(x) as.double(as.character(x)),
+              function(x) as.Date(as.character(x)),
+              as.character),
+    EVAL = function(x, y) isTRUE(all.equal(as.character(x), as.character(y),
+                                           check.attributes = FALSE))
+  ),
+  integer = list(
+    IF = is.integer,
+    DO = list(as.logical),
+    EVAL = function(x, y) isTRUE(all.equal(as.vector(x), as.integer(y),
+                                           check.attributes = FALSE))
+  ),
+  double = list(
+    IF = is.double,
+    DO = list(as.logical, 
+              as.integer),
+    EVAL = function(x, y) isTRUE(all.equal(as.vector(x), as.double(y),
+                                           check.attributes = FALSE))
+  ),
+  character = list(
+    IF = is.character,
+    DO = list(as.logical, 
+              as.integer, 
+              as.Date, 
+              as.double, 
+              function(x) factor(x, levels = unique.default(x)),
+              as.factor),
+    EVAL = function(x, y) isTRUE(all.equal(as.vector(x), 
+                                           as.character(y),
+                                           check.attributes = FALSE))
+  )) {
+  #
+  # collect all arguments 
+  out <- c(
+    lapply(match.call(expand.dots = FALSE)$`...`, eval),
+    mget(setdiff(ls(sorted = FALSE, all.names = TRUE), "..."))
+  )
+  # checks
+  if ("ANY" %in% names(out)) {
+    stop(paste0(
+      "The argument name 'ANY' is reserved for internal use. ",
+      "Choose an other name for that rule."
+    ))
+  }
+  out <- lapply(out, function(x) {
+    if (!is.list(x) || is.null(names(x)) || 
+        !identical(sort(names(x)), c("DO", "EVAL", "IF"))) {
+      stop(paste0(
+        "convertParams: all arguments must be three-element, named ",
+        "lists with names 'IF', 'DO', and 'EVAL'"), call. = FALSE)
     }
-    out <- lapply(out, function(x) {
-        if (!is.list(x) || is.null(names(x)) || 
-            !identical(sort(names(x)), c("DO", "EVAL", "IF"))) {
-            stop(paste0(
-                "convertParams: all arguments must be three-element, named ",
-                "lists with names 'IF', 'DO', and 'EVAL'"), call. = FALSE)
-        }
-        if (length(x$IF) != 1L) {
-            stop("convertParams: the 'IF' element must be of length 1",
-                 call. = FALSE)
-        }
-        if (is.character(x$IF)) {
-            x$IF <- tryCatch(match.fun(x$IF), error = function(e)
-                stop(paste0("convertParams: function with name '",
-                            x$IF, "' was not found"), call. = FALSE))
-        } else if (!is.function(x$IF)) {
-            stop(paste0(
-                "convertParams: the 'IF' element must be a function or ",
-                "a character string of the function name"))
-        }
-#         if (length(formals(x$IF)) < 1L) {
-#             stop(paste0(
-#                 "convertParams: the 'IF' function must have at least ", 
-#                 "one argument"), call. = FALSE)
-#         }
-        if (length(x$DO) == 0L) {
-            stop("convertParams: the 'DO' element must be of length 1 or more",
-                 call. = FALSE)
-        }
-        if (is.character(x$DO)) {
-            x$DO <- as.list(x$DO)
-        } else if (is.function(x$DO)) {
-            x$DO <- list(x$DO)
-        }
-        x$DO <- lapply(x$DO, function(fun) {
-            if (is.character(fun)) {
-                fun <- tryCatch(match.fun(fun), error = function(e)
-                    stop(paste0("convertParams: function with name '",
-                                fun, "' was not found"), call. = FALSE))
-            } else if (!is.function(fun)) {
-                stop(paste0(
-                    "convertParams: the 'DO' element must be a character ",
-                    "vector or a list of functions"))
-            }
-#             if (length(formals(fun)) < 1L) {
-#                 stop(paste0(
-#                     "convertParams: the 'DO' functions must have at least ", 
-#                     "one argument"), call. = FALSE)
-#             }
-            fun
-        })
-        if (length(x$EVAL) != 1L) {
-            stop("convertParams: the 'EVAL' element must be of length 1",
-                 call. = FALSE)
-        }
-        if (is.character(x$EVAL)) {
-            x$IF <- tryCatch(match.fun(x$EVAL), error = function(e)
-                stop(paste0("convertParams: function with name '",
-                            x$EVAL, "' was not found"), call. = FALSE))
-        } else if (!is.function(x$EVAL)) {
-            stop(paste0(
-                "convertParams: the 'EVAL' element must be a function or ",
-                "a character string of the function name"))
-        }
-#         if (length(formals(x$EVAL)) < 2L) {
-#             stop(paste0(
-#                 "convertParams: the 'EVAL' function must have at least ", 
-#                 "two arguments"), call. = FALSE)
-#         }
-        # return
-        x
+    if (length(x$IF) != 1L) {
+      stop("convertParams: the 'IF' element must be of length 1",
+           call. = FALSE)
+    }
+    if (is.character(x$IF)) {
+      x$IF <- tryCatch(match.fun(x$IF), error = function(e)
+        stop(paste0("convertParams: function with name '",
+                    x$IF, "' was not found"), call. = FALSE))
+    } else if (!is.function(x$IF)) {
+      stop(paste0(
+        "convertParams: the 'IF' element must be a function or ",
+        "a character string of the function name"))
+    }
+    #         if (length(formals(x$IF)) < 1L) {
+    #             stop(paste0(
+    #                 "convertParams: the 'IF' function must have at least ", 
+    #                 "one argument"), call. = FALSE)
+    #         }
+    if (length(x$DO) == 0L) {
+      stop("convertParams: the 'DO' element must be of length 1 or more",
+           call. = FALSE)
+    }
+    if (is.character(x$DO)) {
+      x$DO <- as.list(x$DO)
+    } else if (is.function(x$DO)) {
+      x$DO <- list(x$DO)
+    }
+    x$DO <- lapply(x$DO, function(fun) {
+      if (is.character(fun)) {
+        fun <- tryCatch(match.fun(fun), error = function(e)
+          stop(paste0("convertParams: function with name '",
+                      fun, "' was not found"), call. = FALSE))
+      } else if (!is.function(fun)) {
+        stop(paste0(
+          "convertParams: the 'DO' element must be a character ",
+          "vector or a list of functions"))
+      }
+      #             if (length(formals(fun)) < 1L) {
+      #                 stop(paste0(
+      #                     "convertParams: the 'DO' functions must have at least ", 
+      #                     "one argument"), call. = FALSE)
+      #             }
+      fun
     })
+    if (length(x$EVAL) != 1L) {
+      stop("convertParams: the 'EVAL' element must be of length 1",
+           call. = FALSE)
+    }
+    if (is.character(x$EVAL)) {
+      x$IF <- tryCatch(match.fun(x$EVAL), error = function(e)
+        stop(paste0("convertParams: function with name '",
+                    x$EVAL, "' was not found"), call. = FALSE))
+    } else if (!is.function(x$EVAL)) {
+      stop(paste0(
+        "convertParams: the 'EVAL' element must be a function or ",
+        "a character string of the function name"))
+    }
+    #         if (length(formals(x$EVAL)) < 2L) {
+    #             stop(paste0(
+    #                 "convertParams: the 'EVAL' function must have at least ", 
+    #                 "two arguments"), call. = FALSE)
+    #         }
     # return
-    setattr(out, "class", "convertParams")
-    out
+    x
+  })
+  # return
+  setattr(out, "class", "convertParams")
+  out
 }
 
 

@@ -11,11 +11,11 @@
 #' @param ... arguments to fun
 #' @param .var.name name for \code{x}. See \code{\link[checkmate]{assert}}
 assert0 <- function(x, fun, ..., .var.name = NULL) {
-    if (!length(.var.name)) .var.name = deparse(substitute(x))
-    fun <- match.fun(fun)
-    assert(checkNull(x),
-           fun(x, ...),
-           .var.name = .var.name)
+  if (!length(.var.name)) .var.name = deparse(substitute(x))
+  fun <- match.fun(fun)
+  assert(checkNull(x),
+         fun(x, ...),
+         .var.name = .var.name)
 }
 
 #' Address in RAM of a variable
@@ -54,24 +54,24 @@ address <- data.table::address
 #' @references
 #' \url{https://github.com/Rdatatable/data.table/issues/1281}
 setattr <- function(x, name, value, check_for = NULL) {
-    if ((is.logical(x) && length(x) == 1L) || 
-        (identical(address(x), address(check_for)))) {
-        attr(x, name) <- value
-    } else {
-        data.table::setattr(x, name, value)
-    }
+  if ((is.logical(x) && length(x) == 1L) || 
+      (identical(address(x), address(check_for)))) {
+    attr(x, name) <- value
+  } else {
+    data.table::setattr(x, name, value)
+  }
 }
 
 
 #' Check for availability of packages
 #' @keywords internal
 reqFn <- function(packages) {
-    for (i in packages) {
-        if(!requireNamespace(i, quietly = TRUE)) {
-            stop("You have to install package:", i ," before using this function")
-        }
+  for (i in packages) {
+    if(!requireNamespace(i, quietly = TRUE)) {
+      stop("You have to install package:", i ," before using this function")
     }
-    TRUE
+  }
+  TRUE
 }
 
 #' Replace elements of a vector
@@ -100,47 +100,47 @@ reqFn <- function(packages) {
 #' # the missing value is not affected
 #' stopifnot(is.na(xr[1]))
 Replace <- function(x, from, to, digits = 10L) {
-    if (is.factor(x)) {
-        levels(x) <- Replace(levels(x), from = from, to = to, digits = digits)
-        return(x)
-    }
-    if (!identical(typeof(x), typeof(from)) || 
-        !identical(typeof(x), typeof(to)))
-        stop("The type of 'x', 'from', and 'to' must be identical")
-    assertVector(x, strict = TRUE, .var.name = "x")
-    assertVector(from, strict = TRUE, any.missing = FALSE, .var.name = "x")
-    assertVector(to, strict = TRUE, any.missing = FALSE, .var.name = "x")
-    if (is.double(x)) {
-        back <- TRUE
-        x <- format(x, digits = digits)
-        from <- format(from, digits = digits)
-        to <- format(to, digits = digits)
-    } else {
-        back <- FALSE
-    }
-    un <- if (uniqueN(x) == length(x)) TRUE else FALSE
-    from <- unique(from)
-    to <- rep_len(to, length(from))
-    if (un) {
-        ind <- match(from, x)
-        discard <- is.na(ind)
-        x[ind[!discard]] <- to[!discard]
-        if (back) x <- as.double(x)
-        # return
-        x
-    } else {
-        dt <- data.table(ind = seq_along(x), x = x)
-        dt2 <- data.table(x = from, to = to)
-        dt <- merge(dt, dt2, by = "x", all.x = TRUE)
-        setkey(dt, to)
-        dt[is.na(to), to := x]
-        setkey(dt, ind)
-        out <- dt$to
-        if (back) out <- as.double(out)
-        setattr(out, "names", names(x))
-        # return
-        out
-    }
+  if (is.factor(x)) {
+    levels(x) <- Replace(levels(x), from = from, to = to, digits = digits)
+    return(x)
+  }
+  if (!identical(typeof(x), typeof(from)) || 
+      !identical(typeof(x), typeof(to)))
+    stop("The type of 'x', 'from', and 'to' must be identical")
+  assertVector(x, strict = TRUE, .var.name = "x")
+  assertVector(from, strict = TRUE, any.missing = FALSE, .var.name = "x")
+  assertVector(to, strict = TRUE, any.missing = FALSE, .var.name = "x")
+  if (is.double(x)) {
+    back <- TRUE
+    x <- format(x, digits = digits)
+    from <- format(from, digits = digits)
+    to <- format(to, digits = digits)
+  } else {
+    back <- FALSE
+  }
+  un <- if (uniqueN(x) == length(x)) TRUE else FALSE
+  from <- unique(from)
+  to <- rep_len(to, length(from))
+  if (un) {
+    ind <- match(from, x)
+    discard <- is.na(ind)
+    x[ind[!discard]] <- to[!discard]
+    if (back) x <- as.double(x)
+    # return
+    x
+  } else {
+    dt <- data.table(ind = seq_along(x), x = x)
+    dt2 <- data.table(x = from, to = to)
+    dt <- merge(dt, dt2, by = "x", all.x = TRUE)
+    setkey(dt, to)
+    dt[is.na(to), to := x]
+    setkey(dt, ind)
+    out <- dt$to
+    if (back) out <- as.double(out)
+    setattr(out, "names", names(x))
+    # return
+    out
+  }
 }
 
 
@@ -159,21 +159,21 @@ Replace <- function(x, from, to, digits = 10L) {
 #' @return The function is invoked for its side effect, which is assigning list
 #' elements to the enclosing environment
 assignList <- function(listdat, verbose = TRUE, overwriteGlobal = FALSE) {
-    min_calling_frame <- ifelse(overwriteGlobal, 1, 2)
-    if (sys.nframe() >= min_calling_frame) {
-        if (is.null(names(listdat)) || 
-                any(names(listdat) == "")) {
-            stop("All elements of the assigned list should have a name!")
-        }
-        for (i in names(listdat)) {
-            assign(i, listdat[[i]], pos = parent.frame())
-        }
-        if (verbose) {
-            warning(
-                paste("The following variables were assigned to the environment:", 
-                      paste(names(listdat), collapse = " ")))
-        }
+  min_calling_frame <- ifelse(overwriteGlobal, 1, 2)
+  if (sys.nframe() >= min_calling_frame) {
+    if (is.null(names(listdat)) || 
+        any(names(listdat) == "")) {
+      stop("All elements of the assigned list should have a name!")
     }
+    for (i in names(listdat)) {
+      assign(i, listdat[[i]], pos = parent.frame())
+    }
+    if (verbose) {
+      warning(
+        paste("The following variables were assigned to the environment:", 
+              paste(names(listdat), collapse = " ")))
+    }
+  }
 }
 
 #' Create list with substituted names
@@ -189,27 +189,27 @@ assignList <- function(listdat, verbose = TRUE, overwriteGlobal = FALSE) {
 #' @export
 #' @return A list with substituted names.
 listS <- function(..., indices_ = NULL) {
-    call_env <- parent.frame()
-    subst <- function(x) {
-        vapply(x, 
-               function(xx) as.character(eval(parse(text = xx), 
-                                              call_env)), 
-               character(1))
-    }
-    #
-    list_def <- list(...)
-    if (is.null(onames <- names(list_def))) {
-        return( list_def )
-    }
-    if (is.null(indices_)) {
-        ind <- grep("^[.]", onames)
-        onames[ind] <- subst(sub("^[.]", "", onames[ind]))
-    } else {
-        onames[indices_] <- subst(onames[indices_])
-    }
-    names(list_def) <- onames
-    # return
-    list_def
+  call_env <- parent.frame()
+  subst <- function(x) {
+    vapply(x, 
+           function(xx) as.character(eval(parse(text = xx), 
+                                          call_env)), 
+           character(1))
+  }
+  #
+  list_def <- list(...)
+  if (is.null(onames <- names(list_def))) {
+    return( list_def )
+  }
+  if (is.null(indices_)) {
+    ind <- grep("^[.]", onames)
+    onames[ind] <- subst(sub("^[.]", "", onames[ind]))
+  } else {
+    onames[indices_] <- subst(onames[indices_])
+  }
+  names(list_def) <- onames
+  # return
+  list_def
 }
 
 #' Execute a function call not unlike \code{do.call}.
@@ -264,17 +264,17 @@ listS <- function(..., indices_ = NULL) {
 #' test(do("head", n = 10L, arg_list = list(x = x)))
 #' 
 do <- function(what, ..., arg_list = list()) {
-    mc <- match.call(expand.dots = FALSE)[["..."]]
-    to_call <- 
-        if (is.function(what)) {
-            c(list(what), mc, arg_list)
-        } else if (is.character(what)) {
-            c(list(as.name(what[[1L]])), mc, arg_list)
-        } else {
-            stop("'what' must be either a function or a non-empty character string naming the function to be called")
-        }
-    expr <- as.call(to_call)
-    eval(expr, parent.frame())
+  mc <- match.call(expand.dots = FALSE)[["..."]]
+  to_call <- 
+    if (is.function(what)) {
+      c(list(what), mc, arg_list)
+    } else if (is.character(what)) {
+      c(list(as.name(what[[1L]])), mc, arg_list)
+    } else {
+      stop("'what' must be either a function or a non-empty character string naming the function to be called")
+    }
+  expr <- as.call(to_call)
+  eval(expr, parent.frame())
 }
 
 #' Pass \code{arg = .(key1 = value1, key2 = value2)} function arguments
@@ -320,32 +320,32 @@ do <- function(what, ..., arg_list = list()) {
 argumentDeparser <- function(arg, replace_dot, 
                              transform_logical = TRUE,
                              null_params = NULL) {
-    if (missing(replace_dot)) {
-        argname <- deparse(substitute(replace_dot))
-        if (is.null(argname)) 
-            stop(paste0(
-                "Provide the 'replace_dot' argument, its name could ",
-                "not be figured out automagically"))
-        replace_dot <- paste0(argname, "Params")
+  if (missing(replace_dot)) {
+    argname <- deparse(substitute(replace_dot))
+    if (is.null(argname)) 
+      stop(paste0(
+        "Provide the 'replace_dot' argument, its name could ",
+        "not be figured out automagically"))
+    replace_dot <- paste0(argname, "Params")
+  }
+  if (is.symbol(arg)) arg <- eval(arg, parent.frame())
+  out <- 
+    if (transform_logical && identical(arg, TRUE)) {
+      do.call(replace_dot, list())
+    } else if (transform_logical && identical(arg, FALSE)) {
+      NULL
+    } else {
+      if (identical(arg[[1L]], as.name("."))) {
+        arg[[1L]] <- as.name(replace_dot)
+      }
+      eval(arg, parent.frame())
     }
-    if (is.symbol(arg)) arg <- eval(arg, parent.frame())
-    out <- 
-        if (transform_logical && identical(arg, TRUE)) {
-            do.call(replace_dot, list())
-        } else if (transform_logical && identical(arg, FALSE)) {
-            NULL
-        } else {
-            if (identical(arg[[1L]], as.name("."))) {
-                arg[[1L]] <- as.name(replace_dot)
-            }
-            eval(arg, parent.frame())
-        }
-    if (is.null(out) && !is.null(null_params)) {
-        assertList(null_params, .var.name = "null_params")
-        out <- do.call(replace_dot, null_params)
-    }
-    # return
-    out
+  if (is.null(out) && !is.null(null_params)) {
+    assertList(null_params, .var.name = "null_params")
+    out <- do.call(replace_dot, null_params)
+  }
+  # return
+  out
 }
 
 
@@ -358,13 +358,13 @@ argumentDeparser <- function(arg, replace_dot,
 #' \code{\link{set.seed}}, or a list of arguments passed to 
 #' \code{\link{set.seed}}
 setSeed <- function(seed) {
-    if (!is.null(seed)) {
-        if (is.list(seed)) {
-            do.call("set.seed", seed)
-        } else {
-            set.seed(seed = seed)
-        }
+  if (!is.null(seed)) {
+    if (is.list(seed)) {
+      do.call("set.seed", seed)
+    } else {
+      set.seed(seed = seed)
     }
+  }
 }
 
 #' Argument verification if there might be an "all" option
@@ -382,19 +382,19 @@ setSeed <- function(seed) {
 #' choices are returned. Otherwise see \code{\link[base]{match.arg}}.
 #' @keywords internal 
 matchArg <- function(arg, choices = NULL, several_ok = TRUE) {
-    arg <- tolower(arg)
-    if (is.null(choices)) {
-        formal_args <- formals(sys.function(sys.parent()))
-        choices <- eval(formal_args[[deparse(match.call()$arg)]])
-    }
-    choices <- setdiff(tolower(choices), "all")
-    # return choices if "all" and matching choice(s) otherwise
-    if (length(arg) > 0L && any(arg == "all")) {
-        if (!several_ok) stop("'arg' may not be 'all' if 'several_ok' is FALSE")
-        choices
-    } else {
-        match.arg(arg, choices, several.ok = several_ok)
-    }
+  arg <- tolower(arg)
+  if (is.null(choices)) {
+    formal_args <- formals(sys.function(sys.parent()))
+    choices <- eval(formal_args[[deparse(match.call()$arg)]])
+  }
+  choices <- setdiff(tolower(choices), "all")
+  # return choices if "all" and matching choice(s) otherwise
+  if (length(arg) > 0L && any(arg == "all")) {
+    if (!several_ok) stop("'arg' may not be 'all' if 'several_ok' is FALSE")
+    choices
+  } else {
+    match.arg(arg, choices, several.ok = several_ok)
+  }
 }
 
 #' Attach dimension and label attributes to test statistics
@@ -412,15 +412,15 @@ matchArg <- function(arg, choices = NULL, several_ok = TRUE) {
 #' indicating the order (or subset) of the dimensions
 #' @keywords internal
 setattributes <- function(x, obj = NULL, label = NULL, dimorder = NULL) {
-    if (!is.null(obj)) {
-        if (is.null(dimorder)) dimorder <- seq_along(obj$teststat_dimid)
-        array_(x, obj$full_dims[obj$teststat_dimid][dimorder], 
-               arg_check = FALSE)    
-    }
-    if (!is.null(label))
-        setattr(x, "label", label)
-    # return
-    invisible(x)
+  if (!is.null(obj)) {
+    if (is.null(dimorder)) dimorder <- seq_along(obj$teststat_dimid)
+    array_(x, obj$full_dims[obj$teststat_dimid][dimorder], 
+           arg_check = FALSE)    
+  }
+  if (!is.null(label))
+    setattr(x, "label", label)
+  # return
+  invisible(x)
 }
 
 

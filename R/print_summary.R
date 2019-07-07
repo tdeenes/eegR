@@ -49,84 +49,84 @@ extract <- function(...) UseMethod("extract")
 extract.default <- function(object, what,
                             time_window = NULL, term = NULL, chan = NULL,
                             drop = FALSE, ...) {
-    # helper function
-    extractor <- function(x, params) {
-        out <- copy(x)
-        if (is.null(out)) return(out)
-        if (identical(unname(dim(out)), unname(params$dims)) )
-            setattr(out, "dimnames", params$dimn)
-        subs <- params$subs[intersect(names(params$subs),
-                                      names(dimnames(out)))]
-        if (length(subs) > 0L) {
-            out <- subsetArray(out, subset. = subs, drop. = params$drop,
-                               keep_attributes. = FALSE)
-            setattr(out, "label", attr(x, "label"))
-        }
-        # return
-        out
+  # helper function
+  extractor <- function(x, params) {
+    out <- copy(x)
+    if (is.null(out)) return(out)
+    if (identical(unname(dim(out)), unname(params$dims)) )
+      setattr(out, "dimnames", params$dimn)
+    subs <- params$subs[intersect(names(params$subs),
+                                  names(dimnames(out)))]
+    if (length(subs) > 0L) {
+      out <- subsetArray(out, subset. = subs, drop. = params$drop,
+                         keep_attributes. = FALSE)
+      setattr(out, "label", attr(x, "label"))
     }
-    #
-    if (!inherits(object, c("arrayTtest", "arrayAnova", "tanova")))
-        stop("No extractor for this class")
-    exparams <- list(
-        dims = object$dim, dimn = object$dimnames,
-        drop = drop
-    )
-    if (is.null(term)) term <- exparams$dimn$modelterm
-    if (is.null(chan)) chan <- exparams$dimn$chan
-    time <-
-        if (is.null(time_window)) {
-            dimnames(object$stat)$time
-        } else if (length(time_window) != 2L) {
-            stop("time_window must contain two values")
-        } else if (anyNA(time_window)) {
-            stop("time_window has missing value(s)")
-        } else {
-            time_window <- sort(time_window)
-            timep <- as.numeric(exparams$dimn$time)
-            time <- as.character(timep[timep >= time_window[1] &
-                                           timep <= time_window[2]])
-        }
-    subs <- list(chan = chan, time = time, modelterm = term)
-    exparams$subs <- subs[!vapply(subs, is.null, FALSE)]
-    out <- setNames(vector("list", length(what)), what)
-    if ("stat" %in% what) {
-        out[["stat"]] <- extractor(object[["stat"]], exparams)
-    }
-    if ("p" %in% what) {
-        out[["p"]] <- extractor(attr(object[["stat"]], "p_value"), exparams)
-    }
-    if ("es" %in% what) {
-        out[["es"]] <- extractor(attr(object[["stat"]], "effect_size"), exparams)
-    }
-    if ("means" %in% what) {
-        m <- attr(object$stat, "marginal_means")
-        if (!is.null(m)) {
-            m <- lapply(m, subsetArray, subset. = sub[c("chan", "time")],
-                        drop. = drop)
-            out[["means"]] <-
-                if (drop && length(term) == 1L) m[[term]] else m[term]
-        } else {
-            out[["means"]] <- NULL
-        }
-    }
-    if ("stat_corr" %in% what) {
-        out[["stat_corr"]] <- extractor(object[["stat_corr"]], exparams)
-    }
-    if ("p_corr" %in% what) {
-        out[["p_corr"]] <- extractor(object[["p_corr"]], exparams)
-    }
-    if ("df" %in% what) {
-        out[["df"]] <- extractor(attr(object[["stat"]], "Df"), exparams)
-    }
-    what_null <- vapply(out[what], is.null, FALSE)
-    if (any(what_null)) {
-        warning(paste0(paste(what[what_null], collapse = ", "),
-                       " values are not available"))
-    }
-    if (length(what) == 1L) out <- out[[1L]]
     # return
     out
+  }
+  #
+  if (!inherits(object, c("arrayTtest", "arrayAnova", "tanova")))
+    stop("No extractor for this class")
+  exparams <- list(
+    dims = object$dim, dimn = object$dimnames,
+    drop = drop
+  )
+  if (is.null(term)) term <- exparams$dimn$modelterm
+  if (is.null(chan)) chan <- exparams$dimn$chan
+  time <-
+    if (is.null(time_window)) {
+      dimnames(object$stat)$time
+    } else if (length(time_window) != 2L) {
+      stop("time_window must contain two values")
+    } else if (anyNA(time_window)) {
+      stop("time_window has missing value(s)")
+    } else {
+      time_window <- sort(time_window)
+      timep <- as.numeric(exparams$dimn$time)
+      time <- as.character(timep[timep >= time_window[1] &
+                                   timep <= time_window[2]])
+    }
+  subs <- list(chan = chan, time = time, modelterm = term)
+  exparams$subs <- subs[!vapply(subs, is.null, FALSE)]
+  out <- setNames(vector("list", length(what)), what)
+  if ("stat" %in% what) {
+    out[["stat"]] <- extractor(object[["stat"]], exparams)
+  }
+  if ("p" %in% what) {
+    out[["p"]] <- extractor(attr(object[["stat"]], "p_value"), exparams)
+  }
+  if ("es" %in% what) {
+    out[["es"]] <- extractor(attr(object[["stat"]], "effect_size"), exparams)
+  }
+  if ("means" %in% what) {
+    m <- attr(object$stat, "marginal_means")
+    if (!is.null(m)) {
+      m <- lapply(m, subsetArray, subset. = sub[c("chan", "time")],
+                  drop. = drop)
+      out[["means"]] <-
+        if (drop && length(term) == 1L) m[[term]] else m[term]
+    } else {
+      out[["means"]] <- NULL
+    }
+  }
+  if ("stat_corr" %in% what) {
+    out[["stat_corr"]] <- extractor(object[["stat_corr"]], exparams)
+  }
+  if ("p_corr" %in% what) {
+    out[["p_corr"]] <- extractor(object[["p_corr"]], exparams)
+  }
+  if ("df" %in% what) {
+    out[["df"]] <- extractor(attr(object[["stat"]], "Df"), exparams)
+  }
+  what_null <- vapply(out[what], is.null, FALSE)
+  if (any(what_null)) {
+    warning(paste0(paste(what[what_null], collapse = ", "),
+                   " values are not available"))
+  }
+  if (length(what) == 1L) out <- out[[1L]]
+  # return
+  out
 }
 
 #' @describeIn extract Method for \code{arrayTtest} objects
@@ -137,9 +137,9 @@ extract.arrayTtest <- function(object,
                                time_window = NULL, term = NULL, chan = NULL,
                                drop = FALSE,
                                ...) {
-    what <- matchArg(what)
-    NextMethod(what = what, time_window = time_window, term = term,
-               chan = chan, drop = drop, ...)
+  what <- matchArg(what)
+  NextMethod(what = what, time_window = time_window, term = term,
+             chan = chan, drop = drop, ...)
 }
 
 #' @describeIn extract Method for \code{arrayAnova} objects
@@ -150,9 +150,9 @@ extract.arrayAnova <- function(object,
                                time_window = NULL, term = NULL, chan = NULL,
                                drop = FALSE,
                                ...) {
-    what <- matchArg(what)
-    NextMethod(what = what, time_window = time_window, term = term,
-               chan = chan, drop = drop, ...)
+  what <- matchArg(what)
+  NextMethod(what = what, time_window = time_window, term = term,
+             chan = chan, drop = drop, ...)
 }
 
 #' @describeIn extract Method for \code{tanova} objects
@@ -163,9 +163,9 @@ extract.tanova <- function(object,
                            time_window = NULL, term = NULL,
                            drop = FALSE,
                            ...) {
-    what <- matchArg(what)
-    NextMethod(what = what, time_window = time_window, term = term,
-               chan = NULL, drop = drop, ...)
+  what <- matchArg(what)
+  NextMethod(what = what, time_window = time_window, term = term,
+             chan = NULL, drop = drop, ...)
 }
 
 
@@ -216,13 +216,13 @@ summary.arrayTtest <- function(object,
                                basis_dim = c("chan", "time"),
                                crit = NULL,
                                ...) {
-    basis <- tolower(basis)
-    basis <- match.arg(basis)
-    if (is.null(crit) && grepl("p", basis)) crit <- 0.05
-    out <- summary.eegr(object, basis, basis_dim, crit, ...)
-    setattr(out, "class", c("summary.arrayTtest", "summary.eegr"))
-    # return
-    out
+  basis <- tolower(basis)
+  basis <- match.arg(basis)
+  if (is.null(crit) && grepl("p", basis)) crit <- 0.05
+  out <- summary.eegr(object, basis, basis_dim, crit, ...)
+  setattr(out, "class", c("summary.arrayTtest", "summary.eegr"))
+  # return
+  out
 }
 
 #' @rdname summary
@@ -233,13 +233,13 @@ summary.arrayAnova <- function(object,
                                basis_dim = c("chan", "time"),
                                crit = NULL,
                                ...) {
-    basis <- tolower(basis)
-    basis <- match.arg(basis)
-    if (is.null(crit) && grepl("p", basis)) crit <- 0.05
-    out <- summary.eegr(object, basis, basis_dim, crit, ...)
-    setattr(out, "class", c("summary.arrayAnova", "summary.eegr"))
-    # return
-    out
+  basis <- tolower(basis)
+  basis <- match.arg(basis)
+  if (is.null(crit) && grepl("p", basis)) crit <- 0.05
+  out <- summary.eegr(object, basis, basis_dim, crit, ...)
+  setattr(out, "class", c("summary.arrayAnova", "summary.eegr"))
+  # return
+  out
 }
 
 #' @rdname summary
@@ -249,13 +249,13 @@ summary.tanova <- function(object,
                            basis_dim = "time",
                            crit = NULL,
                            ...) {
-    basis <- tolower(basis)
-    basis <- match.arg(basis)
-    if (is.null(crit) && grepl("p", basis)) crit <- 0.05
-    out <- summary.eegr(object, basis, basis_dim, crit, ...)
-    setattr(out, "class", c("summary.tanova", "summary.eegr"))
-    # return
-    out
+  basis <- tolower(basis)
+  basis <- match.arg(basis)
+  if (is.null(crit) && grepl("p", basis)) crit <- 0.05
+  out <- summary.eegr(object, basis, basis_dim, crit, ...)
+  setattr(out, "class", c("summary.tanova", "summary.eegr"))
+  # return
+  out
 }
 
 #' Workhorse function for eegR-summary methods
@@ -274,95 +274,95 @@ summary.tanova <- function(object,
 #' \code{time_window = c(100, 200)}
 #' @keywords internal
 summary.eegr <- function(object, basis, basis_dim, crit, ...) {
-    # helper functions
-    applyFn <- function(x, size = FALSE) {
-        out <- t(colQuantiles(x, probs = c(0, 1, 0.5),
-                              na.rm = TRUE, drop = FALSE))
-        if (size) {
-            size <- colSums(!is.na(x))
-            ratio <- size/nrow(x)
-            out <- rbind(out, size, ratio)
-        }
-        out
+  # helper functions
+  applyFn <- function(x, size = FALSE) {
+    out <- t(colQuantiles(x, probs = c(0, 1, 0.5),
+                          na.rm = TRUE, drop = FALSE))
+    if (size) {
+      size <- colSums(!is.na(x))
+      ratio <- size/nrow(x)
+      out <- rbind(out, size, ratio)
     }
-    Aperm <- function(x) {
-        ndimn <- names(dimnames(x))
-        dims <-
-            if ("modelterm" %in% ndimn) {
-                c("modelterm", "descriptives")
-            } else {
-                "descriptives"
-            }
-        # return
-        if (length(dim(x)) > 1L) {
-            apermArray(x, first = dims, keep_attributes. = TRUE)
-        } else {
-            x
-        }
-    }
-    #
-    # basis must be extracted
-    assertString(basis, .var.name = "basis")
-    args <- list(...)
-    args$what <-
-        if (is.null(args$what)) {
-            "all"
-        } else {
-            unique(c(tolower(args$what), basis))
-        }
-    #
-    # extract nodes
-    suppressWarnings(out <- do("extract", object, arg_list = args))
-    if (!is.list(out)) out <- setNames(list(out), args$what)
-    #
-    # basis must be present
-    if (!basis %in% names(out))
-        stop(sprintf("The node corresponding to basis ('%s') is not available",
-                     basis))
-    #
-    # use absolute values of the test statistics
-    abs_ind <- grep("stat", names(out))
-    if (length(abs_ind) > 0L)
-        out[abs_ind] <- lapply(out[abs_ind], abs)
-    #
-    # find values above (or below) the criteria
-    assertNumber(crit, .var.name = "crit")
-    ind <-
-        if (basis %in% c("p_corr", "p")) {
-            out[[basis]] <= crit
-        } else {
-            out[[basis]] >= crit
-        }
-    #
-    # compute summary statistics
-    excl <- "means"
-    if (!all(basis_dim %in% names(dimnames(out$df))))
-        excl  <- c(excl, "df")
-    for (i in setdiff(names(out), excl)) {
-        if (i != basis) {
-            arg_size <- FALSE
-            descr <- c("min", "max", "median")
-        } else {
-            arg_size <- TRUE
-            descr <- c("min", "max", "median", "size", "ratio")
-        }
-        temp <- out[[i]]
-        temp[!ind] <- NA
-        temp <- fnDims(
-            temp, target_dim = basis_dim, applyFn,
-            arg_list = list(size = arg_size),
-            newdims = list(descriptives = descr),
-            vectorized = TRUE)
-        setattr(temp, "label", attr(out[[i]], "label"))
-        out[[i]] <- Aperm(temp)
-    }
-    #
-    # some decoration
-    out[["call"]] <- object[["call"]]
-    out[["basis"]] <- list(basis = basis, crit = crit, dim = basis_dim)
-    #
-    # return
     out
+  }
+  Aperm <- function(x) {
+    ndimn <- names(dimnames(x))
+    dims <-
+      if ("modelterm" %in% ndimn) {
+        c("modelterm", "descriptives")
+      } else {
+        "descriptives"
+      }
+    # return
+    if (length(dim(x)) > 1L) {
+      apermArray(x, first = dims, keep_attributes. = TRUE)
+    } else {
+      x
+    }
+  }
+  #
+  # basis must be extracted
+  assertString(basis, .var.name = "basis")
+  args <- list(...)
+  args$what <-
+    if (is.null(args$what)) {
+      "all"
+    } else {
+      unique(c(tolower(args$what), basis))
+    }
+  #
+  # extract nodes
+  suppressWarnings(out <- do("extract", object, arg_list = args))
+  if (!is.list(out)) out <- setNames(list(out), args$what)
+  #
+  # basis must be present
+  if (!basis %in% names(out))
+    stop(sprintf("The node corresponding to basis ('%s') is not available",
+                 basis))
+  #
+  # use absolute values of the test statistics
+  abs_ind <- grep("stat", names(out))
+  if (length(abs_ind) > 0L)
+    out[abs_ind] <- lapply(out[abs_ind], abs)
+  #
+  # find values above (or below) the criteria
+  assertNumber(crit, .var.name = "crit")
+  ind <-
+    if (basis %in% c("p_corr", "p")) {
+      out[[basis]] <= crit
+    } else {
+      out[[basis]] >= crit
+    }
+  #
+  # compute summary statistics
+  excl <- "means"
+  if (!all(basis_dim %in% names(dimnames(out$df))))
+    excl  <- c(excl, "df")
+  for (i in setdiff(names(out), excl)) {
+    if (i != basis) {
+      arg_size <- FALSE
+      descr <- c("min", "max", "median")
+    } else {
+      arg_size <- TRUE
+      descr <- c("min", "max", "median", "size", "ratio")
+    }
+    temp <- out[[i]]
+    temp[!ind] <- NA
+    temp <- fnDims(
+      temp, target_dim = basis_dim, applyFn,
+      arg_list = list(size = arg_size),
+      newdims = list(descriptives = descr),
+      vectorized = TRUE)
+    setattr(temp, "label", attr(out[[i]], "label"))
+    out[[i]] <- Aperm(temp)
+  }
+  #
+  # some decoration
+  out[["call"]] <- object[["call"]]
+  out[["basis"]] <- list(basis = basis, crit = crit, dim = basis_dim)
+  #
+  # return
+  out
 }
 
 #' Print summaries of \code{\link{arrayTtest}}, \code{\link{arrayAnova}}, or
@@ -384,30 +384,30 @@ summary.eegr <- function(object, basis, basis_dim, crit, ...) {
 #' @return The function invisibly returns the input object.
 print.summary.eegr <- function(x, digits = 3L, quote = FALSE, fill_na = "-",
                                ...) {
-    # function to remove "descriptives" header
-    rD <- function(x) {
-        if (!is.null(names(dimnames(x)))) {
-            ind <- match("descriptives", names(dimnames(x)))
-            names(dimnames(x))[ind] <- ""
-        }
-        attr(x, "label") <- NULL
-        x
+  # function to remove "descriptives" header
+  rD <- function(x) {
+    if (!is.null(names(dimnames(x)))) {
+      ind <- match("descriptives", names(dimnames(x)))
+      names(dimnames(x))[ind] <- ""
     }
-    # check arguments
-    assertCount(digits, .var.name = "digits")
-    assertFlag(quote, .var.name = "quote")
-    # main
-    cat("\n----\nCall\n----\n",
-        paste(deparse(x$call), sep = "\n", collapse = "\n"))
-    cat("\n\n----\nDesriptive statistics\n----\n")
-    rel <- if (grepl("p", x$basis$basis)) "<" else ">"
-    basis <- attr(x[[x$basis$basis]], "label")
-    cat("\n( Basis:", paste(basis, rel, x$basis$crit, ")\n", sep = " "))
-    for (i in seq_along(x[setdiff(names(x), c("call", "basis"))])) {
-        cat("\n<<<", attr(x[[i]], "label"),  ">>>\n")
-        print(rD(x[[i]]), digits = digits, quote = quote, na.print = fill_na,
-              ...)
-    }
-    # return
-    invisible(x)
+    attr(x, "label") <- NULL
+    x
+  }
+  # check arguments
+  assertCount(digits, .var.name = "digits")
+  assertFlag(quote, .var.name = "quote")
+  # main
+  cat("\n----\nCall\n----\n",
+      paste(deparse(x$call), sep = "\n", collapse = "\n"))
+  cat("\n\n----\nDesriptive statistics\n----\n")
+  rel <- if (grepl("p", x$basis$basis)) "<" else ">"
+  basis <- attr(x[[x$basis$basis]], "label")
+  cat("\n( Basis:", paste(basis, rel, x$basis$crit, ")\n", sep = " "))
+  for (i in seq_along(x[setdiff(names(x), c("call", "basis"))])) {
+    cat("\n<<<", attr(x[[i]], "label"),  ">>>\n")
+    print(rD(x[[i]]), digits = digits, quote = quote, na.print = fill_na,
+          ...)
+  }
+  # return
+  invisible(x)
 }

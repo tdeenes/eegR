@@ -26,99 +26,99 @@ NULL
 #' @rdname Ttest
 # independent samples t-test
 isTtest <- function(obj, new_group = NULL, attribs = FALSE) {
-    verbose <- if (!attribs) FALSE else obj$verbose 
-    groups <- if (is.null(new_group)) obj$groups else new_group
-    res <- lapply(1:2, function(g) {
-        datx <- obj$.arraydat[groups == g, , drop = FALSE]
-        mm <- colMeans(datx, na.rm = TRUE)
-        vv <- colVars(datx, na.rm = TRUE)
-        if (obj$has_NA) {
-            nn <- nrow(datx) - colCounts(datx, value = NA_real_)
-            nn[nn < 1L] <- NA
-        } else {
-            nn <- nrow(datx)
-        }
-        list(mm, vv, nn)
-    })
-    m1 <- res[[1]][[1]]; v1 <- res[[1]][[2]]; n1 <- res[[1]][[3]]
-    m2 <- res[[2]][[1]]; v2 <- res[[2]][[2]]; n2 <- res[[2]][[3]]
-    mdiff <- m1 - m2
-    out <- 
-        if (!obj$var_equal) {
-            sd12 <- sqrt(v1/n1 + v2/n2)
-            mdiff/sd12
-        } else {
-            sd12 <- sqrt(
-                ((n1-1)*v1 + (n2-1)*v2)/(n1 + n2 - 2)
-            )
-            es <- mdiff/sd12
-            es/sqrt(1/n1 + 1/n2)
-        }
-    if (attribs) {
-        setattributes(out, obj, 
-                      if (obj$var_equal) "Student's t statistic" 
-                      else "Welch's t statistic")
-        if (verbose) {
-            # degress of freedom
-            Df <- 
-                if (obj$var_equal) {
-                    n1 + n2 - 2 
-                } else {
-                    sd12^4/( (v1/n1)^2/(n1-1) + (v2/n2)^2/(n2-1) )
-                }
-            setattributes(Df, 
-                          if (length(Df) > 1L) obj else NULL, 
-                          "Degrees of freedom")
-            # p-value
-            p <- 2 * pt(-abs(out), Df)
-            setattributes(p, obj, "Traditional P-value")
-            # Cohen's D
-            es <- if (!obj$var_equal) abs(mdiff)/sqrt((v1 + v2)/2) else abs(es)
-            setattributes(es, obj, "Cohen's D")
-            # attach to out
-            setattr(out, "p_value", p)
-            setattr(out, "effect_size", es)
-            setattr(out, "Df", Df)
-        }
+  verbose <- if (!attribs) FALSE else obj$verbose 
+  groups <- if (is.null(new_group)) obj$groups else new_group
+  res <- lapply(1:2, function(g) {
+    datx <- obj$.arraydat[groups == g, , drop = FALSE]
+    mm <- colMeans(datx, na.rm = TRUE)
+    vv <- colVars(datx, na.rm = TRUE)
+    if (obj$has_NA) {
+      nn <- nrow(datx) - colCounts(datx, value = NA_real_)
+      nn[nn < 1L] <- NA
+    } else {
+      nn <- nrow(datx)
     }
-    out
+    list(mm, vv, nn)
+  })
+  m1 <- res[[1]][[1]]; v1 <- res[[1]][[2]]; n1 <- res[[1]][[3]]
+  m2 <- res[[2]][[1]]; v2 <- res[[2]][[2]]; n2 <- res[[2]][[3]]
+  mdiff <- m1 - m2
+  out <- 
+    if (!obj$var_equal) {
+      sd12 <- sqrt(v1/n1 + v2/n2)
+      mdiff/sd12
+    } else {
+      sd12 <- sqrt(
+        ((n1-1)*v1 + (n2-1)*v2)/(n1 + n2 - 2)
+      )
+      es <- mdiff/sd12
+      es/sqrt(1/n1 + 1/n2)
+    }
+  if (attribs) {
+    setattributes(out, obj, 
+                  if (obj$var_equal) "Student's t statistic" 
+                  else "Welch's t statistic")
+    if (verbose) {
+      # degress of freedom
+      Df <- 
+        if (obj$var_equal) {
+          n1 + n2 - 2 
+        } else {
+          sd12^4/( (v1/n1)^2/(n1-1) + (v2/n2)^2/(n2-1) )
+        }
+      setattributes(Df, 
+                    if (length(Df) > 1L) obj else NULL, 
+                    "Degrees of freedom")
+      # p-value
+      p <- 2 * pt(-abs(out), Df)
+      setattributes(p, obj, "Traditional P-value")
+      # Cohen's D
+      es <- if (!obj$var_equal) abs(mdiff)/sqrt((v1 + v2)/2) else abs(es)
+      setattributes(es, obj, "Cohen's D")
+      # attach to out
+      setattr(out, "p_value", p)
+      setattr(out, "effect_size", es)
+      setattr(out, "Df", Df)
+    }
+  }
+  out
 }
 
 #' @rdname Ttest
 # one-sample or paired samples t-test
 osTtest <- function(obj, new_sign = NULL, attribs = FALSE) {
-    verbose <- if (!attribs) FALSE else obj$verbose
-    dat <- if (is.null(new_sign)) obj$.arraydat else obj$.arraydat * new_sign
-    m1 <- colMeans(dat, na.rm = TRUE)
-    sd1 <- colSds(dat, na.rm = TRUE)
-    if (obj$has_NA) {
-        n1 <- nrow(dat) - colCounts(dat, value = NA_real_)
-        n1[n1 < 1L] <- NA
-    } else {
-        n1 <- nrow(dat)
+  verbose <- if (!attribs) FALSE else obj$verbose
+  dat <- if (is.null(new_sign)) obj$.arraydat else obj$.arraydat * new_sign
+  m1 <- colMeans(dat, na.rm = TRUE)
+  sd1 <- colSds(dat, na.rm = TRUE)
+  if (obj$has_NA) {
+    n1 <- nrow(dat) - colCounts(dat, value = NA_real_)
+    n1[n1 < 1L] <- NA
+  } else {
+    n1 <- nrow(dat)
+  }
+  es <- (m1 - obj$mu)/sd1
+  out <- es * sqrt(n1)
+  if (attribs) {
+    setattributes(
+      out, obj, 
+      if (obj$type == "paired_samples") "Paired samples t-statistic"
+      else "One sample t-statistic")
+    if (verbose) {
+      Df <- n1 - 1
+      setattributes(Df,
+                    if (length(Df) > 1L) obj else NULL,
+                    "Degrees of freedom")
+      pvalues <- 2 * pt(-abs(out), Df)
+      setattributes(pvalues, obj, "Traditional P-value")
+      es <- abs(es)
+      setattributes(es, obj, "Cohen's D")
+      setattr(out, "p_value", pvalues)
+      setattr(out, "effect_size", es)
+      setattr(out, "Df", Df)
     }
-    es <- (m1 - obj$mu)/sd1
-    out <- es * sqrt(n1)
-    if (attribs) {
-        setattributes(
-            out, obj, 
-            if (obj$type == "paired_samples") "Paired samples t-statistic"
-            else "One sample t-statistic")
-        if (verbose) {
-            Df <- n1 - 1
-            setattributes(Df,
-                          if (length(Df) > 1L) obj else NULL,
-                          "Degrees of freedom")
-            pvalues <- 2 * pt(-abs(out), Df)
-            setattributes(pvalues, obj, "Traditional P-value")
-            es <- abs(es)
-            setattributes(es, obj, "Cohen's D")
-            setattr(out, "p_value", pvalues)
-            setattr(out, "effect_size", es)
-            setattr(out, "Df", Df)
-        }
-    }
-    out
+  }
+  out
 }
 
 #' Create random group memberships for independent samples t-tests
@@ -149,36 +149,36 @@ osTtest <- function(obj, new_sign = NULL, attribs = FALSE) {
 #' stopifnot(!anyDuplicated(temp, MARGIN = 2L))
 #' }
 isTtestRandomGroups <- function(obj, nperm, seed = NULL) {
-    setSeed(seed)
-    groups <- obj$groups
-    grouplen <- length(groups)
-    group2len <- sum(groups == 2L)
-    maxperm <- choose(grouplen, group2len)
-    if (nperm > maxperm) 
-        stop("nperm is too high for this sample size (not enough unique combinations exist)")
-    if (nperm > maxperm/3L) {
-        randind <- combn(grouplen, group2len)
-        randgroups <- matrix(1L, grouplen, ncol(randind))
-        for (i in 1:ncol(randind)) randgroups[randind[,i], i] <- 2L
-        randgroups <- randgroups[, sample.int(nrow(randgroups), nperm)]
-    } else {
-        randgroups <- matrix(groups, grouplen, 1)
-        repeat{
-            nc <- ncol(randgroups) - 1
-            if (nc >= nperm) {
-                randgroups <- randgroups[, 2:(nperm + 1)]
-                break
-            } else {
-                rg <- matrix(1L, grouplen, (nperm - nc) * 2)
-                for (i in 1:ncol(rg)) {
-                    rg[sample.int(grouplen, group2len), i] <- 2L
-                }
-                randgroups <- cbind(randgroups, rg)
-                randgroups <- fastUnique(randgroups, margin = 2L)
-            }
+  setSeed(seed)
+  groups <- obj$groups
+  grouplen <- length(groups)
+  group2len <- sum(groups == 2L)
+  maxperm <- choose(grouplen, group2len)
+  if (nperm > maxperm) 
+    stop("nperm is too high for this sample size (not enough unique combinations exist)")
+  if (nperm > maxperm/3L) {
+    randind <- combn(grouplen, group2len)
+    randgroups <- matrix(1L, grouplen, ncol(randind))
+    for (i in 1:ncol(randind)) randgroups[randind[,i], i] <- 2L
+    randgroups <- randgroups[, sample.int(nrow(randgroups), nperm)]
+  } else {
+    randgroups <- matrix(groups, grouplen, 1)
+    repeat{
+      nc <- ncol(randgroups) - 1
+      if (nc >= nperm) {
+        randgroups <- randgroups[, 2:(nperm + 1)]
+        break
+      } else {
+        rg <- matrix(1L, grouplen, (nperm - nc) * 2)
+        for (i in 1:ncol(rg)) {
+          rg[sample.int(grouplen, group2len), i] <- 2L
         }
+        randgroups <- cbind(randgroups, rg)
+        randgroups <- fastUnique(randgroups, margin = 2L)
+      }
     }
-    randgroups
+  }
+  randgroups
 }
 
 
@@ -213,34 +213,34 @@ isTtestRandomGroups <- function(obj, nperm, seed = NULL) {
 #' stopifnot(!anyDuplicated(temp, MARGIN = 2L))
 #' }
 osTtestRandomSigns <- function(obj, nperm, seed) {
-    setSeed(seed)
-    idlen <- nrow(obj$.arraydat)
-    maxperm <- 2^idlen
-    if (nperm > maxperm) 
-        stop("nperm is too high for this sample size (not enough unique combinations exist)")
-    if (nperm > maxperm/3) {
-        randi <- matrix(unlist(
-            expand.grid(rep(list(c(-1L, 1L)), idlen), 
-                        KEEP.OUT.ATTRS = FALSE),
-            use.names = FALSE), idlen, maxperm, TRUE)
-        randi <- randi[, sample(ncol(randi), nperm)]
-    } else {
-        randi <- matrix(rep.int(1L, idlen))
-        repeat{
-            nc <- ncol(randi) - 1
-            if (nc >= nperm) {
-                randi <- randi[, 2:(nperm + 1)]
-                break
-            } else {
-                ri <- matrix_(sample(c(-1L, 1L), 
-                                     temp <- idlen * (nperm - nc) * 2,
-                                     TRUE),
-                              idlen, temp)
-                randi <- fastUnique(cbind(randi, ri), margin = 2L)
-            }
-        }
+  setSeed(seed)
+  idlen <- nrow(obj$.arraydat)
+  maxperm <- 2^idlen
+  if (nperm > maxperm) 
+    stop("nperm is too high for this sample size (not enough unique combinations exist)")
+  if (nperm > maxperm/3) {
+    randi <- matrix(unlist(
+      expand.grid(rep(list(c(-1L, 1L)), idlen), 
+                  KEEP.OUT.ATTRS = FALSE),
+      use.names = FALSE), idlen, maxperm, TRUE)
+    randi <- randi[, sample(ncol(randi), nperm)]
+  } else {
+    randi <- matrix(rep.int(1L, idlen))
+    repeat{
+      nc <- ncol(randi) - 1
+      if (nc >= nperm) {
+        randi <- randi[, 2:(nperm + 1)]
+        break
+      } else {
+        ri <- matrix_(sample(c(-1L, 1L), 
+                             temp <- idlen * (nperm - nc) * 2,
+                             TRUE),
+                      idlen, temp)
+        randi <- fastUnique(cbind(randi, ri), margin = 2L)
+      }
     }
-    randi
+  }
+  randi
 }
 
 
@@ -259,153 +259,153 @@ osTtestRandomSigns <- function(obj, nperm, seed) {
 #' functions relying on the returned object of \code{preTtest}.
 preTtest <- function(.arraydat, .arraydat2, paired, groups, 
                      mu, var_equal, id_dim, verbose, tfce, perm) {
-    # check if .arraydat is an array
-    if (is.data.frame(.arraydat)) .arraydat <- as.matrix(.arraydat)
-    # TODO: should be possible to allow missing values, but what about
-    # the permutation?
-    assertArray(.arraydat, mode = "numeric", min.d = 1L, any.missing = FALSE,
-                .var.name = ".arraydat")
-    # dimnames
-    pre_dimnames <- dimnames(.arraydat)
-    full_dimnames <- fillMissingDimnames(dimnames(.arraydat), dim(.arraydat))
-    full_dimid_origord <- names(full_dimnames)
-    if (!identical(pre_dimnames, full_dimnames))
-        dimnames(.arraydat) <- full_dimnames
-    # check id_dim
-    if (!id_dim %in% names(full_dimnames)) {
-        stop(sprintf(".arraydat has no '%s' dimension identifier", id_dim))
-    }
-    # if TFCE is requested, "chan" and "time" dimensions are obligatory
-    if (tfce && !all(c("chan", "time") %in% names(full_dimnames)))
-        stop("If TFCE is requested, '.arraydat' must have 'chan' and 'time' dimensions")
-    # check for .arraydat2
-    if (is.null(.arraydat2)) {
-        if (!is.null(groups)) {
-            # set type of t-test
-            type <- "independent_samples"
-            # check 'groups'
-            assertAtomic(groups, .var.name = "groups")
-            # subset arraydat for is.na(groups)
-            groups_keep <- !is.na(groups)
-            if (any(!groups_keep)) {
-                .arraydat <- subsetArray(.arraydat, 
-                                         listS(.id_dim = groups_keep),
-                                         drop. = FALSE)
-                groups <- groups[groups_keep]
-            }
-            # transform to 1s and 2s
-            groups <- as.integer(factor(groups))
-            if (max(groups) != 2L) 
-                stop("groups must contain two distinct values (e.g. 1 or 2, 'a' or 'b')")
-        } else {
-            # set type of t-test
-            type <- "one_sample"
-        }
+  # check if .arraydat is an array
+  if (is.data.frame(.arraydat)) .arraydat <- as.matrix(.arraydat)
+  # TODO: should be possible to allow missing values, but what about
+  # the permutation?
+  assertArray(.arraydat, mode = "numeric", min.d = 1L, any.missing = FALSE,
+              .var.name = ".arraydat")
+  # dimnames
+  pre_dimnames <- dimnames(.arraydat)
+  full_dimnames <- fillMissingDimnames(dimnames(.arraydat), dim(.arraydat))
+  full_dimid_origord <- names(full_dimnames)
+  if (!identical(pre_dimnames, full_dimnames))
+    dimnames(.arraydat) <- full_dimnames
+  # check id_dim
+  if (!id_dim %in% names(full_dimnames)) {
+    stop(sprintf(".arraydat has no '%s' dimension identifier", id_dim))
+  }
+  # if TFCE is requested, "chan" and "time" dimensions are obligatory
+  if (tfce && !all(c("chan", "time") %in% names(full_dimnames)))
+    stop("If TFCE is requested, '.arraydat' must have 'chan' and 'time' dimensions")
+  # check for .arraydat2
+  if (is.null(.arraydat2)) {
+    if (!is.null(groups)) {
+      # set type of t-test
+      type <- "independent_samples"
+      # check 'groups'
+      assertAtomic(groups, .var.name = "groups")
+      # subset arraydat for is.na(groups)
+      groups_keep <- !is.na(groups)
+      if (any(!groups_keep)) {
+        .arraydat <- subsetArray(.arraydat, 
+                                 listS(.id_dim = groups_keep),
+                                 drop. = FALSE)
+        groups <- groups[groups_keep]
+      }
+      # transform to 1s and 2s
+      groups <- as.integer(factor(groups))
+      if (max(groups) != 2L) 
+        stop("groups must contain two distinct values (e.g. 1 or 2, 'a' or 'b')")
     } else {
-        # check format
-        if (is.data.frame(.arraydat2)) .arraydat2 <- as.matrix(.arraydat2)
-        assertArray(.arraydat2, mode = "numeric", any.missing = FALSE, 
-                    min.d = 1L, .var.name = ".arraydat2")
-        # check dimension names
-        full_dimnames2 <- fillMissingDimnames(dimnames(.arraydat2),
-                                              dim(.arraydat2))
-        # check 'paired'
-        assertFlag(paired, .var.name = "paired")
-        # if paired == TRUE, compute the difference; 
-        # if paired == FALSE, bind the two arrays and store the group membership
-        # in 'groups'
-        if (paired) {
-            if (!identical(full_dimnames, full_dimnames2) ||
-                !identical(dim(.arraydat), dim(.arraydat2))) {
-                stop("Input array dimensions must be identical")
-            }
-            .arraydat <- .arraydat - .arraydat2
-            groups <- NULL
-            type <- "paired_samples"
-        } else {
-            if (!identical(sort(names(full_dimnames)),
-                           sort(names(full_dimnames2)))) {
-                stop(".arraydat and .arraydat2 must have the same dimension identifiers")
-            }
-            groups <- rep.int(1:2, 
-                              c(length(full_dimnames[[id_dim]]),
-                                length(full_dimnames2[[id_dim]])))
-            .arraydat <- bindArrays(.arraydat, .arraydat2, along_name = id_dim)
-        }
+      # set type of t-test
+      type <- "one_sample"
     }
-    # check 'mu'
-    if (length(mu == 1L)) {
-        assertNumber(mu, finite = TRUE, .var.name = "mu")
+  } else {
+    # check format
+    if (is.data.frame(.arraydat2)) .arraydat2 <- as.matrix(.arraydat2)
+    assertArray(.arraydat2, mode = "numeric", any.missing = FALSE, 
+                min.d = 1L, .var.name = ".arraydat2")
+    # check dimension names
+    full_dimnames2 <- fillMissingDimnames(dimnames(.arraydat2),
+                                          dim(.arraydat2))
+    # check 'paired'
+    assertFlag(paired, .var.name = "paired")
+    # if paired == TRUE, compute the difference; 
+    # if paired == FALSE, bind the two arrays and store the group membership
+    # in 'groups'
+    if (paired) {
+      if (!identical(full_dimnames, full_dimnames2) ||
+          !identical(dim(.arraydat), dim(.arraydat2))) {
+        stop("Input array dimensions must be identical")
+      }
+      .arraydat <- .arraydat - .arraydat2
+      groups <- NULL
+      type <- "paired_samples"
     } else {
-        assertArray(mu, mode = storage.mode(.arraydat), any.missing = FALSE,
-                    .var.name = "mu")
-        expect_mu_dimnames <- full_dimnames[-match(id_dim, names(full_dimnames))]
-        expect_mu_dims <- vapply(expect_mu_dimnames, length, integer(1L))
-        if (!identical(dim(mu), expect_mu_dims)) {
-            stop(sprintf("If 'mu' is not a scalar, it must be an array with the same dimensions (%s) as '.arraydat' without the 'id_dim' dimension",
-                 paste(expect_mu_dims, collapse = "x")))
-        }
-        if (!is.null(dimnames(mu)) && 
-            !identical(fillMissingDimnames(dimnames(mu), dim(mu)), 
-                       expect_mu_dimnames)) {
-            stop("If 'mu' has dimension names, they must be the same as the dimension names of '.arraydat' without the 'id_dim' dimension")
-        }
+      if (!identical(sort(names(full_dimnames)),
+                     sort(names(full_dimnames2)))) {
+        stop(".arraydat and .arraydat2 must have the same dimension identifiers")
+      }
+      groups <- rep.int(1:2, 
+                        c(length(full_dimnames[[id_dim]]),
+                          length(full_dimnames2[[id_dim]])))
+      .arraydat <- bindArrays(.arraydat, .arraydat2, along_name = id_dim)
     }
-    #
-    # reshape .arraydat (first permute dimensions if needed, finally to matrix)
-    #
-    # id_dim, chan, time dimension order
-    nr_chanXtime <- nr_chan <- nr_time <- NULL
-    if (tfce || perm) {
-        firstdims <- union(c(id_dim, "chan", "time"), names(full_dimnames))
-        .arraydat <- apermArray(.arraydat, first = firstdims)
-        if (length(mu) > 1L) {
-            mu <- apermArray(.arraydat, first = setdiff(firstdims, id_dim))    
-        }
-        if (tfce) {
-            nr_chan <- length(full_dimnames$chan)
-            nr_time <- length(full_dimnames$time)
-            nr_chanXtime <- nr_chan * nr_time
-        } else {
-            nr_chanXtime <- c(length(full_dimnames$chan),
-                              length(full_dimnames$time))
-            nr_chanXtime[nr_chanXtime == 0L] <- 1L
-            nr_chanXtime <- prod(nr_chanXtime)
-        }
+  }
+  # check 'mu'
+  if (length(mu == 1L)) {
+    assertNumber(mu, finite = TRUE, .var.name = "mu")
+  } else {
+    assertArray(mu, mode = storage.mode(.arraydat), any.missing = FALSE,
+                .var.name = "mu")
+    expect_mu_dimnames <- full_dimnames[-match(id_dim, names(full_dimnames))]
+    expect_mu_dims <- vapply(expect_mu_dimnames, length, integer(1L))
+    if (!identical(dim(mu), expect_mu_dims)) {
+      stop(sprintf("If 'mu' is not a scalar, it must be an array with the same dimensions (%s) as '.arraydat' without the 'id_dim' dimension",
+                   paste(expect_mu_dims, collapse = "x")))
+    }
+    if (!is.null(dimnames(mu)) && 
+        !identical(fillMissingDimnames(dimnames(mu), dim(mu)), 
+                   expect_mu_dimnames)) {
+      stop("If 'mu' has dimension names, they must be the same as the dimension names of '.arraydat' without the 'id_dim' dimension")
+    }
+  }
+  #
+  # reshape .arraydat (first permute dimensions if needed, finally to matrix)
+  #
+  # id_dim, chan, time dimension order
+  nr_chanXtime <- nr_chan <- nr_time <- NULL
+  if (tfce || perm) {
+    firstdims <- union(c(id_dim, "chan", "time"), names(full_dimnames))
+    .arraydat <- apermArray(.arraydat, first = firstdims)
+    if (length(mu) > 1L) {
+      mu <- apermArray(.arraydat, first = setdiff(firstdims, id_dim))    
+    }
+    if (tfce) {
+      nr_chan <- length(full_dimnames$chan)
+      nr_time <- length(full_dimnames$time)
+      nr_chanXtime <- nr_chan * nr_time
     } else {
-        .arraydat <- apermArray(.arraydat, first = id_dim)
+      nr_chanXtime <- c(length(full_dimnames$chan),
+                        length(full_dimnames$time))
+      nr_chanXtime[nr_chanXtime == 0L] <- 1L
+      nr_chanXtime <- prod(nr_chanXtime)
     }
-    full_dimnames <- dimnames(.arraydat)
-    full_dimid <- names(full_dimnames)
-    full_dims <- dim(.arraydat)
-    setattr(full_dims, "names", full_dimid)
-    teststat_dimid <- full_dimid[full_dimid != id_dim]
-    setattr(teststat_dimid, "origpos", 
-            match(teststat_dimid, full_dimid_origord))
-    has_NA <- anyNA(.arraydat)
-    # not chan or time
-    otherdims <- 
-        if (!is.null(nr_chanXtime)) {
-            other_dimid <- setdiff(teststat_dimid, c("chan", "time"))
-            list(dimid = other_dimid,
-                 index = match(other_dimid, teststat_dimid),
-                 size = prod(full_dims[other_dimid]))
-        } else {
-            list(NULL)
-        }
-    # 
-    matrix_(.arraydat, nrow = nrow(.arraydat))
-    #
-    # return
-    #
-    list(.arraydat = .arraydat, groups = groups,  
-         has_NA = has_NA,
-         full_dimnames = full_dimnames, full_dims = full_dims,
-         pre_dimnames = pre_dimnames,
-         teststat_dimid = teststat_dimid,
-         type = type, mu = mu, var_equal = var_equal, verbose = verbose,
-         nr_chan = nr_chan, nr_time = nr_time, nr_chanXtime = nr_chanXtime,
-         otherdims = otherdims)
+  } else {
+    .arraydat <- apermArray(.arraydat, first = id_dim)
+  }
+  full_dimnames <- dimnames(.arraydat)
+  full_dimid <- names(full_dimnames)
+  full_dims <- dim(.arraydat)
+  setattr(full_dims, "names", full_dimid)
+  teststat_dimid <- full_dimid[full_dimid != id_dim]
+  setattr(teststat_dimid, "origpos", 
+          match(teststat_dimid, full_dimid_origord))
+  has_NA <- anyNA(.arraydat)
+  # not chan or time
+  otherdims <- 
+    if (!is.null(nr_chanXtime)) {
+      other_dimid <- setdiff(teststat_dimid, c("chan", "time"))
+      list(dimid = other_dimid,
+           index = match(other_dimid, teststat_dimid),
+           size = prod(full_dims[other_dimid]))
+    } else {
+      list(NULL)
+    }
+  # 
+  matrix_(.arraydat, nrow = nrow(.arraydat))
+  #
+  # return
+  #
+  list(.arraydat = .arraydat, groups = groups,  
+       has_NA = has_NA,
+       full_dimnames = full_dimnames, full_dims = full_dims,
+       pre_dimnames = pre_dimnames,
+       teststat_dimid = teststat_dimid,
+       type = type, mu = mu, var_equal = var_equal, verbose = verbose,
+       nr_chan = nr_chan, nr_time = nr_time, nr_chanXtime = nr_chanXtime,
+       otherdims = otherdims)
 }
 
 
@@ -554,31 +554,31 @@ arrayTtest <- function(.arraydat, .arraydat2 = NULL, paired = FALSE,
                        groups = NULL, mu = 0, var_equal = FALSE, id_dim = "id", 
                        verbose = TRUE, nperm = 0L, tfce = NULL, parallel = NULL, 
                        seed = NULL) {
-    # deparse tfce and parallel
-    mcall <- match.call()
-    perm <- permParams(n = nperm)
-    tfce <- argumentDeparser(substitute(tfce), "tfceParams")
-    ob <- getDoBackend()
-    parallel <- argumentDeparser(substitute(parallel), "parallelParams",
-                                 null_params = list(ncores = 0L))
-    if (parallel$cl_new) {
-        on.exit(stopCluster(parallel$cl))
-    }
-    on.exit(setDoBackend(ob), add = TRUE)
-    #
-    # compute statistics
-    out <- arrayTtestAnova(
-        "T_TEST", .arraydat, .arraydat2,
-        paired = paired, groups = groups, 
-        mu = mu, var_equal = var_equal, id_dim = id_dim, 
-        verbose = verbose, perm = perm, 
-        tfce = tfce, parallel = parallel, seed = seed)
-    #
-    # replace call to the original
-    out$call <- mcall
-    # set class
-    setattr(out, "class", "arrayTtest")
-    # return
-    out
+  # deparse tfce and parallel
+  mcall <- match.call()
+  perm <- permParams(n = nperm)
+  tfce <- argumentDeparser(substitute(tfce), "tfceParams")
+  ob <- getDoBackend()
+  parallel <- argumentDeparser(substitute(parallel), "parallelParams",
+                               null_params = list(ncores = 0L))
+  if (parallel$cl_new) {
+    on.exit(stopCluster(parallel$cl))
+  }
+  on.exit(setDoBackend(ob), add = TRUE)
+  #
+  # compute statistics
+  out <- arrayTtestAnova(
+    "T_TEST", .arraydat, .arraydat2,
+    paired = paired, groups = groups, 
+    mu = mu, var_equal = var_equal, id_dim = id_dim, 
+    verbose = verbose, perm = perm, 
+    tfce = tfce, parallel = parallel, seed = seed)
+  #
+  # replace call to the original
+  out$call <- mcall
+  # set class
+  setattr(out, "class", "arrayTtest")
+  # return
+  out
 }
 
