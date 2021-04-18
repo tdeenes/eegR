@@ -4,8 +4,13 @@
 \alias{apermArray}
 \title{Array transposition}
 \usage{
-apermArray(a, perm = NULL, resize = TRUE, first = perm,
-  keep_attributes. = FALSE)
+apermArray(
+  a,
+  perm = NULL,
+  resize = TRUE,
+  first = perm,
+  keep_attributes. = FALSE
+)
 }
 \arguments{
 \item{a}{the array to be transposed}

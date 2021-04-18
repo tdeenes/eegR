@@ -4,8 +4,15 @@
 \alias{matrix_}
 \title{Fast in-place transformation to a matrix (without copy)}
 \usage{
-matrix_(x, nrow, ncol, byrow = FALSE, dimnames = NULL,
-  force_length = TRUE, arg_check = TRUE)
+matrix_(
+  x,
+  nrow,
+  ncol,
+  byrow = FALSE,
+  dimnames = NULL,
+  force_length = TRUE,
+  arg_check = TRUE
+)
 }
 \arguments{
 \item{x}{a data vector, matrix or array}

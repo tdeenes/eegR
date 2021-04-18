@@ -9,14 +9,18 @@
 \usage{
 modelMeans(...)
 
-\method{modelMeans}{default}(.arraydat, factordef, bwdat = NULL,
-  term = NULL, adjusted = FALSE, ...)
+\method{modelMeans}{default}(
+  .arraydat,
+  factordef,
+  bwdat = NULL,
+  term = NULL,
+  adjusted = FALSE,
+  ...
+)
 
-\method{modelMeans}{arrayAnova}(model = NULL, term = NULL,
-  adjusted = FALSE, ...)
+\method{modelMeans}{arrayAnova}(model = NULL, term = NULL, adjusted = FALSE, ...)
 
-\method{modelMeans}{tanova}(model = NULL, term = NULL,
-  adjusted = FALSE, ...)
+\method{modelMeans}{tanova}(model = NULL, term = NULL, adjusted = FALSE, ...)
 }
 \arguments{
 \item{...}{not used yet}

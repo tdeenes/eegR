@@ -4,11 +4,23 @@
 \alias{plotComplex}
 \title{Visualize ERP curves and scalp topographies}
 \usage{
-plotComplex(dat, sig = NULL, topo_time = NULL, chan_pos = NULL,
-  subset = list(), plot_curves = TRUE, pcrit = 0.05,
-  aspect_ratio = 0.5, scalp_ratio = 0.5, ampl_range = NULL,
-  map_marker_colour = "red", map_marker_shape = 16,
-  map_marker_size = 1, ggplot_theme = theme_ndys, ...)
+plotComplex(
+  dat,
+  sig = NULL,
+  topo_time = NULL,
+  chan_pos = NULL,
+  subset = list(),
+  plot_curves = TRUE,
+  pcrit = 0.05,
+  aspect_ratio = 0.5,
+  scalp_ratio = 0.5,
+  ampl_range = NULL,
+  map_marker_colour = "red",
+  map_marker_shape = 16,
+  map_marker_size = 1,
+  ggplot_theme = theme_ndys,
+  ...
+)
 }
 \arguments{
 \item{dat}{the array of ERP curves which must have at least 'time' and/or 

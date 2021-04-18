@@ -51,4 +51,4 @@ Suggests:
     zoo
 LinkingTo: Rcpp
 VignetteBuilder: knitr
-RoxygenNote: 6.1.0
+RoxygenNote: 7.1.1

@@ -4,8 +4,7 @@
 \alias{mergeDims}
 \title{Reshape array by merging specific dimensions}
 \usage{
-mergeDims(dat, dims, return_attributes = TRUE, keep_dimnames = TRUE,
-  sep = ".")
+mergeDims(dat, dims, return_attributes = TRUE, keep_dimnames = TRUE, sep = ".")
 }
 \arguments{
 \item{dat}{array to reshape}

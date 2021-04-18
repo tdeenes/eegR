@@ -4,8 +4,14 @@
 \alias{dropDims}
 \title{Drop singleton dimensions of an array}
 \usage{
-dropDims(x, drop = TRUE, keep = NULL, return_array = TRUE,
-  named_vector = TRUE, stop_if_missing = TRUE)
+dropDims(
+  x,
+  drop = TRUE,
+  keep = NULL,
+  return_array = TRUE,
+  named_vector = TRUE,
+  stop_if_missing = TRUE
+)
 }
 \arguments{
 \item{x}{an array (or a matrix, or a list with \code{dim} attribute)}

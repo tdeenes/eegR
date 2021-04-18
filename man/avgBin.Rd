@@ -4,8 +4,14 @@
 \alias{avgBin}
 \title{Compute averages of bins on a dimension of an array}
 \usage{
-avgBin(dat, target_dim, bin_length = NULL, bin_ind = NULL,
-  rolling = FALSE, newnames = "avg")
+avgBin(
+  dat,
+  target_dim,
+  bin_length = NULL,
+  bin_ind = NULL,
+  rolling = FALSE,
+  newnames = "avg"
+)
 }
 \arguments{
 \item{dat}{matrix or array}

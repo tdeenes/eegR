@@ -4,11 +4,21 @@
 \alias{plotERParray}
 \title{Plot ERP curves}
 \usage{
-plotERParray(dat, xdim = "time", sepdim = "chan", gfp_plot = if
-  (sepdim == "chan") TRUE else FALSE, gfp_col = "black", gfp_lwd = 1.3,
-  minus_up = if (gfp_plot) FALSE else TRUE, title = "",
-  subtitle_col = "black", xlab = xdim, ylab = "amplitude",
-  grid_dim = NULL, ...)
+plotERParray(
+  dat,
+  xdim = "time",
+  sepdim = "chan",
+  gfp_plot = if (sepdim == "chan") TRUE else FALSE,
+  gfp_col = "black",
+  gfp_lwd = 1.3,
+  minus_up = if (gfp_plot) FALSE else TRUE,
+  title = "",
+  subtitle_col = "black",
+  xlab = xdim,
+  ylab = "amplitude",
+  grid_dim = NULL,
+  ...
+)
 }
 \arguments{
 \item{dat}{a numeric array with named dimensions}

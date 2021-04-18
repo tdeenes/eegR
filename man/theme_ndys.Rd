@@ -4,8 +4,11 @@
 \alias{theme_ndys}
 \title{Helper function to create customized ggplot2 theme}
 \usage{
-theme_ndys(base_fontsize = 8, legend_direction = c("vertical",
-  "horizontal"), panel_aspect_ratio = NULL)
+theme_ndys(
+  base_fontsize = 8,
+  legend_direction = c("vertical", "horizontal"),
+  panel_aspect_ratio = NULL
+)
 }
 \arguments{
 \item{base_fontsize}{size of texts}

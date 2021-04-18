@@ -4,12 +4,20 @@
 \alias{artrejOptions}
 \title{Options for artifact rejection}
 \usage{
-artrejOptions(sampling_freq = 1000, channels = "all",
-  apply_maxgrad = TRUE, maxgrad_limit = 50, maxgrad_mark = c(-200,
-  200), apply_diffrange = TRUE, diffrange_limit = c(0.5, 100),
-  diffrange_mark = c(-200, 200), diffrange_interval = 200,
-  apply_amplrange = TRUE, amplrange_limit = c(-200, 200),
-  amplrange_mark = c(-200, 200))
+artrejOptions(
+  sampling_freq = 1000,
+  channels = "all",
+  apply_maxgrad = TRUE,
+  maxgrad_limit = 50,
+  maxgrad_mark = c(-200, 200),
+  apply_diffrange = TRUE,
+  diffrange_limit = c(0.5, 100),
+  diffrange_mark = c(-200, 200),
+  diffrange_interval = 200,
+  apply_amplrange = TRUE,
+  amplrange_limit = c(-200, 200),
+  amplrange_mark = c(-200, 200)
+)
 }
 \arguments{
 \item{sampling_freq}{numeric value, the sampling frequency of the EEG-data}

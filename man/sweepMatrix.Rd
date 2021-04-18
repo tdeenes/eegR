@@ -4,8 +4,13 @@
 \alias{sweepMatrix}
 \title{Fast replacement for \code{sweep}}
 \usage{
-sweepMatrix(x, MARGIN, STATS, FUN = c("-", "+", "*", "/", "^", "==",
-  "!=", "<", "<=", ">", ">="), has_NA = NULL)
+sweepMatrix(
+  x,
+  MARGIN,
+  STATS,
+  FUN = c("-", "+", "*", "/", "^", "==", "!=", "<", "<=", ">", ">="),
+  has_NA = NULL
+)
 }
 \arguments{
 \item{x}{numeric matrix}

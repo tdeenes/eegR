@@ -4,8 +4,15 @@
 \alias{extract.default}
 \title{Default extractor}
 \usage{
-\method{extract}{default}(object, what, time_window = NULL,
-  term = NULL, chan = NULL, drop = FALSE, ...)
+\method{extract}{default}(
+  object,
+  what,
+  time_window = NULL,
+  term = NULL,
+  chan = NULL,
+  drop = FALSE,
+  ...
+)
 }
 \description{
 Default extractor which is behind \code{\link{extract.arrayTtest}},

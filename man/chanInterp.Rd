@@ -4,9 +4,18 @@
 \alias{chanInterp}
 \title{Spherical spline interpolation}
 \usage{
-chanInterp(dat, ch_pos, interp_pos = NULL, maxNA = 0.3, m = 4L,
-  N = 7L, lambda = 1e-10, type = c("voltage", "laplacian", "scd"),
-  alarm_tolerance = 0.01, error_on_alarm = TRUE)
+chanInterp(
+  dat,
+  ch_pos,
+  interp_pos = NULL,
+  maxNA = 0.3,
+  m = 4L,
+  N = 7L,
+  lambda = 1e-10,
+  type = c("voltage", "laplacian", "scd"),
+  alarm_tolerance = 0.01,
+  error_on_alarm = TRUE
+)
 }
 \arguments{
 \item{dat}{a numeric vector, matrix, data.frame or array with named dimnames}

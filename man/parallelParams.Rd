@@ -4,8 +4,12 @@
 \alias{parallelParams}
 \title{Setting the parameters for parallel computation}
 \usage{
-parallelParams(cl = NULL, method = c("auto", "snow", "multicore"),
-  ncores = parallel::detectCores() - 1L, ...)
+parallelParams(
+  cl = NULL,
+  method = c("auto", "snow", "multicore"),
+  ncores = parallel::detectCores() - 1L,
+  ...
+)
 }
 \arguments{
 \item{cl}{an object of class "cluster" (default: NULL)}

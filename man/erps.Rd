@@ -4,12 +4,14 @@
 \name{erps}
 \alias{erps}
 \title{Averaged ERPs in a visual word recognition experiment}
-\format{An array with 5 dimensions: stimulus class (stimclass, 3 level) x 
+\format{
+An array with 5 dimensions: stimulus class (stimclass, 3 level) x 
 pair type (pairtype, 3 level) x channels (chan, 33 levels) x time (time, 276 
 levels) x participant (id, 20 levels). Additionally, the array has an 
 attribute "id" which is a data.frame of the group memberships (dyslexic or 
 control), and an attribute "chan" which is a data.frame of the electrode 
-positions in spherical coordinates.}
+positions in spherical coordinates.
+}
 \description{
 A dataset containing averaged event-related potentials (ERPs) from 20 
 participants. The data were collected in a same-different matching task, and

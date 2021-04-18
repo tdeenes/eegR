@@ -15,41 +15,101 @@
 \alias{isMinimum}
 \title{Test logical statements on data points}
 \usage{
-isPattern(pattern., strict. = TRUE, negate. = FALSE,
-  subset. = list(), expand. = list(), options. = list())
+isPattern(
+  pattern.,
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 
-isEqual(ref., tol. = .Machine$double.eps^0.5, strict. = TRUE,
-  negate. = FALSE, subset. = list(), expand. = list(),
-  options. = list())
+isEqual(
+  ref.,
+  tol. = .Machine$double.eps^0.5,
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 
-isSame(ref., strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), options. = list())
+isSame(
+  ref.,
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 
-isBetween(lwr. = -Inf, upr. = Inf, open. = c("none", "both", "lwr",
-  "upr"), strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), options. = list())
+isBetween(
+  lwr. = -Inf,
+  upr. = Inf,
+  open. = c("none", "both", "lwr", "upr"),
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 
-isNegative(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), options. = list())
+isNegative(
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 
-isPositive(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), options. = list())
+isPositive(
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 
-isExtremum(what. = c("both", "min", "max"), strict. = TRUE,
-  negate. = FALSE, subset. = list(), expand. = list(),
-  options. = list())
+isExtremum(
+  what. = c("both", "min", "max"),
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 
-isLocalMaximum(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), options. = list())
+isLocalMaximum(
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 
-isLocalMinimum(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), options. = list())
+isLocalMinimum(
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 
-isMaximum(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), options. = list())
+isMaximum(
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 
-isMinimum(strict. = TRUE, negate. = FALSE, subset. = list(),
-  expand. = list(), options. = list())
+isMinimum(
+  strict. = TRUE,
+  negate. = FALSE,
+  subset. = list(),
+  expand. = list(),
+  options. = list()
+)
 }
 \arguments{
 \item{pattern.}{a character regexp pattern, see the 'pattern' argument in

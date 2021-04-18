@@ -4,9 +4,17 @@
 \alias{scaleArray}
 \title{Scale array across arbitrary dimension(s)}
 \usage{
-scaleArray(dat, by_dims = NULL, along_dims = NULL, center = TRUE,
-  scale = TRUE, base_subset = NULL, center_subset = NULL,
-  scale_subset = NULL, keep_dimorder = TRUE)
+scaleArray(
+  dat,
+  by_dims = NULL,
+  along_dims = NULL,
+  center = TRUE,
+  scale = TRUE,
+  base_subset = NULL,
+  center_subset = NULL,
+  scale_subset = NULL,
+  keep_dimorder = TRUE
+)
 }
 \arguments{
 \item{dat}{numeric matrix or array}

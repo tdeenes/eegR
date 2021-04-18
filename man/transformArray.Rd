@@ -4,8 +4,16 @@
 \alias{transformArray}
 \title{Data preparation mainly aimed at facilitating plotting in lattice or ggplot2}
 \usage{
-transformArray(formula, data, group = NULL, group_fun = "avgDims",
-  subset = NULL, datfr = TRUE, auto_convert = TRUE, ...)
+transformArray(
+  formula,
+  data,
+  group = NULL,
+  group_fun = "avgDims",
+  subset = NULL,
+  datfr = TRUE,
+  auto_convert = TRUE,
+  ...
+)
 }
 \arguments{
 \item{formula}{an object of class "formula" (or one that can be coerced to

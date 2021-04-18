@@ -4,8 +4,15 @@
 \alias{tfceFn}
 \title{Low-level TFCE function which calls C++ code}
 \usage{
-tfceFn(x, chn, eh, nr_steps = 50L, channel_dim = 1L, has_neg = TRUE,
-  has_pos = TRUE)
+tfceFn(
+  x,
+  chn,
+  eh,
+  nr_steps = 50L,
+  channel_dim = 1L,
+  has_neg = TRUE,
+  has_pos = TRUE
+)
 }
 \arguments{
 \item{x}{numeric matrix or array}

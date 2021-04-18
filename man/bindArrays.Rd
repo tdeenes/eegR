@@ -4,10 +4,18 @@
 \alias{bindArrays}
 \title{Combine several arrays into one large array}
 \usage{
-bindArrays(..., along = NULL, rev.along = NULL, new.names = NULL,
-  force.array = TRUE, make.names = use.anon.names,
-  use.anon.names = FALSE, use.first.dimnames = FALSE,
-  hier.names = FALSE, along_name = NULL)
+bindArrays(
+  ...,
+  along = NULL,
+  rev.along = NULL,
+  new.names = NULL,
+  force.array = TRUE,
+  make.names = use.anon.names,
+  use.anon.names = FALSE,
+  use.first.dimnames = FALSE,
+  hier.names = FALSE,
+  along_name = NULL
+)
 }
 \arguments{
 \item{...}{Any number of vectors, matrices, arrays, or data frames. If the

@@ -6,8 +6,7 @@
 \title{Print summaries of \code{\link{arrayTtest}}, \code{\link{arrayAnova}}, or
 \code{\link{tanova}} objects}
 \usage{
-\method{print}{summary.eegr}(x, digits = 3L, quote = FALSE,
-  fill_na = "-", ...)
+\method{print}{summary.eegr}(x, digits = 3L, quote = FALSE, fill_na = "-", ...)
 }
 \arguments{
 \item{x}{an object of class \code{summary.arrayTtest},

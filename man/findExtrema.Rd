@@ -4,9 +4,16 @@
 \alias{findExtrema}
 \title{Find local/global peaks (maxima) and valleys (minima) of a vector}
 \usage{
-findExtrema(x, n = 1L, global = FALSE, along_dim = 1L,
-  tail = c("if_plateau", "never", "do_not_care"), constant = 3L,
-  topN = NULL, has_NA = NULL)
+findExtrema(
+  x,
+  n = 1L,
+  global = FALSE,
+  along_dim = 1L,
+  tail = c("if_plateau", "never", "do_not_care"),
+  constant = 3L,
+  topN = NULL,
+  has_NA = NULL
+)
 }
 \arguments{
 \item{x}{an integer or numeric vector, matrix, or array}

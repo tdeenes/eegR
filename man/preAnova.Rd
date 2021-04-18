@@ -4,8 +4,7 @@
 \alias{preAnova}
 \title{Parameter checks and data preparation in \code{arrayAnova}}
 \usage{
-preAnova(.arraydat, factordef, bwdat, verbose, tfce, perm,
-  tanova_type = NULL)
+preAnova(.arraydat, factordef, bwdat, verbose, tfce, perm, tanova_type = NULL)
 }
 \arguments{
 \item{.arraydat}{numeric array}

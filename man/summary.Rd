@@ -8,16 +8,29 @@
 \title{Compute summary statistics for \code{arrayTtest}, \code{arrayAnova}, or
 \code{tanova} objects}
 \usage{
-\method{summary}{arrayTtest}(object, basis = c("p_corr", "p", "es",
-  "stat", "stat_corr"), basis_dim = c("chan", "time"), crit = NULL,
-  ...)
+\method{summary}{arrayTtest}(
+  object,
+  basis = c("p_corr", "p", "es", "stat", "stat_corr"),
+  basis_dim = c("chan", "time"),
+  crit = NULL,
+  ...
+)
 
-\method{summary}{arrayAnova}(object, basis = c("p_corr", "p", "es",
-  "stat", "stat_corr"), basis_dim = c("chan", "time"), crit = NULL,
-  ...)
+\method{summary}{arrayAnova}(
+  object,
+  basis = c("p_corr", "p", "es", "stat", "stat_corr"),
+  basis_dim = c("chan", "time"),
+  crit = NULL,
+  ...
+)
 
-\method{summary}{tanova}(object, basis = c("p_corr", "p", "stat",
-  "stat_corr"), basis_dim = "time", crit = NULL, ...)
+\method{summary}{tanova}(
+  object,
+  basis = c("p_corr", "p", "stat", "stat_corr"),
+  basis_dim = "time",
+  crit = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{an object of class \code{\link{arrayTtest}},

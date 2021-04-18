@@ -4,8 +4,16 @@
 \alias{arrayAnova}
 \title{Perform ANOVA (potentially with TFCE correction) on arrays}
 \usage{
-arrayAnova(.arraydat, factordef, bwdat = NULL, verbose = TRUE,
-  perm = NULL, tfce = NULL, parallel = NULL, seed = NULL)
+arrayAnova(
+  .arraydat,
+  factordef,
+  bwdat = NULL,
+  verbose = TRUE,
+  perm = NULL,
+  tfce = NULL,
+  parallel = NULL,
+  seed = NULL
+)
 }
 \arguments{
 \item{.arraydat}{a numeric array with named dimnames containing the EEG (or

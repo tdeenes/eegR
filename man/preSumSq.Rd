@@ -4,8 +4,15 @@
 \alias{preSumSq}
 \title{Prepare sum-of-squares computations}
 \usage{
-preSumSq(form, form_data, keep_term_order = FALSE, scaled = FALSE,
-  y = NULL, between = NULL, adjusted = TRUE)
+preSumSq(
+  form,
+  form_data,
+  keep_term_order = FALSE,
+  scaled = FALSE,
+  y = NULL,
+  between = NULL,
+  adjusted = TRUE
+)
 }
 \arguments{
 \item{form}{model formula (or character string to \code{as.formula})}

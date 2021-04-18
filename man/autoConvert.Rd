@@ -4,8 +4,13 @@
 \alias{autoConvert}
 \title{Convert (coerce) variables according to various schemes}
 \usage{
-autoConvert(dat, select = NULL, conversion = "ANY",
-  rules = convertParams(), keep_dim = TRUE)
+autoConvert(
+  dat,
+  select = NULL,
+  conversion = "ANY",
+  rules = convertParams(),
+  keep_dim = TRUE
+)
 }
 \arguments{
 \item{dat}{an object}

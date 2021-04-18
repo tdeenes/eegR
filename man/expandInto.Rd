@@ -4,8 +4,7 @@
 \alias{expandInto}
 \title{Expand array}
 \usage{
-expandInto(dat, new_dat, expand_levels = NULL, safe_mode = TRUE,
-  fill = TRUE)
+expandInto(dat, new_dat, expand_levels = NULL, safe_mode = TRUE, fill = TRUE)
 }
 \arguments{
 \item{dat}{an array}

@@ -4,8 +4,7 @@
 \alias{mergeArrays}
 \title{Merge arrays having common dimension identifiers}
 \usage{
-mergeArrays(..., base_value = NA, sort_dims = FALSE,
-  sort_dimlevels = FALSE)
+mergeArrays(..., base_value = NA, sort_dims = FALSE, sort_dimlevels = FALSE)
 }
 \arguments{
 \item{...}{numeric arrays with named dimension names or a list of such

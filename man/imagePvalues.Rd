@@ -4,9 +4,16 @@
 \alias{imagePvalues}
 \title{Image plot of p-values}
 \usage{
-imagePvalues(pvalues, pcrit = c(0.001, 0.01, 0.05), grid = NULL,
-  wrap = NULL, time_label = "Time (ms)", channel_label = "Channels",
-  raster = TRUE, cluster_order = FALSE)
+imagePvalues(
+  pvalues,
+  pcrit = c(0.001, 0.01, 0.05),
+  grid = NULL,
+  wrap = NULL,
+  time_label = "Time (ms)",
+  channel_label = "Channels",
+  raster = TRUE,
+  cluster_order = FALSE
+)
 }
 \arguments{
 \item{pvalues}{numeric matrix or array of p-values with named dimensions (at

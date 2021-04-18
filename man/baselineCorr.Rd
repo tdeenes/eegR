@@ -4,8 +4,13 @@
 \alias{baselineCorr}
 \title{Baseline correction}
 \usage{
-baselineCorr(dat, pool_dim = "time", sep_dim = NULL,
-  base_timerange = isPositive(negate. = TRUE), return_call = TRUE)
+baselineCorr(
+  dat,
+  pool_dim = "time",
+  sep_dim = NULL,
+  base_timerange = isPositive(negate. = TRUE),
+  return_call = TRUE
+)
 }
 \arguments{
 \item{dat}{numeric vector, matrix, or array containing the ERPs}

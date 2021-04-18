@@ -46,9 +46,9 @@ stopifnot(identical(do.call("head", list(x, n = 10L)),
 # a little helper function (do not use for serious measurements)
 test <- function(expr) {
     gc(reset = TRUE)
-    cat("CPU time:\\n")
+    cat("CPU time:\n")
     print(system.time(expr, gcFirst = FALSE))
-    cat("\\nRAM usage:\\n")
+    cat("\nRAM usage:\n")
     print(gc())
 }
 

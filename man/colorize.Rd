@@ -4,8 +4,13 @@
 \alias{colorize}
 \title{Make image plots more colorful (only for ggplot objects)}
 \usage{
-colorize(obj, low = scales::muted("blue"), mid = "white",
-  high = scales::muted("red"), ...)
+colorize(
+  obj,
+  low = scales::muted("blue"),
+  mid = "white",
+  high = scales::muted("red"),
+  ...
+)
 }
 \arguments{
 \item{obj}{a ggplot object created by \code{\link{imageValues}}}

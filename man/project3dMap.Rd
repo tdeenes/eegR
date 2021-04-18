@@ -4,9 +4,15 @@
 \alias{project3dMap}
 \title{Project channel positions onto 2D plane}
 \usage{
-project3dMap(pos, r = 1, projection = "laea", projref = c("pole",
-  "equator"), origo = c(lat = ifelse(projref == "pole", 90, 0), long =
-  ifelse(projref == "pole", 270, 0)), inverse = FALSE)
+project3dMap(
+  pos,
+  r = 1,
+  projection = "laea",
+  projref = c("pole", "equator"),
+  origo = c(lat = ifelse(projref == "pole", 90, 0), long = ifelse(projref == "pole",
+    270, 0)),
+  inverse = FALSE
+)
 }
 \arguments{
 \item{pos}{electrode positions (matrix or data.frame)}

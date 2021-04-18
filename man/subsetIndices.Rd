@@ -8,7 +8,7 @@ subsetIndices(subset., which_dims., dim., dimnames.)
 }
 \arguments{
 \item{subset.}{a possibly named list of subset indices (either logical,
-integer or is* functional indices)}
+integer, character, factor, or is* functional indices)}
 
 \item{which_dims.}{the indices of the dimensions which should be subsetted}
 

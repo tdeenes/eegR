@@ -4,11 +4,23 @@
 \alias{complexplot2dview}
 \title{Plot topography in complex layout}
 \usage{
-complexplot2dview(dat, ch_pos, timepoint, datgrid = NULL,
-  layout_matrix = NULL, heights = NULL, widths = NULL,
-  title_row = NULL, title_col = NULL, title_map = NULL,
+complexplot2dview(
+  dat,
+  ch_pos,
+  timepoint,
+  datgrid = NULL,
+  layout_matrix = NULL,
+  heights = NULL,
+  widths = NULL,
+  title_row = NULL,
+  title_col = NULL,
+  title_map = NULL,
   title_main = paste("Time:", paste(timepoint, collapse = ", "), "ms"),
-  plot_bar = TRUE, ampl_range = NULL, gfp = NULL, ...)
+  plot_bar = TRUE,
+  ampl_range = NULL,
+  gfp = NULL,
+  ...
+)
 }
 \arguments{
 \item{dat}{a list of numeric vectors or matrices, which can be plotted by

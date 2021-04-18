@@ -4,10 +4,21 @@
 \alias{imageValues}
 \title{Image plot of channel values}
 \usage{
-imageValues(dat, grid = NULL, wrap = NULL, bar_title = "effect",
-  time_label = "Time (ms)", channel_label = "Channels",
-  raster = TRUE, cluster_order = FALSE, low = scales::muted("blue"),
-  mid = "white", high = scales::muted("red"), midpoint = 0, ...)
+imageValues(
+  dat,
+  grid = NULL,
+  wrap = NULL,
+  bar_title = "effect",
+  time_label = "Time (ms)",
+  channel_label = "Channels",
+  raster = TRUE,
+  cluster_order = FALSE,
+  low = scales::muted("blue"),
+  mid = "white",
+  high = scales::muted("red"),
+  midpoint = 0,
+  ...
+)
 }
 \arguments{
 \item{dat}{numeric matrix or array of values with named dimensions (at least

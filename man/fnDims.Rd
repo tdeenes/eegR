@@ -4,9 +4,18 @@
 \alias{fnDims}
 \title{Call a user-specified function on whatever dimension(s) of an array}
 \usage{
-fnDims(dat, target_dim, target_fn, arg_list = NULL, newdims = list(),
-  vectorized = FALSE, columnwise = TRUE, keep_dimorder = FALSE,
-  parallel = NULL, arg_check = TRUE)
+fnDims(
+  dat,
+  target_dim,
+  target_fn,
+  arg_list = NULL,
+  newdims = list(),
+  vectorized = FALSE,
+  columnwise = TRUE,
+  keep_dimorder = FALSE,
+  parallel = NULL,
+  arg_check = TRUE
+)
 }
 \arguments{
 \item{dat}{matrix or array on which function should be called}

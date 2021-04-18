@@ -4,14 +4,25 @@
 \alias{importOptions}
 \title{Import options for importBVdat}
 \usage{
-importOptions(eeg_ext = "dat", marker_ext = "vmrk",
-  info_ext = "vhdr", marker_skip = 14, marker_segment = "Target",
-  marker_badcat = "Bad Interval", marker_badstim = "resp_false",
-  marker_keepstim = "*", marker_badchan = c("badchan_start",
-  "badchan_stop"), marker_time0 = "Time 0",
-  segment_dpoints = (-100):1023, marker_regexp = TRUE,
-  marker_ignorecase = TRUE, marker_header = FALSE,
-  marker_fill = TRUE, marker_asis = TRUE, marker_sep = ",")
+importOptions(
+  eeg_ext = "dat",
+  marker_ext = "vmrk",
+  info_ext = "vhdr",
+  marker_skip = 14,
+  marker_segment = "Target",
+  marker_badcat = "Bad Interval",
+  marker_badstim = "resp_false",
+  marker_keepstim = "*",
+  marker_badchan = c("badchan_start", "badchan_stop"),
+  marker_time0 = "Time 0",
+  segment_dpoints = (-100):1023,
+  marker_regexp = TRUE,
+  marker_ignorecase = TRUE,
+  marker_header = FALSE,
+  marker_fill = TRUE,
+  marker_asis = TRUE,
+  marker_sep = ","
+)
 }
 \arguments{
 \item{eeg_ext}{character value, the extension of the segmented EEG dataset 

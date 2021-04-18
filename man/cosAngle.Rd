@@ -4,8 +4,7 @@
 \alias{cosAngle}
 \title{Cosine of the angles between electrodes}
 \usage{
-cosAngle(x, y = NULL, coords = TRUE, units_in_rows = TRUE,
-  check_params = TRUE)
+cosAngle(x, y = NULL, coords = TRUE, units_in_rows = TRUE, check_params = TRUE)
 }
 \arguments{
 \item{x}{a matrix or data.frame with at least two columns and rows}

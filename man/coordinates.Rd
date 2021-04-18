@@ -14,8 +14,13 @@ sph2cart(ch_pos, r = 1, deg = TRUE)
 
 cart2sph(ch_pos, deg = TRUE)
 
-sph2geo(ch_pos, r = 1, deg = TRUE, long360 = TRUE,
-  orient = c("northpole", "equatorial"))
+sph2geo(
+  ch_pos,
+  r = 1,
+  deg = TRUE,
+  long360 = TRUE,
+  orient = c("northpole", "equatorial")
+)
 
 geo2sph(ch_pos, r = 1, deg = TRUE)
 

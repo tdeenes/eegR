@@ -9,17 +9,34 @@
 \usage{
 extract(...)
 
-\method{extract}{arrayTtest}(object, what = c("all", "stat", "p", "es",
-  "stat_corr", "p_corr", "means", "df"), time_window = NULL,
-  term = NULL, chan = NULL, drop = FALSE, ...)
+\method{extract}{arrayTtest}(
+  object,
+  what = c("all", "stat", "p", "es", "stat_corr", "p_corr", "means", "df"),
+  time_window = NULL,
+  term = NULL,
+  chan = NULL,
+  drop = FALSE,
+  ...
+)
 
-\method{extract}{arrayAnova}(object, what = c("all", "stat", "p", "es",
-  "stat_corr", "p_corr", "means", "df"), time_window = NULL,
-  term = NULL, chan = NULL, drop = FALSE, ...)
+\method{extract}{arrayAnova}(
+  object,
+  what = c("all", "stat", "p", "es", "stat_corr", "p_corr", "means", "df"),
+  time_window = NULL,
+  term = NULL,
+  chan = NULL,
+  drop = FALSE,
+  ...
+)
 
-\method{extract}{tanova}(object, what = c("all", "stat", "p",
-  "stat_corr", "p_corr", "means"), time_window = NULL, term = NULL,
-  drop = FALSE, ...)
+\method{extract}{tanova}(
+  object,
+  what = c("all", "stat", "p", "stat_corr", "p_corr", "means"),
+  time_window = NULL,
+  term = NULL,
+  drop = FALSE,
+  ...
+)
 }
 \arguments{
 \item{...}{not used yet}

@@ -4,8 +4,14 @@
 \alias{selectValues}
 \title{Select values from a vector, matrix or array}
 \usage{
-selectValues(dat, condition, return_index = TRUE, dim_labels = NULL,
-  value_label = "value", auto_convert = TRUE)
+selectValues(
+  dat,
+  condition,
+  return_index = TRUE,
+  dim_labels = NULL,
+  value_label = "value",
+  auto_convert = TRUE
+)
 }
 \arguments{
 \item{dat}{an atomic object}

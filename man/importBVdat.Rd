@@ -4,8 +4,12 @@
 \alias{importBVdat}
 \title{Import binary file exported from BrainVision}
 \usage{
-importBVdat(file_name, file_path = getwd(), id = "",
-  import_options = importOptions())
+importBVdat(
+  file_name,
+  file_path = getwd(),
+  id = "",
+  import_options = importOptions()
+)
 }
 \arguments{
 \item{file_name}{character string; the name of the input files without

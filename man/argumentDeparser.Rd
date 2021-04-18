@@ -4,8 +4,12 @@
 \alias{argumentDeparser}
 \title{Pass \code{arg = .(key1 = value1, key2 = value2)} function arguments}
 \usage{
-argumentDeparser(arg, replace_dot, transform_logical = TRUE,
-  null_params = NULL)
+argumentDeparser(
+  arg,
+  replace_dot,
+  transform_logical = TRUE,
+  null_params = NULL
+)
 }
 \arguments{
 \item{arg}{an unevaluated call, see Details}

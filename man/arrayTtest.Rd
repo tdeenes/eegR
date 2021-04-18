@@ -4,10 +4,20 @@
 \alias{arrayTtest}
 \title{Point-to-point t-tests (potentially with TFCE correction) on arrays}
 \usage{
-arrayTtest(.arraydat, .arraydat2 = NULL, paired = FALSE,
-  groups = NULL, mu = 0, var_equal = FALSE, id_dim = "id",
-  verbose = TRUE, nperm = 0L, tfce = NULL, parallel = NULL,
-  seed = NULL)
+arrayTtest(
+  .arraydat,
+  .arraydat2 = NULL,
+  paired = FALSE,
+  groups = NULL,
+  mu = 0,
+  var_equal = FALSE,
+  id_dim = "id",
+  verbose = TRUE,
+  nperm = 0L,
+  tfce = NULL,
+  parallel = NULL,
+  seed = NULL
+)
 }
 \arguments{
 \item{.arraydat}{a numeric array with named dimnames containing EEG (or 

@@ -4,8 +4,16 @@
 \alias{marginalMeans}
 \title{Compute marginal means in an ANOVA design}
 \usage{
-marginalMeans(form, f_dat, a_dat, dimn, keep_term_order = FALSE,
-  residualmean = FALSE, whichterm = NULL, no_icpt = FALSE)
+marginalMeans(
+  form,
+  f_dat,
+  a_dat,
+  dimn,
+  keep_term_order = FALSE,
+  residualmean = FALSE,
+  whichterm = NULL,
+  no_icpt = FALSE
+)
 }
 \arguments{
 \item{form}{formula of the model}
