@@ -773,8 +773,12 @@ preAnova <- function(.arraydat, factordef, bwdat, verbose, tfce, perm,
       stop("Between-subject factors and 'bwdat' dataset do not match.")
     }
     # force to data.frame, keep only relevant variables
-    bwdat <- droplevels(
-      as.data.frame(bwdat[, c(factordef$w_id, factordef$between)]))
+    bwdat <- as.data.frame(bwdat[, c(factordef$w_id, factordef$between)])
+    bwdat[[factordef$w_id]] <- as.character(bwdat[[factordef$w_id]])
+    bwdat[, factordef$between] <- lapply(
+      bwdat[, factordef$between, drop = FALSE],
+      function(x) if (is.factor(x)) droplevels(x) else factor(x)
+    )
     # check for missing values
     if (anyNA(bwdat)) stop("Missing values in bwdat are not allowed")
     # align .arraydat and bwdat on w_id
