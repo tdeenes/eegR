@@ -710,7 +710,7 @@ array_ <- function(x, dim, dimnames = NULL,
 #' \code{subsetIndices} check arguments and creates subset indices for
 #' subsetArray and `subsetArray<-`.
 #' @param subset. a possibly named list of subset indices (either logical,
-#' integer or is* functional indices)
+#' integer, character, factor, or is* functional indices)
 #' @param which_dims. the indices of the dimensions which should be subsetted
 #' @param dim. the dimensions of the data to subset on
 #' @param dimnames. the dimension names of the data to subset on
@@ -719,7 +719,7 @@ subsetIndices <- function(subset., which_dims., dim., dimnames.) {
   dimid. <- names(dimnames.)
   if (is.null(subset.)) subset. <- list()
   assertList(subset.,
-             types = c("logical", "integerish", "character", "function"),
+             types = c("logical", "integerish", "character", "factor", "function"),
              any.missing = FALSE, max.len = length(dim.),
              .var.name = "subset.")
   if (any(duplicated(names(subset.))))
@@ -764,6 +764,8 @@ subsetIndices <- function(subset., which_dims., dim., dimnames.) {
     ind[[dimid_]] <-
       if (is.function(subset_)) {
         subset_(dimn_)
+      } else if (is.factor(subset_)) {
+        as.character(subset_)
       } else {
         subset_
       }
